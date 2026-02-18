@@ -14,14 +14,13 @@ int main() {
 
     Camera2D camera = {0};
     camera.zoom = 1.0f;
+    const float dpi = GetWindowScaleDPI().x;
 
     SetTargetFPS(GetMonitorRefreshRate(GetCurrentMonitor()));
 
     // Main game loop
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
-        float dpi = GetWindowScaleDPI().x;
-
         // Update
         if (IsWindowResized()) {
             window.width = GetScreenWidth();
@@ -35,11 +34,10 @@ int main() {
             camera.target = Vector2Add(camera.target, delta);
         }
 
-        float wheel = GetMouseWheelMove();
-        if (wheel != 0)
+        if (const float wheel = GetMouseWheelMove(); wheel != 0)
         {
             // Get the world point that is under the mouse
-            Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition() * dpi, camera);
+            const Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition() * dpi, camera);
 
             // Set the offset to where the mouse is
             camera.offset = GetMousePosition() * dpi;
@@ -50,7 +48,7 @@ int main() {
 
             // Zoom increment
             // Uses log scaling to provide consistent zoom speed
-            float scale = 0.2f*wheel;
+            const float scale = 0.2f*wheel;
             camera.zoom = Clamp(expf(logf(camera.zoom)+scale), 0.125f, 64.0f);
             std::println("{}", camera.zoom);
         }
