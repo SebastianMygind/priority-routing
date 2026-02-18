@@ -70,7 +70,7 @@ int main() {
             rlPopMatrix();
 
             // Draw a reference circle
-            DrawCircle(window.width/2, window.height/2, 50, MAROON);
+            DrawCircle(0,0, 50, MAROON);
         EndMode2D();
 
         DrawCircle(window.width, window.height/2, 100, PURPLE);
