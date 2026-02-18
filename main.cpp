@@ -6,11 +6,11 @@ int main() {
     std::println("Hello World!");
 
     auto window = Window("Routing Simulation");
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI);
 
     InitWindow(window.width, window.height, window.title.c_str());
 
-    SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
+    SetTargetFPS(120);               // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
 
 
@@ -21,8 +21,8 @@ int main() {
         // Update
         if (IsWindowResized()) {
 
-            window.width = GetRenderWidth();
-            window.height = GetRenderHeight();
+            window.width = GetScreenWidth();
+            window.height = GetScreenHeight();
         }
 
         // Draw
