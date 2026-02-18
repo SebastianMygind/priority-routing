@@ -11,14 +11,11 @@ int main() {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI);
 
     InitWindow(window.width, window.height, window.title.c_str());
-    SetTargetFPS(120);
 
     Camera2D camera = {0};
     camera.zoom = 1.0f;
 
-    SetTargetFPS(GetMonitorRefreshRate(GetCurrentMonitor()));               // Set our game to run at 60 frames-per-second
-    //--------------------------------------------------------------------------------------
-
+    SetTargetFPS(GetMonitorRefreshRate(GetCurrentMonitor()));
 
     // Main game loop
     while (!WindowShouldClose())    // Detect window close button or ESC key
