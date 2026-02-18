@@ -1,15 +1,15 @@
 #include <print>
 #include "raylib.h"
+#include "Window.h"
 
 int main() {
     std::println("Hello World!");
 
-    const int screenWidth = 800;
-    const int screenHeight = 450;
+    auto window = Window("Routing Simulation");
 
-    SetConfigFlags(FLAG_MSAA_4X_HINT);
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
 
-    InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
+    InitWindow(window.width, window.height, window.title.c_str());
 
     SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
@@ -18,9 +18,8 @@ int main() {
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
         // Update
-        //----------------------------------------------------------------------------------
-        // TODO: Update your variables here
-        //----------------------------------------------------------------------------------
+        window.width = GetScreenWidth();
+        window.height = GetScreenHeight();
 
         // Draw
         //----------------------------------------------------------------------------------
@@ -32,7 +31,7 @@ int main() {
 
         DrawLineEx(Vector2 {20, 40 }, Vector2 {400, 30}, 7., DARKBLUE);
 
-        DrawCircle(300, 300, 30, PURPLE);
+        DrawCircle(window.width/2, window.height/2, 30, PURPLE);
 
         EndDrawing();
         //----------------------------------------------------------------------------------

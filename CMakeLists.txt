@@ -27,7 +27,9 @@ set(GLFW_BUILD_WAYLAND ON CACHE BOOL "Enable GLFW Wayland" FORCE)
 
 FetchContent_MakeAvailable(raylib)
 
-add_executable(priority_routing main.cpp)
+add_executable(priority_routing main.cpp
+        Window.cpp
+        Window.h)
 target_link_libraries(
         priority_routing
         raylib
