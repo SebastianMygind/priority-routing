@@ -27,7 +27,11 @@ FetchContent_MakeAvailable(tinyxml2)
 
 add_executable(priority_routing main.cpp
         Window.cpp
-        Window.h)
+        Window.h
+        httplib.h
+        httplib.cpp
+        DataFetcher.cpp)
+        
 target_link_libraries(
         priority_routing
         raylib
