@@ -6,10 +6,13 @@ int main() {
     std::println("Hello World!");
 
     auto window = Window("Routing Simulation");
-
+    auto window_scale = GetWindowScaleDPI();
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
 
     InitWindow(window.width, window.height, window.title.c_str());
+
+    window.width = GetRenderWidth();
+    window.height = GetRenderHeight();
 
     SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
@@ -18,8 +21,11 @@ int main() {
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
         // Update
-        window.width = GetScreenWidth();
-        window.height = GetScreenHeight();
+        if (IsWindowResized()) {
+
+            window.width = GetRenderWidth();
+            window.height = GetRenderHeight();
+        }
 
         // Draw
         //----------------------------------------------------------------------------------
@@ -31,7 +37,7 @@ int main() {
 
         DrawLineEx(Vector2 {20, 40 }, Vector2 {400, 30}, 7., DARKBLUE);
 
-        DrawCircle(window.width/2, window.height/2, 30, PURPLE);
+        DrawCircle(window.width, window.height, 30, PURPLE);
 
         EndDrawing();
         //----------------------------------------------------------------------------------

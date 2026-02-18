@@ -14,8 +14,8 @@ public:
     std::string title;
 
     explicit Window(std::string i_title) {
-        width = 1920;
-        height = 1080;
+        width = 1280;
+        height = 720;
         title = std::move(i_title);
     }
 };
