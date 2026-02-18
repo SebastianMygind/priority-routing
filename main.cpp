@@ -10,7 +10,7 @@ int main() {
 
     InitWindow(window.width, window.height, window.title.c_str());
 
-    SetTargetFPS(120);               // Set our game to run at 60 frames-per-second
+    SetTargetFPS(GetMonitorRefreshRate(GetCurrentMonitor()));               // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
 
 
@@ -20,7 +20,6 @@ int main() {
 
         // Update
         if (IsWindowResized()) {
-
             window.width = GetScreenWidth();
             window.height = GetScreenHeight();
         }
