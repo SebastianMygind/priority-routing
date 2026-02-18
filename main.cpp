@@ -64,19 +64,23 @@ int main() {
         ClearBackground(RAYWHITE);
 
         BeginMode2D(camera);
-                // Draw the 3d grid, rotated 90 degrees and centered around 0,0
-                // just so we have something in the XY plane
-                rlPushMatrix();
-                    rlTranslatef(0, 25*50, 0);
-                    rlRotatef(90, 1, 0, 0);
-                    DrawGrid(100, 50);
-                rlPopMatrix();
+            // Draw the 3d grid, rotated 90 degrees and centered around 0,0
+            // just so we have something in the XY plane
+            rlPushMatrix();
+                rlTranslatef(0, 25*50, 0);
+                rlRotatef(90, 1, 0, 0);
+                DrawGrid(100, 50);
+            rlPopMatrix();
 
-                // Draw a reference circle
-                DrawCircle(window.width/2, window.height/2, 50, MAROON);
-            EndMode2D();
+            // Draw a reference circle
+            DrawCircle(window.width/2, window.height/2, 50, MAROON);
+        EndMode2D();
 
         DrawCircle(window.width, window.height/2, 100, PURPLE);
+
+        DrawCircleV(GetMousePosition(), 4, DARKGRAY);
+        DrawTextEx(GetFontDefault(), TextFormat("[%i, %i]", GetMouseX(), GetMouseY()),
+            Vector2Add(GetMousePosition(), (Vector2){ -44, -24 }), 20, 2, BLACK);
 
         EndDrawing();
         //----------------------------------------------------------------------------------
