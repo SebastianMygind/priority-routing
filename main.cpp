@@ -194,7 +194,6 @@ bool ParseData(std::string xml)
 {
     tinyxml2::XMLDocument doc;
 
-    std::println("{}", xml);
     if (doc.Parse(xml.c_str()) != tinyxml2::XML_SUCCESS)
     {
         std::println("Failed to load xml");
