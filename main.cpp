@@ -50,7 +50,6 @@ int main() {
             // Uses log scaling to provide consistent zoom speed
             const float scale = 0.2f*wheel;
             camera.zoom = Clamp(expf(logf(camera.zoom)+scale), 0.125f, 64.0f);
-            std::println("{}", camera.zoom);
         }
 
         // Draw
