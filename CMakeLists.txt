@@ -15,7 +15,15 @@ FetchContent_Declare(
         GIT_PROGRESS TRUE
 )
 
+FetchContent_Declare(
+        tinyxml2
+        GIT_REPOSITORY https://github.com/leethomason/tinyxml2.git
+        GIT_TAG 11.0.0
+        GIT_PROGRESS TRUE
+)
+
 FetchContent_MakeAvailable(raylib)
+FetchContent_MakeAvailable(tinyxml2)
 
 add_executable(priority_routing main.cpp
         Window.cpp
@@ -23,4 +31,5 @@ add_executable(priority_routing main.cpp
 target_link_libraries(
         priority_routing
         raylib
+        tinyxml2
 )
