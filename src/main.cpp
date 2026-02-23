@@ -6,24 +6,22 @@
 #include "rlgl.h"
 #include "raymath.h"
 #include "spdlog/spdlog.h"
+#include "raylib_logger.h"
 
 int main() {
 
-    std::vector<Node> nodes = {{25, 25}, {50, 50}, {75, 75}, {75, 125}};
-    std::vector<std::pair<uint32_t, uint32_t>> edges = {{0, 1}, {1, 2}, {2, 3}, {3, 0}};
-
+    SetTraceLogCallback(SPDLogger);
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI | FLAG_VSYNC_HINT);
 
     auto window = Window("Routing Simulation");
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI);
 
     InitWindow(window.width, window.height, window.title.c_str());
-
+    // Setup Application logic at this stage.
     Camera2D camera = {0};
     camera.zoom = 1.0F;
 
-    SetTargetFPS(GetMonitorRefreshRate(GetCurrentMonitor()));
-
-    spdlog::error("Test error");
+    std::vector<Node> nodes = {{25, 25}, {50, 50}, {75, 75}, {75, 125}};
+    std::vector<std::pair<uint32_t, uint32_t>> edges = {{0, 1}, {1, 2}, {2, 3}, {3, 0}};
 
     // Main game loop
     while (!WindowShouldClose()) // Detect window close button or ESC key

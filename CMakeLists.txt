@@ -23,7 +23,9 @@ add_executable(priority_routing src/main.cpp
         src/Window.cpp
         src/Window.h
         src/Node.cpp
-        src/Node.h)
+        src/Node.h
+        src/raylib_logger.h
+)
 target_link_libraries(
         priority_routing
         raylib
