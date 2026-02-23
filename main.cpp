@@ -22,7 +22,7 @@ int main() {
     spdlog::error("Test error");
 
     // Main game loop
-    while (!WindowShouldClose())    // Detect window close button or ESC key
+    while (!WindowShouldClose()) // Detect window close button or ESC key
     {
         // Update
         if (IsWindowResized()) {
@@ -30,15 +30,13 @@ int main() {
             window.height = GetScreenHeight();
         }
 
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
-        {
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
             Vector2 delta = GetMouseDelta();
-            delta = Vector2Scale(delta, (-1.0f)/camera.zoom);
+            delta = Vector2Scale(delta, (-1.0f) / camera.zoom);
             camera.target = Vector2Add(camera.target, delta);
         }
 
-        if (const float wheel = GetMouseWheelMove(); wheel != 0)
-        {
+        if (const float wheel = GetMouseWheelMove(); wheel != 0) {
             // Get the world point that is under the mouse
             const Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
 
@@ -51,8 +49,8 @@ int main() {
 
             // Zoom increment
             // Uses log scaling to provide consistent zoom speed
-            const float scale = 0.2f*wheel;
-            camera.zoom = Clamp(expf(logf(camera.zoom)+scale), 0.125f, 64.0f);
+            const float scale = 0.2f * wheel;
+            camera.zoom = Clamp(expf(logf(camera.zoom) + scale), 0.125f, 64.0f);
         }
 
         // Draw
@@ -62,23 +60,23 @@ int main() {
         ClearBackground(RAYWHITE);
 
         BeginMode2D(camera);
-            // Draw the 3d grid, rotated 90 degrees and centered around 0,0
-            // just so we have something in the XY plane
-            rlPushMatrix();
-                rlTranslatef(0, 25*50, 0);
-                rlRotatef(90, 1, 0, 0);
-                DrawGrid(100, 50);
-            rlPopMatrix();
+        // Draw the 3d grid, rotated 90 degrees and centered around 0,0
+        // just so we have something in the XY plane
+        rlPushMatrix();
+        rlTranslatef(0, 25 * 50, 0);
+        rlRotatef(90, 1, 0, 0);
+        DrawGrid(100, 50);
+        rlPopMatrix();
 
-            // Draw a reference circle
-            DrawCircle(0,0, 50, MAROON);
+        // Draw a reference circle
+        DrawCircle(0, 0, 50, MAROON);
         EndMode2D();
 
-        DrawCircle(window.width, window.height/2, 100, PURPLE);
+        DrawCircle(window.width, window.height / 2, 100, PURPLE);
 
         DrawCircleV(GetMousePosition(), 4, DARKGRAY);
         DrawTextEx(GetFontDefault(), TextFormat("[%i, %i]", GetMouseX(), GetMouseY()),
-            Vector2Add(GetMousePosition(), (Vector2){ -44, -24 }), 20, 2, BLACK);
+                   Vector2Add(GetMousePosition(), (Vector2){-44, -24}), 20, 2, BLACK);
 
         EndDrawing();
         //----------------------------------------------------------------------------------
@@ -86,7 +84,7 @@ int main() {
 
     // De-Initialization
     //--------------------------------------------------------------------------------------
-    CloseWindow();        // Close window and OpenGL context
+    CloseWindow(); // Close window and OpenGL context
     //--------------------------------------------------------------------------------------
 
     return 0;
