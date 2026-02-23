@@ -1,4 +1,6 @@
 #include <print>
+
+#include "Node.h"
 #include "raylib.h"
 #include "Window.h"
 #include "rlgl.h"
@@ -6,7 +8,10 @@
 #include "spdlog/spdlog.h"
 
 int main() {
-    std::println("Hello World!");
+
+    std::vector<Node> nodes = {{25, 25}, {50, 50}, {75, 75}, {75, 125}};
+    std::vector<std::pair<uint32_t, uint32_t>> edges = {{0, 1}, {1, 2}, {2, 3}, {3, 0}};
+
 
     auto window = Window("Routing Simulation");
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI);
@@ -14,8 +19,7 @@ int main() {
     InitWindow(window.width, window.height, window.title.c_str());
 
     Camera2D camera = {0};
-    camera.zoom = 1.0f;
-    const float dpi = GetWindowScaleDPI().x;
+    camera.zoom = 1.0F;
 
     SetTargetFPS(GetMonitorRefreshRate(GetCurrentMonitor()));
 
@@ -69,13 +73,31 @@ int main() {
         rlPopMatrix();
 
         // Draw a reference circle
-        DrawCircle(0, 0, 50, MAROON);
+        // DrawCircle(0, 0, 50, MAROON);
+
+        // Draw edges
+
+        for (const std::pair<uint32_t, uint32_t>& edge : edges) {
+            Node &node1 = nodes[edge.first];
+            Node &node2 = nodes[edge.second];
+
+            DrawLineEx({node1.x, node1.y}, {node2.x, node2.y}, 3, BLACK);
+        }
+
+        // Draw vertices
+        for (const Node &node : nodes) {
+            DrawCircle(static_cast<int>(node.x), static_cast<int>(node.y), 10.F, MAROON);
+        }
+
         EndMode2D();
 
         DrawCircle(window.width, window.height / 2, 100, PURPLE);
 
         DrawCircleV(GetMousePosition(), 4, DARKGRAY);
-        DrawTextEx(GetFontDefault(), TextFormat("[%i, %i]", GetMouseX(), GetMouseY()),
+        const Vector2 dpi = GetWindowScaleDPI();
+        const Vector2 mouse_world_pos = GetScreenToWorld2D(GetMousePosition() * dpi, camera);
+
+        DrawTextEx(GetFontDefault(), TextFormat("[%.2f, %.2f]", mouse_world_pos.x, mouse_world_pos.y),
                    Vector2Add(GetMousePosition(), (Vector2){-44, -24}), 20, 2, BLACK);
 
         EndDrawing();

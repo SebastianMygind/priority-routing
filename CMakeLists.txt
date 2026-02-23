@@ -21,7 +21,9 @@ FetchContent_MakeAvailable(raylib)
 
 add_executable(priority_routing main.cpp
         Window.cpp
-        Window.h)
+        Window.h
+        Node.cpp
+        Node.h)
 target_link_libraries(
         priority_routing
         raylib
