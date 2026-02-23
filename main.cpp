@@ -30,17 +30,17 @@ int main() {
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
         {
             Vector2 delta = GetMouseDelta();
-            delta = Vector2Scale(delta, (-1.0f * dpi)/camera.zoom);
+            delta = Vector2Scale(delta, (-1.0f)/camera.zoom);
             camera.target = Vector2Add(camera.target, delta);
         }
 
         if (const float wheel = GetMouseWheelMove(); wheel != 0)
         {
             // Get the world point that is under the mouse
-            const Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition() * dpi, camera);
+            const Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
 
             // Set the offset to where the mouse is
-            camera.offset = GetMousePosition() * dpi;
+            camera.offset = GetMousePosition();
 
             // Set the target to match, so that the camera maps the world space point
             // under the cursor to the screen space point under the cursor at any zoom
