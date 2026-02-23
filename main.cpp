@@ -3,6 +3,7 @@
 #include "Window.h"
 #include "rlgl.h"
 #include "raymath.h"
+#include "spdlog/spdlog.h"
 
 int main() {
     std::println("Hello World!");
@@ -17,6 +18,8 @@ int main() {
     const float dpi = GetWindowScaleDPI().x;
 
     SetTargetFPS(GetMonitorRefreshRate(GetCurrentMonitor()));
+
+    spdlog::error("Test error");
 
     // Main game loop
     while (!WindowShouldClose())    // Detect window close button or ESC key
