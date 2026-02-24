@@ -19,12 +19,16 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(raylib)
 
-add_executable(priority_routing src/main.cpp
+add_executable(
+        priority_routing 
+        src/main.cpp
         src/Window.cpp
         src/Window.h
-        src/Node.cpp
-        src/Node.h
         src/raylib_logger.h
+        src/Graph.cpp
+        src/Graph.h
+        src/PathFinding.cpp
+        src/PathFinding.h
 )
 target_link_libraries(
         priority_routing
