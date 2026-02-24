@@ -1,7 +1,3 @@
-//
-// Created by seb on 18/02/2026.
-//
-
 #ifndef PRIORITY_ROUTING_WINDOW_H
 #define PRIORITY_ROUTING_WINDOW_H
 #include <string>

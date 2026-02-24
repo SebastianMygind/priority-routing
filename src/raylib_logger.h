@@ -1,7 +1,3 @@
-//
-// Created by seb on 23/02/2026.
-//
-
 #ifndef PRIORITY_ROUTING_RAYLIB_LOGGER_H
 #define PRIORITY_ROUTING_RAYLIB_LOGGER_H
 
