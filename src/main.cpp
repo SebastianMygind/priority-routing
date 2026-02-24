@@ -18,6 +18,7 @@ int main() {
     SetTraceLogCallback(SPDLogger);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI | FLAG_VSYNC_HINT);
 
+
     auto window = Window("Routing Simulation");
 
     InitWindow(window.width, window.height, window.title.c_str());
@@ -25,14 +26,17 @@ int main() {
     Camera2D camera = {0};
     camera.zoom = 1.0F;
 
-    std::vector<Node> nodes = {{25, 25}, {50, 50}, {75, 75}, {75, 125}};
-    std::vector<std::pair<uint32_t, uint32_t>> edges = {{0, 1}, {1, 2}, {2, 3}, {3, 0}};
+#ifdef __APPLE__
+    Vector2 dpi = {1.0, 1.0};
+#else
+    Vector2 dpi = GetWindowScaleDPI();
+#endif
 
     // Main game loop
     while (!WindowShouldClose())  // Detect window close button or ESC key
     {
         // Get the world point that is under the mouse
-        const Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
+        const Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition() * dpi, camera);
 
         // Update
         if (IsWindowResized()) 
@@ -70,7 +74,7 @@ int main() {
 
         if (const float wheel = GetMouseWheelMove(); wheel != 0) {
             // Set the offset to where the mouse is
-            camera.offset = GetMousePosition();
+            camera.offset = GetMousePosition() * dpi;
 
             // Set the target to match, so that the camera maps the world space point
             // under the cursor to the screen space point under the cursor at any zoom
