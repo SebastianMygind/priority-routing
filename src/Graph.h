@@ -9,7 +9,8 @@ struct Node
 
 struct Edge 
 {
-    uint32_t a, b;
+    std::vector<uint32_t> nodeRefs;
+    //uint32_t a, b;
 };
 
 

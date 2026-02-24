@@ -2,7 +2,6 @@
 #include <cmath>
 #include <cstdint>
 #include <vector>
-#include <algorithm>
 
 bool Djikstra(Graph& graph, uint32_t start_node, uint32_t end_node, std::vector<uint32_t>& out_path)
 {
@@ -16,8 +15,11 @@ bool Djikstra(Graph& graph, uint32_t start_node, uint32_t end_node, std::vector<
     for (const Edge& edge : graph.edges) 
     {
         // Undirected graph, so add both directions (if we want directed, we'd only add one)
-        adj_list[edge.a].push_back(edge.b);
-        adj_list[edge.b].push_back(edge.a);
+        for (uint32_t i = 0; i < edge.nodeRefs.size() - 1; i++)
+        {
+            adj_list[edge.nodeRefs[i]].push_back(edge.nodeRefs[i + 1]);
+            adj_list[edge.nodeRefs[i + 1]].push_back(edge.nodeRefs[i]);
+        } 
     }
 
     while (!queue.empty()) 
