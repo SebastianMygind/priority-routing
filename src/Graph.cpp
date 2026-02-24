@@ -1,5 +1,6 @@
 #include "Graph.h"
 #include "raylib.h"
+#include <algorithm>
 
 Graph::Graph() : selected_node_a(UINT32_MAX), selected_node_b(UINT32_MAX)
 {

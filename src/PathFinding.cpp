@@ -2,6 +2,7 @@
 #include <cmath>
 #include <cstdint>
 #include <vector>
+#include <algorithm>
 
 bool Djikstra(Graph& graph, uint32_t start_node, uint32_t end_node, std::vector<uint32_t>& out_path)
 {
