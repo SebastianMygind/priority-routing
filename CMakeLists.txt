@@ -17,11 +17,19 @@ FetchContent_Declare(
         GIT_PROGRESS TRUE
 )
 
+FetchContent_Declare(
+        googletest
+        URL https://github.com/google/googletest/archive/52eb8108c5bdec04579160ae17225d66034bd723.zip
+        GIT_PROGRESS TRUE
+)
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(googletest)
 FetchContent_MakeAvailable(raylib)
 
-add_executable(
-        priority_routing 
-        src/main.cpp
+enable_testing()
+
+set(CORE_SOURCES
         src/Window.cpp
         src/Window.h
         src/raylib_logger.h
@@ -30,8 +38,36 @@ add_executable(
         src/PathFinding.cpp
         src/PathFinding.h
 )
+
+# Main executable that runs the application
+
+add_executable(
+        priority_routing 
+        src/main.cpp
+        ${CORE_SOURCES}
+)
 target_link_libraries(
         priority_routing
+        PRIVATE
         raylib
         spdlog::spdlog
 )
+
+# Test executable for testing
+
+add_executable(
+        priority_routing_tests
+        tests/example_test.cpp
+        ${CORE_SOURCES}
+)
+
+target_link_libraries(
+        priority_routing_tests
+        PRIVATE
+        raylib
+        spdlog::spdlog
+        GTest::gtest_main
+)
+
+include(GoogleTest)
+gtest_discover_tests(priority_routing_tests)
