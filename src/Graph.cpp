@@ -43,9 +43,8 @@ void Graph::DrawGraph()
         bool in_path =
             std::find(selected_path.begin(), selected_path.end(), edge.a) != selected_path.end() &&
             std::find(selected_path.begin(), selected_path.end(), edge.b) != selected_path.end();
-        Color color = in_path ? SKYBLUE : GRAY;
 
-        DrawLineEx({node1.x, node1.y}, {node2.x, node2.y}, 3, color);
+        DrawLineEx({node1.x, node1.y}, {node2.x, node2.y}, 3, in_path ? SKYBLUE : GRAY);
     }
 
     // Draw vertices
