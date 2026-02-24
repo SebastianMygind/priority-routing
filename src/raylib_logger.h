@@ -1,5 +1,4 @@
-#ifndef PRIORITY_ROUTING_RAYLIB_LOGGER_H
-#define PRIORITY_ROUTING_RAYLIB_LOGGER_H
+#pragma once
 
 #include "raylib.h"
 #include "spdlog/spdlog.h"
@@ -30,4 +29,3 @@ inline void SPDLogger(const int msgType, const char *msg, va_list args) {
         default: break;
     }
 }
-#endif //PRIORITY_ROUTING_RAYLIB_LOGGER_H
