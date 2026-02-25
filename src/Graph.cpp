@@ -32,7 +32,7 @@ void Graph::DrawGraph()
                 std::find(selected_path.begin(), selected_path.end(), edge.nodeRefs[i]) != selected_path.end() &&
                 std::find(selected_path.begin(), selected_path.end(), edge.nodeRefs[i + 1]) != selected_path.end();
 
-            DrawLineEx({node1.x, node1.y}, {node2.x, node2.y}, 3, in_path ? SKYBLUE : GRAY);
+            DrawLineEx({node1.x, node1.y}, {node2.x, node2.y}, in_path ? 8.F : 3.F, in_path ? SKYBLUE : GRAY);
         }
     }
 
@@ -40,6 +40,6 @@ void Graph::DrawGraph()
     for (auto& node : nodes)
     {
         Color color = (node.first == selected_node_a || node.first == selected_node_b) ? SKYBLUE : MAROON;
-        DrawCircle(static_cast<int>(node.second.x), static_cast<int>(node.second.y), 1.2F, color);
+        DrawCircle(static_cast<int>(node.second.x), static_cast<int>(node.second.y), 1.5F, color);
     }
 }

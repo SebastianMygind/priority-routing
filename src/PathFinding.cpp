@@ -2,24 +2,35 @@
 #include <cmath>
 #include <cstdint>
 #include <vector>
+#include <unordered_map>
 
 bool Djikstra(Graph& graph, uint64_t start_node, uint64_t end_node, std::vector<uint64_t>& out_path)
 {
-    std::vector<double>   dist(graph.nodes.size(), INFINITY);
-    std::vector<uint64_t> prev(graph.nodes.size(), 0xFFFFFFFF);
+    std::unordered_map<uint64_t, double>   dist;
+    std::unordered_map<uint64_t, uint64_t> prev;
     std::vector<uint64_t> queue = {start_node};
+
+    for (auto& node : graph.nodes)
+    {
+        dist.insert({node.first, INFINITY});
+        prev.insert({node.first, 0xFFFFFFFF});
+    }
 
     dist[start_node] = 0;
 
-    std::vector< std::vector<uint64_t> > adj_list(graph.nodes.size());
-    for (const Edge& edge : graph.edges) 
+    std::unordered_map< uint64_t, std::vector<uint64_t> > adj_list;
+    for (const auto& edge : graph.edges)
     {
-        // Undirected graph, so add both directions (if we want directed, we'd only add one)
-        for (uint64_t i = 0; i < edge.nodeRefs.size() - 1; i++)
+        const auto& nodes = edge.nodeRefs;
+
+        for (size_t i = 0; i + 1 < nodes.size(); ++i)
         {
-            adj_list[edge.nodeRefs[i]].push_back(edge.nodeRefs[i + 1]);
-            adj_list[edge.nodeRefs[i + 1]].push_back(edge.nodeRefs[i]);
-        } 
+            uint64_t a = nodes[i];
+            uint64_t b = nodes[i + 1];
+
+            adj_list[a].push_back(b);
+            adj_list[b].push_back(a);  // reverse direction
+        }
     }
 
     while (!queue.empty()) 

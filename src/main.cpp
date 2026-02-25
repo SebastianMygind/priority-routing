@@ -61,7 +61,7 @@ int main() {
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) 
         {
             for (auto& node : graph.nodes) {
-                if (Vector2Distance({node.second.x, node.second.y}, mouseWorldPos) < 10) 
+                if (Vector2Distance({node.second.x, node.second.y}, mouseWorldPos) < 1.5F) 
                 {
                     if (graph.selected_node_a == 0xFFFFFFFF) {              // Click one, A
                         graph.selected_node_a = node.first;
