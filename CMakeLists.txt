@@ -46,6 +46,9 @@ set(CORE_SOURCES
         src/PathFinding.h
         src/Parser.cpp
         src/Parser.h
+        src/user_interface.cpp
+        src/user_interface.h
+        vendor/raygui.h
 )
 
 # Main executable that runs the application
