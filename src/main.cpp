@@ -11,6 +11,7 @@
 #include "raymath.h"
 #include "spdlog/spdlog.h"
 #include "raylib_logger.h"
+#include "user_interface.h"
 
 int main() {
 
@@ -47,8 +48,8 @@ int main() {
         // Update
         if (IsWindowResized()) 
         {
-            window.width = GetScreenWidth();
-            window.height = GetScreenHeight();
+            window.width = static_cast<int>(static_cast<float>(GetScreenWidth()) / dpi.x);
+            window.height = static_cast<int>(static_cast<float>(GetScreenHeight())/ dpi.y);
         }
 
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) 
@@ -124,6 +125,8 @@ int main() {
             TextFormat("Selected Node: \n A:%i, B:%i", graph.selected_node_a, graph.selected_node_b),
             {10, 10}, 20, 2, BLACK
         );
+
+        DrawUserInterface(window, dpi);
 
         EndDrawing();
     }
