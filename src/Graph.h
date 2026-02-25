@@ -1,6 +1,8 @@
 #pragma once
 #include <vector>
+#include <unordered_map>
 #include <cstdint>
+#include <string>
 
 struct Node 
 {
@@ -9,19 +11,20 @@ struct Node
 
 struct Edge 
 {
-    uint32_t a, b;
+    std::vector<uint64_t> nodeRefs;
+    std::unordered_map<std::string, std::string> tags;
 };
 
 
 class Graph 
 {
 public:
-    std::vector<Node> nodes;
+    std::unordered_map<uint64_t, Node> nodes;
     std::vector<Edge> edges;
 
-    std::vector<uint32_t> selected_path;
-    uint32_t selected_node_a;
-    uint32_t selected_node_b;
+    std::vector<uint64_t> selected_path;
+    uint64_t selected_node_a;
+    uint64_t selected_node_b;
 
     Graph();
 
