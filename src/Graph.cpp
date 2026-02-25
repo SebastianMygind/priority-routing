@@ -6,13 +6,17 @@ Graph::Graph() : selected_node_a(UINT32_MAX), selected_node_b(UINT32_MAX)
 {
     // Init default graph
     nodes = {
-        {0.0F, 0.0F},     // 0
-        {40.0F, 12.0F},    // 1
-        {85.0F, 15.0F},    // 2
-        {130.0F, 30.0F},   // 3
-        {80.0F, 100.0F},    // 4
+        {0, {0.0F, 0.0F}},     // 0
+        {1, {40.0F, 12.0F}},    // 1
+        {2, {85.0F, 15.0F}},    // 2
+        {3, {130.0F, 30.0F}},   // 3
+        {4, {80.0F, 100.0F}},    // 4
+
+        {5, {100.0F, 100.0F}},    // 5
+        {6, {150.0F, 150.0F}},    // 5
+        
     };
-    edges = {{{0, 1, 2, 3}}, {{2, 4}}};
+    edges = {{{0, 1, 2, 3}}, {{2, 4}}, {{5, 6}}};
 }
 
 void Graph::DrawGraph() 
@@ -33,10 +37,9 @@ void Graph::DrawGraph()
     }
 
     // Draw vertices
-    for (uint32_t i = 0; i < nodes.size(); i++) 
+    for (auto& node : nodes)
     {
-        const Node& node = nodes[i];
-        Color color = (i == selected_node_a || i == selected_node_b) ? SKYBLUE : MAROON;
-        DrawCircle(static_cast<int>(node.x), static_cast<int>(node.y), 6.F, color);
+        Color color = (node.first == selected_node_a || node.first == selected_node_b) ? SKYBLUE : MAROON;
+        DrawCircle(static_cast<int>(node.second.x), static_cast<int>(node.second.y), 1.2F, color);
     }
 }

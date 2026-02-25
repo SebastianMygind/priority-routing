@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "Graph.h"
+#include "Parser.h"
 #include "PathFinding.h"
 #include "raylib.h"
 #include "Window.h"
@@ -14,6 +15,11 @@
 int main() {
 
     Graph graph;
+
+    ParseOSM("./map.osm", graph);
+
+    std::println("{} {}", graph.nodes.size(), graph.edges.size());
+
 
     SetTraceLogCallback(SPDLogger);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI | FLAG_VSYNC_HINT);
@@ -54,13 +60,13 @@ int main() {
 
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) 
         {
-            for (Node& node : graph.nodes) {
-                if (Vector2Distance({node.x, node.y}, mouseWorldPos) < 10) 
+            for (auto& node : graph.nodes) {
+                if (Vector2Distance({node.second.x, node.second.y}, mouseWorldPos) < 10) 
                 {
                     if (graph.selected_node_a == 0xFFFFFFFF) {              // Click one, A
-                        graph.selected_node_a = &node - graph.nodes.data();
+                        graph.selected_node_a = node.first;
                     } else if (graph.selected_node_b == 0xFFFFFFFF) {       // Click two, B, calculate path
-                        graph.selected_node_b = &node - graph.nodes.data();
+                        graph.selected_node_b = node.first;
                         Djikstra(graph, graph.selected_node_a, graph.selected_node_b, graph.selected_path);
                     } else {                                                // Click three, reset
                         graph.selected_node_a = 0xFFFFFFFF;

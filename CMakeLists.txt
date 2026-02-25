@@ -16,6 +16,12 @@ FetchContent_Declare(
         GIT_TAG 5.5
         GIT_PROGRESS TRUE
 )
+FetchContent_Declare(
+        tinyxml2
+        GIT_REPOSITORY https://github.com/leethomason/tinyxml2
+        GIT_TAG 11.0.0
+        GIT_PROGRESS TRUE
+)
 
 FetchContent_Declare(
         googletest
@@ -26,6 +32,7 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(googletest)
 FetchContent_MakeAvailable(raylib)
+FetchContent_MakeAvailable(tinyxml2)
 
 enable_testing()
 
@@ -37,6 +44,8 @@ set(CORE_SOURCES
         src/Graph.h
         src/PathFinding.cpp
         src/PathFinding.h
+        src/Parser.cpp
+        src/Parser.h
 )
 
 # Main executable that runs the application
@@ -50,6 +59,7 @@ target_link_libraries(
         priority_routing
         PRIVATE
         raylib
+        tinyxml2
         spdlog::spdlog
 )
 
