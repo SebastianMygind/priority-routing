@@ -18,8 +18,7 @@ int main() {
 
     ParseOSM("../data/map.osm", graph);
 
-    std::println("{} {}", graph.nodes.size(), graph.edges.size());
-
+    std::println("{} {}", graph.nodes.size(), graph.ways.size());
 
     SetTraceLogCallback(SPDLogger);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI | FLAG_VSYNC_HINT);
@@ -61,7 +60,7 @@ int main() {
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) 
         {
             for (auto& node : graph.nodes) {
-                if (Vector2Distance({node.second.x, node.second.y}, mouseWorldPos) < 1.5F) 
+                if (Vector2Distance(MercatorProjection(node.second.lat, node.second.lon, (float)window.height, (float)window.width), mouseWorldPos) < 0.2F) 
                 {
                     if (graph.selected_node_a == 0xFFFFFFFF) {              // Click one, A
                         graph.selected_node_a = node.first;
@@ -107,11 +106,11 @@ int main() {
         DrawGrid(100, 50);
         rlPopMatrix();
 
-        graph.DrawGraph();
+        graph.DrawGraph(camera, (float)window.width, (float)window.height);
 
         EndMode2D();
 
-        DrawCircleV(GetMousePosition(), 4, DARKGRAY);
+        DrawCircleV(GetMousePosition(), 2, DARKGRAY);
 
         DrawTextEx(
             GetFontDefault(),

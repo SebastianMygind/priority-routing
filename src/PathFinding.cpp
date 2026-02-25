@@ -20,7 +20,7 @@ bool Djikstra(Graph& graph, uint64_t start_node, uint64_t end_node, std::vector<
     dist[start_node] = 0;
 
     std::unordered_map< uint64_t, std::vector<uint64_t> > adj_list;
-    for (const auto& edge : graph.edges)
+    for (const auto& edge : graph.ways)
     {
         const auto& nodes = edge.nodeRefs;
 
@@ -64,7 +64,7 @@ bool Djikstra(Graph& graph, uint64_t start_node, uint64_t end_node, std::vector<
         // Update distances to neighbors
         for (uint64_t neighbor : adj_list[current]) 
         {
-            double alt = dist[current] + sqrt(pow(graph.nodes[current].x - graph.nodes[neighbor].x, 2) + pow(graph.nodes[current].y - graph.nodes[neighbor].y, 2));
+            double alt = dist[current] + sqrt(pow(graph.nodes[current].lat - graph.nodes[neighbor].lat, 2) + pow(graph.nodes[current].lon - graph.nodes[neighbor].lon, 2));
             if (alt < dist[neighbor]) 
             {
                 dist[neighbor] = alt;
