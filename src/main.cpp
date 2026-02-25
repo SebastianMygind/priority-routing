@@ -125,7 +125,7 @@ int main() {
             {10, 10}, 20, 2, BLACK
         );
 
-        DrawUserInterface(window, dpi);
+        DrawUserInterface(window);
 
         EndDrawing();
     }

@@ -8,7 +8,7 @@
 constexpr float BORDER_SPACING = 0.05;
 constexpr float WINDOW_WIDTH = 0.25;
 
-void DrawUserInterface(const Window &window, Vector2 &dpi) {
+void DrawUserInterface(const Window &window) {
     const auto SCREEN_X = static_cast<float>(window.width);
     const auto SCREEN_Y = static_cast<float>(window.height);
 
