@@ -16,7 +16,7 @@ int main() {
 
     Graph graph;
 
-    ParseOSM("./map.osm", graph);
+    ParseOSM("../data/map.osm", graph);
 
     std::println("{} {}", graph.nodes.size(), graph.edges.size());
 

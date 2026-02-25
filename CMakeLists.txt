@@ -75,6 +75,7 @@ target_link_libraries(
         priority_routing_tests
         PRIVATE
         raylib
+        tinyxml2
         spdlog::spdlog
         GTest::gtest_main
 )
