@@ -1,20 +1,12 @@
-#ifndef PRIORITY_ROUTING_WINDOW_H
-#define PRIORITY_ROUTING_WINDOW_H
+#pragma once
+
 #include <string>
 #include <utility>
 
-
 class Window {
 public:
-    int height, width;
+    int height{720}, width{1280};
     std::string title;
 
-    explicit Window(std::string i_title) {
-        width = 1280;
-        height = 720;
-        title = std::move(i_title);
-    }
+    explicit Window(std::string i_title) : title(std::move(i_title)){}
 };
-
-
-#endif //PRIORITY_ROUTING_WINDOW_H
