@@ -61,7 +61,7 @@ int main() {
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) 
         {
             for (auto& node : graph.nodes) {
-                if (Vector2Distance(MercatorProjection(node.second.lat, node.second.lon, (float)window.height, (float)window.width), mouseWorldPos) < 0.2F) 
+                if (Vector2Distance(MercatorProjection(node.second.lat, node.second.lon, (float)window.height, (float)window.width), mouseWorldPos) < 0.2F)
                 {
                     if (graph.selected_node_a == 0xFFFFFFFF) {              // Click one, A
                         graph.selected_node_a = node.first;
@@ -111,21 +111,13 @@ int main() {
 
         EndMode2D();
 
-        DrawCircleV(GetMousePosition(), 2, DARKGRAY);
-
-        DrawTextEx(
-            GetFontDefault(),
-            TextFormat("[%.2f, %.2f]", mouseWorldPos.x, mouseWorldPos.y),
-            Vector2Add(GetMousePosition(), (Vector2){-44, -24}), 20, 2, BLACK
-        );
-
         DrawTextEx(
             GetFontDefault(),
             TextFormat("Selected Node: \n A:%i, B:%i", graph.selected_node_a, graph.selected_node_b),
             {10, 10}, 20, 2, BLACK
         );
 
-        DrawUserInterface(window);
+        DrawUserInterface(window, mouseWorldPos);
 
         EndDrawing();
     }
