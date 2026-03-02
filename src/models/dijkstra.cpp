@@ -15,28 +15,40 @@ bool Dijkstra::FindPath(
     std::unordered_map<uint64_t, uint64_t> prev;
     std::vector<uint64_t> queue = {start_node};
 
-    for (auto& node : graph.nodes)
-    {
-        dist.insert({node.first, INFINITY});
-        prev.insert({node.first, 0xFFFFFFFF});
-    }
-
-    dist[start_node] = 0;
-
     std::unordered_map< uint64_t, std::vector<uint64_t> > adj_list;
-    for (const auto& edge : graph.ways)
+    for (const Way& way : graph.ways)
     {
-        const auto& nodes = edge.nodeRefs;
+        const std::vector<uint64_t>& nodes = way.nodeRefs;
+
+        if (way.tags.find("highway") == way.tags.end())
+            continue;
+
+        auto tag = way.tags.find("oneway");
+        const bool oneWay = (tag != way.tags.end()) && (tag->second == "yes");
 
         for (size_t i = 0; i + 1 < nodes.size(); ++i)
         {
             uint64_t a = nodes[i];
             uint64_t b = nodes[i + 1];
 
-            adj_list[a].push_back(b);
-            adj_list[b].push_back(a);  // reverse direction
+            dist.insert({a, INFINITY});
+            dist.insert({b, INFINITY});
+            prev.insert({a, 0xFFFFFFFF});
+            prev.insert({b, 0xFFFFFFFF});
+
+            if (oneWay)
+            {
+                adj_list[a].push_back(b);
+            }
+            else
+            {
+                adj_list[a].push_back(b);
+                adj_list[b].push_back(a);
+            }
         }
     }
+
+    dist[start_node] = 0;
 
     while (!queue.empty()) 
     {
@@ -55,10 +67,10 @@ bool Dijkstra::FindPath(
             out_path.clear();
             while (current != 0xFFFFFFFF) 
             {
-                out_path.push_back(current);
+                out_path.insert(current);
                 current = prev[current];
             }
-            std::reverse(out_path.begin(), out_path.end());
+            //std::reverse(out_path.begin(), out_path.end());
             return true;
         }
 

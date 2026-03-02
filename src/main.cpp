@@ -1,6 +1,7 @@
 #include <cstdint>
 #include <print>
 #include <vector>
+#include <thread>
 
 #include "Graph.h"
 #include "Parser.h"
@@ -21,7 +22,6 @@ int main() {
 
     ParseOSM("../data/map.osm", graph);
 
-    std::println("{} {}", graph.nodes.size(), graph.ways.size());
 
     SetTraceLogCallback(SPDLogger);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI | FLAG_VSYNC_HINT);

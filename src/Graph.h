@@ -3,6 +3,8 @@
 #include <unordered_map>
 #include <cstdint>
 #include <string>
+#include <set>
+#include <utility>
 
 #include "raylib.h"
 
@@ -24,7 +26,7 @@ public:
     std::unordered_map<uint64_t, Node> nodes;
     std::vector<Way> ways;
 
-    std::vector<uint64_t> selected_path;
+    std::set<uint64_t> selected_path;
     uint64_t selected_node_a;
     uint64_t selected_node_b;
 

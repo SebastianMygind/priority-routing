@@ -19,20 +19,27 @@ bool ParseOSM(std::string path, Graph& out_graph)
 
     tinyxml2::XMLNode* root = doc.FirstChildElement("osm");
 
+    std::unordered_map<uint64_t, Node> temp_nodes;
+
+    {
+        tinyxml2::XMLElement* element = root->FirstChildElement("node");
+        while (element)
+        {
+            uint64_t id = std::stoull(element->Attribute("id"));
+            double lat = std::stod(element->Attribute("lat"));
+            double lon = std::stod(element->Attribute("lon"));
+
+            temp_nodes.insert({ id, Node{lat, lon} });
+            element = element->NextSiblingElement("node");
+        }
+    }
+
     {
         tinyxml2::XMLElement* element = root->FirstChildElement("way");
 
         while (element)
         {
             Way way = {};
-
-            tinyxml2::XMLElement* child = element->FirstChildElement("nd");
-            while (child)
-            {
-                uint64_t ref = std::stoull(child->Attribute("ref"));
-                way.nodeRefs.push_back(ref);
-                child = child->NextSiblingElement("nd");
-            }
 
             tinyxml2::XMLElement* childTag = element->FirstChildElement("tag");
             while (childTag)
@@ -45,35 +52,27 @@ bool ParseOSM(std::string path, Graph& out_graph)
                 childTag = childTag->NextSiblingElement("tag");
             }
 
-            if (auto tag = way.tags.find("highway"); tag != way.tags.end())
+            auto tag = way.tags.find("highway");
+            const bool isHighway = tag != way.tags.end();
+            
+            tinyxml2::XMLElement* child = element->FirstChildElement("nd");
+            while (child)
             {
-                out_graph.ways.push_back(way);
+                uint64_t ref = std::stoull(child->Attribute("ref"));
+                way.nodeRefs.push_back(ref);
+
+                Node& node = temp_nodes[ref];
+
+                if (isHighway)
+                    out_graph.nodes.insert({ref, node});
+
+                child = child->NextSiblingElement("nd");
             }
             
-            //tinyxml2::XMLElement* tag = element->FirstChildElement("tag");
-            //if (tag)
-            //    way.type = std::string(tag->Attribute("k"));
+            if (isHighway)
+                out_graph.ways.push_back(way);
 
             element = element->NextSiblingElement("way");
-        }
-    }
-
-    {
-        tinyxml2::XMLElement* element = root->FirstChildElement("node");
-
-        while (element)
-        {
-            uint64_t id = std::stoull(element->Attribute("id"));
-            double lat = std::stod(element->Attribute("lat"));
-            double lon = std::stod(element->Attribute("lon"));
-
-            for (Way& edge : out_graph.ways)
-            {
-                if (std::find(edge.nodeRefs.begin(), edge.nodeRefs.end(), id) != edge.nodeRefs.end())
-                    out_graph.nodes.insert({ id, Node{lat, lon} });
-            }
-
-            element = element->NextSiblingElement("node");
         }
     }
     

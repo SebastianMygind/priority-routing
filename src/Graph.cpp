@@ -36,19 +36,21 @@ void Graph::DrawGraph(Camera2D camera, float screenWidth, float screenHeight)
 
             if (outside)
                 continue;
-
+                
             bool inPath =
-                std::find(selected_path.begin(), selected_path.end(), way.nodeRefs[i]) != selected_path.end() &&
-                std::find(selected_path.begin(), selected_path.end(), way.nodeRefs[i + 1]) != selected_path.end();
+                selected_path.contains(way.nodeRefs[i]) && selected_path.contains(way.nodeRefs[i + 1]);
 
             DrawLineEx(
                 p1, 
                 p2, 
                 inPath ? std::fmax(2.5F * (1.0 / camera.zoom), 0.1F) : 0.1F, 
-                inPath ? SKYBLUE : GRAY
+                inPath ? SKYBLUE : BLACK
             );
         }
     }
+
+    if (camera.zoom < 6.F)
+        return;
 
     // Draw node
     for (auto& node : nodes)
@@ -66,8 +68,8 @@ void Graph::DrawGraph(Camera2D camera, float screenWidth, float screenHeight)
 
         bool isSelected = (node.first == selected_node_a || node.first == selected_node_b);
         DrawCircleV(
-            MercatorProjection(node.second.lat, node.second.lon, screenHeight, screenWidth),
-            0.1F, 
+            p1,
+            isSelected ? std::fmax(2.5F * (1.0 / camera.zoom), 0.1F) : 0.1F, 
             isSelected ? SKYBLUE : MAROON
         );
     }
