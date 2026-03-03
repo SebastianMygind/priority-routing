@@ -1,12 +1,14 @@
 #pragma once
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 #include <cstdint>
 #include <string>
 #include <set>
 #include <utility>
 
 #include "raylib.h"
+#include "raymath.h"
 
 struct Node 
 {
@@ -37,3 +39,9 @@ public:
 
 
 inline Vector2 MercatorProjection(double lat, double lon, float screenHeight, float screenWidth);
+
+inline Node InverseMercatorProjection(
+    float screenX,
+    float screenY,
+    float screenHeight,
+    float screenWidth);
