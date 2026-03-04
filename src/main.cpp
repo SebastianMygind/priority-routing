@@ -111,7 +111,7 @@ int main() {
         DrawGrid(100, 50);
         rlPopMatrix();
 
-        graph.DrawGraph(camera, (float)window.width, (float)window.height);
+        graph.DrawGraph(camera, (float)window.width * dpi.x, (float)window.height * dpi.y);
 
         EndMode2D();
 
