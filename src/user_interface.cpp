@@ -106,6 +106,13 @@ void DrawDebugInfo(const Rectangle& userInterface, const Window& window) {
 
 }
 
+// todo! add back positional ui info
+// DrawTextEx(
+//  GetFontDefault(),
+//  TextFormat("Selected Node: \n A:%i, B:%i", graph.selected_node_a, graph.selected_node_b),
+//  {10, 10}, 20, 2, BLACK
+//  );
+
 void DrawRouteInfo(const Rectangle& userInterface, const Vector2 &mousePos) {
 
 

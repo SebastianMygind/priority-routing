@@ -115,12 +115,6 @@ int main() {
 
         EndMode2D();
 
-        DrawTextEx(
-            GetFontDefault(),
-            TextFormat("Selected Node: \n A:%i, B:%i", graph.selected_node_a, graph.selected_node_b),
-            {10, 10}, 20, 2, BLACK
-        );
-
         DrawUserInterface(window, mouseWorldPos);
 
         EndDrawing();
