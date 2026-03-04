@@ -2,6 +2,7 @@
 
 #include "raylib.h"
 #define RAYGUI_IMPLEMENTATION
+#include <algorithm>
 #include <format>
 
 #include "raymath.h"
@@ -17,7 +18,7 @@ void DrawDebugInfo(const Rectangle& userInterface, const Window& window);
 
 void DrawUserInterface(const Window &WINDOW, const Vector2 &mouseWorldPos) {
     // We need to set a minimum size for UI elements which will be done "globally" here
-    constexpr std::pair<float, float> MIN_UI_SIZE = {};
+    constexpr std::pair<float, float> MIN_UI_SIZE = {200.F, 600.F};
 
     const auto SCREEN_X = static_cast<float>(WINDOW.width);
     const auto SCREEN_Y = static_cast<float>(WINDOW.height);
@@ -27,10 +28,10 @@ void DrawUserInterface(const Window &WINDOW, const Vector2 &mouseWorldPos) {
 
     const auto WINDOW_START_X = SCREEN_X * BORDER_SPACING;
     const auto WINDOW_START_Y = SCREEN_Y * BORDER_SPACING;
-    const auto WINDOW_LENGTH_X = SCREEN_X * WINDOW_WIDTH;
-    const auto WINDOW_LENGTH_Y = SCREEN_Y - (2 * WINDOW_START_Y);
+    const auto windowLengthX = std::max(SCREEN_X * WINDOW_WIDTH, MIN_UI_SIZE.first);
+    const auto windowLengthY = std::max(SCREEN_Y - (2 * WINDOW_START_Y), MIN_UI_SIZE.second);
 
-    const Rectangle BOX = {.x=WINDOW_START_X, .y=WINDOW_START_Y, .width=WINDOW_LENGTH_X, .height=WINDOW_LENGTH_Y};
+    const Rectangle BOX = {.x=WINDOW_START_X, .y=WINDOW_START_Y, .width=windowLengthX, .height=windowLengthY};
 
     GuiDrawRectangle(BOX, 3, GRAY, RAYWHITE);
 
@@ -84,10 +85,20 @@ void DrawDebugInfo(const Rectangle& userInterface, const Window& window) {
         {245, 181, 39, 230}
         );
 
+    // Below is the actual debug information, Constant spacing seems better for this so the ofsets are in pixels.
+
+    DrawText(
+        "DEBUG INFO",
+        static_cast<int>(DEBUG_BOX.x) + 10,
+        static_cast<int>(DEBUG_BOX.y) + 10,
+        20,
+        BLACK
+    );
+
     DrawText(
         std::format("FPS: {}", currentFPS).c_str(),
-        200,
-        200,
+        static_cast<int>(DEBUG_BOX.x) + 10,
+        static_cast<int>(DEBUG_BOX.y) + 40,
         18,
         BLACK
     );

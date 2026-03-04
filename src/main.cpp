@@ -51,6 +51,10 @@ int main() {
             window.height = static_cast<int>(static_cast<float>(GetScreenHeight())/ dpi.y);
         }
 
+        if (IsKeyPressed(KEY_D)) {
+            window.showDebug = !window.showDebug;
+        }
+
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) 
         {
             Vector2 delta = GetMouseDelta();
