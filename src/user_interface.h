@@ -2,4 +2,4 @@
 #include "raylib.h"
 #include "Window.h"
 
-void DrawUserInterface(const Window &window, const Vector2 &mouseWorldPos);
+void DrawUserInterface(const Window &WINDOW, const Vector2 &mouseWorldPos);
