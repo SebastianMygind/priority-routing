@@ -11,6 +11,7 @@
 #include "raymath.h"
 #include "spdlog/spdlog.h"
 #include "raylib_logger.h"
+#include "user_interface.h"
 
 int main() {
 
@@ -46,8 +47,12 @@ int main() {
         // Update
         if (IsWindowResized()) 
         {
-            window.width = GetScreenWidth();
-            window.height = GetScreenHeight();
+            window.width = static_cast<int>(static_cast<float>(GetScreenWidth()) / dpi.x);
+            window.height = static_cast<int>(static_cast<float>(GetScreenHeight())/ dpi.y);
+        }
+
+        if (IsKeyPressed(KEY_D)) {
+            window.showDebug = !window.showDebug;
         }
 
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) 
@@ -60,7 +65,7 @@ int main() {
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) 
         {
             for (auto& node : graph.nodes) {
-                if (Vector2Distance(MercatorProjection(node.second.lat, node.second.lon, (float)window.height, (float)window.width), mouseWorldPos) < 0.2F) 
+                if (Vector2Distance(MercatorProjection(node.second.lat, node.second.lon, (float)window.height, (float)window.width), mouseWorldPos) < 0.2F)
                 {
                     if (graph.selected_node_a == 0xFFFFFFFF) {              // Click one, A
                         graph.selected_node_a = node.first;
@@ -106,23 +111,11 @@ int main() {
         DrawGrid(100, 50);
         rlPopMatrix();
 
-        graph.DrawGraph(camera, (float)window.width, (float)window.height);
+        graph.DrawGraph(camera, (float)window.width * dpi.x, (float)window.height * dpi.y);
 
         EndMode2D();
 
-        DrawCircleV(GetMousePosition(), 2, DARKGRAY);
-
-        DrawTextEx(
-            GetFontDefault(),
-            TextFormat("[%.2f, %.2f]", mouseWorldPos.x, mouseWorldPos.y),
-            Vector2Add(GetMousePosition(), (Vector2){-44, -24}), 20, 2, BLACK
-        );
-
-        DrawTextEx(
-            GetFontDefault(),
-            TextFormat("Selected Node: \n A:%i, B:%i", graph.selected_node_a, graph.selected_node_b),
-            {10, 10}, 20, 2, BLACK
-        );
+        DrawUserInterface(window, mouseWorldPos);
 
         EndDrawing();
     }
