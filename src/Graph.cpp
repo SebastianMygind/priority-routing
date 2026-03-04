@@ -1,6 +1,7 @@
 #include "Graph.h"
 
 #include <algorithm>
+#include <cmath>
 
 Graph::Graph() : selected_node_a(UINT32_MAX), selected_node_b(UINT32_MAX)
 {
