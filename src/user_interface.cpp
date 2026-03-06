@@ -12,6 +12,9 @@
 constexpr float BORDER_SPACING = 0.01;
 constexpr float WINDOW_WIDTH = 0.20;
 
+PathfindingModel modelSelection = PathfindingModel::Dijkstra;
+bool modelDropdownEdit = false;
+
 void DrawCursor(const Rectangle& userInterface, const Vector2 &mouseWorldPos, Vector2 mousePos);
 void DrawRouteInfo(const Rectangle& userInterface, const Vector2 &mousePos);
 void DrawDebugInfo(const Rectangle& userInterface, const Window& window);
@@ -118,4 +121,19 @@ void DrawRouteInfo(const Rectangle& userInterface, const Vector2 &mousePos) {
 
 
     // GuiTextBox();
+
+    if (GuiDropdownBox(
+        (Rectangle){
+            userInterface.x + 10, 
+            userInterface.y + 10, 
+            userInterface.width - 20, 
+            40
+        }, 
+        "Dijkstra;A Star", 
+        reinterpret_cast<int*>(&modelSelection), 
+        modelDropdownEdit))
+    { 
+        modelDropdownEdit = !modelDropdownEdit;
+    }
+
 }

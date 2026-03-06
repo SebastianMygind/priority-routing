@@ -4,7 +4,7 @@
 
 #include "Graph.h"
 #include "Parser.h"
-#include "PathFinding.h"
+#include "path_finder.h"
 #include "raylib.h"
 #include "Window.h"
 #include "rlgl.h"
@@ -71,7 +71,7 @@ int main() {
                         graph.selected_node_a = node.first;
                     } else if (graph.selected_node_b == 0xFFFFFFFF) {       // Click two, B, calculate path
                         graph.selected_node_b = node.first;
-                        Djikstra(graph, graph.selected_node_a, graph.selected_node_b, graph.selected_path);
+                        PathFinder(graph, modelSelection);
                     } else {                                                // Click three, reset
                         graph.selected_node_a = 0xFFFFFFFF;
                         graph.selected_node_b = 0xFFFFFFFF;
