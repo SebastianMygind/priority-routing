@@ -120,6 +120,9 @@ void DrawRouteInfo(const Rectangle& userInterface, const Vector2 &mousePos, UISt
 
     // GuiTextBox();
 
+    // Model selection dropdown
+
+    int modelSelectionIndex = static_cast<int>(state.modelSelection);
     if (GuiDropdownBox(
         (Rectangle){
             userInterface.x + 10, 
@@ -128,10 +131,10 @@ void DrawRouteInfo(const Rectangle& userInterface, const Vector2 &mousePos, UISt
             40
         }, 
         "Dijkstra;A Star", 
-        reinterpret_cast<int*>(&state.modelSelection), 
+        &modelSelectionIndex, 
         state.modelDropdownEdit))
     { 
         state.modelDropdownEdit = !state.modelDropdownEdit;
+        state.modelSelection = static_cast<PathfindingModel>(modelSelectionIndex);
     }
-
 }

@@ -16,6 +16,7 @@ void PathFinder(Graph& graph, PathfindingModel model)
         //    break;
         default:
             spdlog::error("Invalid pathfinding model selected");
+            return;
     }
 
     pathfinder->FindPath(
