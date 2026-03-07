@@ -1,11 +1,15 @@
-#include "PathFinding.h"
+#include "dijkstra.h"
 #include <cmath>
 #include <cstdint>
 #include <vector>
 #include <unordered_map>
 #include <algorithm>
 
-bool Djikstra(Graph& graph, uint64_t start_node, uint64_t end_node, std::vector<uint64_t>& out_path)
+bool Dijkstra::FindPath(
+    Graph& graph,
+    uint64_t start_node,
+    uint64_t end_node,
+    std::vector<uint64_t>& out_path)
 {
     std::unordered_map<uint64_t, double>   dist;
     std::unordered_map<uint64_t, uint64_t> prev;

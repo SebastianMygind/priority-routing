@@ -4,7 +4,7 @@
 
 #include "Graph.h"
 #include "Parser.h"
-#include "PathFinding.h"
+#include "path_finder.h"
 #include "raylib.h"
 #include "Window.h"
 #include "rlgl.h"
@@ -14,6 +14,8 @@
 #include "user_interface.h"
 
 int main() {
+
+    UIState uiState;
 
     Graph graph;
 
@@ -71,7 +73,7 @@ int main() {
                         graph.selected_node_a = node.first;
                     } else if (graph.selected_node_b == 0xFFFFFFFF) {       // Click two, B, calculate path
                         graph.selected_node_b = node.first;
-                        Djikstra(graph, graph.selected_node_a, graph.selected_node_b, graph.selected_path);
+                        PathFinder(graph, uiState.modelSelection);
                     } else {                                                // Click three, reset
                         graph.selected_node_a = 0xFFFFFFFF;
                         graph.selected_node_b = 0xFFFFFFFF;
@@ -115,7 +117,7 @@ int main() {
 
         EndMode2D();
 
-        DrawUserInterface(window, mouseWorldPos);
+        DrawUserInterface(window, mouseWorldPos, uiState);
 
         EndDrawing();
     }
