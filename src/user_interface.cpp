@@ -12,14 +12,12 @@
 constexpr float BORDER_SPACING = 0.01;
 constexpr float WINDOW_WIDTH = 0.20;
 
-PathfindingModel modelSelection = PathfindingModel::Dijkstra;
-bool modelDropdownEdit = false;
 
 void DrawCursor(const Rectangle& userInterface, const Vector2 &mouseWorldPos, Vector2 mousePos);
-void DrawRouteInfo(const Rectangle& userInterface, const Vector2 &mousePos);
+void DrawRouteInfo(const Rectangle& userInterface, const Vector2 &mousePos, UIState &state);
 void DrawDebugInfo(const Rectangle& userInterface, const Window& window);
 
-void DrawUserInterface(const Window &WINDOW, const Vector2 &mouseWorldPos) {
+void DrawUserInterface(const Window &WINDOW, const Vector2 &mouseWorldPos, UIState &state) {
     // We need to set a minimum size for UI elements which will be done "globally" here
     constexpr std::pair<float, float> MIN_UI_SIZE = {200.F, 600.F};
 
@@ -41,7 +39,7 @@ void DrawUserInterface(const Window &WINDOW, const Vector2 &mouseWorldPos) {
     // These elements make up the UI and must not overlap as that will cause collisions.
     DrawCursor(BOX, mouseWorldPos, MOUSE_POS);
     DrawDebugInfo(BOX, WINDOW);
-    DrawRouteInfo(BOX, MOUSE_POS);
+    DrawRouteInfo(BOX, MOUSE_POS, state);
 }
 
 // Only draw the cursor if we are not hovering over UI elements.
@@ -116,7 +114,7 @@ void DrawDebugInfo(const Rectangle& userInterface, const Window& window) {
 //  {10, 10}, 20, 2, BLACK
 //  );
 
-void DrawRouteInfo(const Rectangle& userInterface, const Vector2 &mousePos) {
+void DrawRouteInfo(const Rectangle& userInterface, const Vector2 &mousePos, UIState &state) {
 
 
 
@@ -130,10 +128,10 @@ void DrawRouteInfo(const Rectangle& userInterface, const Vector2 &mousePos) {
             40
         }, 
         "Dijkstra;A Star", 
-        reinterpret_cast<int*>(&modelSelection), 
-        modelDropdownEdit))
+        reinterpret_cast<int*>(&state.modelSelection), 
+        state.modelDropdownEdit))
     { 
-        modelDropdownEdit = !modelDropdownEdit;
+        state.modelDropdownEdit = !state.modelDropdownEdit;
     }
 
 }

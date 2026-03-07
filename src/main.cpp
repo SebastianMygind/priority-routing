@@ -15,6 +15,8 @@
 
 int main() {
 
+    UIState uiState;
+
     Graph graph;
 
     ParseOSM("../data/map.osm", graph);
@@ -71,7 +73,7 @@ int main() {
                         graph.selected_node_a = node.first;
                     } else if (graph.selected_node_b == 0xFFFFFFFF) {       // Click two, B, calculate path
                         graph.selected_node_b = node.first;
-                        PathFinder(graph, modelSelection);
+                        PathFinder(graph, uiState.modelSelection);
                     } else {                                                // Click three, reset
                         graph.selected_node_a = 0xFFFFFFFF;
                         graph.selected_node_b = 0xFFFFFFFF;
@@ -115,7 +117,7 @@ int main() {
 
         EndMode2D();
 
-        DrawUserInterface(window, mouseWorldPos);
+        DrawUserInterface(window, mouseWorldPos, uiState);
 
         EndDrawing();
     }

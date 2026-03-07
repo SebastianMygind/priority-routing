@@ -4,5 +4,12 @@
 #include "path_finder.h"
 
 
-extern PathfindingModel modelSelection;
-void DrawUserInterface(const Window &WINDOW, const Vector2 &mouseWorldPos);
+struct UIState {
+    PathfindingModel modelSelection = PathfindingModel::Dijkstra;
+    bool modelDropdownEdit = false;
+};
+
+
+void DrawUserInterface(const Window &WINDOW,
+                       const Vector2 &mouseWorldPos,
+                       UIState &state);
