@@ -83,8 +83,8 @@ void DrawDebugInfo(const Rectangle &uiRect, const Window &window) {
     GuiDrawRectangle(
         debugRect,
         2,
-        {.r=150, .g=50, .b=50, .a=255},
-        {.r=245, .g=181, .b=39, .a=230}
+        {.r = 150, .g = 50, .b = 50, .a = 255},
+        {.r = 245, .g = 181, .b = 39, .a = 230}
     );
 
     // Below is the actual debug information, Constant spacing seems better for this so the offsets are in pixels.
@@ -131,10 +131,10 @@ void DrawRouteInfo(const Rectangle& uiRect, const Vector2 &mPos, const Graph &gr
     int modelSelectionIndex = static_cast<int>(state.modelSelection);
     if (GuiDropdownBox(
         (Rectangle){
-            .x=uiRect.x + 10,
-            .y=uiRect.y + 10,
-            .width=uiRect.width - 20,
-            .height=40
+            .x = uiRect.x + 10,
+            .y = uiRect.y + 50,
+            .width = uiRect.width - 20,
+            .height = 40
         },
         "Dijkstra;A Star",
         &modelSelectionIndex,
