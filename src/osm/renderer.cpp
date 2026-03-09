@@ -7,7 +7,7 @@
 
 #include <array>
 
-OSMRenderer::OSMRenderer(OSMGraph* graph) : graph(graph), tree({11.271273842, 55.1959946, 13.008736992, 56.13105965}, 8)
+OSMRenderer::OSMRenderer(OSMGraph* graph) : m_pGraph(graph), m_Tree({11.271273842, 55.1959946, 13.008736992, 56.13105965}, 8)
 {
 }
 
@@ -15,7 +15,7 @@ void OSMRenderer::BuildQuadTree()
 {
     spdlog::info("Building QuadTree..");
 
-    for (const auto& wayPair : graph->ways)
+    for (const auto& wayPair : m_pGraph->ways)
     {
         const uint64_t& id = wayPair.first;
         const OSMWay& way = wayPair.second;
@@ -23,12 +23,12 @@ void OSMRenderer::BuildQuadTree()
         bool isHighway = way.tags.find("highway") != way.tags.end();
 
         AABB box;
-        OSMNode& node = graph->nodes[way.nodeRefs[0]];
+        OSMNode& node = m_pGraph->nodes[way.nodes[0]];
         box.minX = box.maxX = node.lon;
         box.minY = box.maxY = node.lat;
-        for (const uint64_t& nodeRef : way.nodeRefs) 
+        for (const uint64_t& nodeRef : way.nodes) 
         {
-            OSMNode& node = graph->nodes[nodeRef];
+            OSMNode& node = m_pGraph->nodes[nodeRef];
             box.minX = std::min(box.minX, node.lon);
             box.maxX = std::max(box.maxX, node.lon);
             box.minY = std::min(box.minY, node.lat);
@@ -39,22 +39,22 @@ void OSMRenderer::BuildQuadTree()
                 MapObject obj;
                 obj.id = nodeRef;
                 obj.bounds = {node.lon, node.lat, node.lon, node.lat};
-                tree.InsertNode(obj);
+                m_Tree.InsertNode(obj);
             }
         }
 
         MapObject wayobj;
         wayobj.id = id;
         wayobj.bounds = box;
-        tree.InsertWay(wayobj);
+        m_Tree.InsertWay(wayobj);
     }
 }
 
-void OSMRenderer::DrawGraph(Camera2D camera, float screenWidth, float screenHeight)
+void OSMRenderer::DrawGraph(Camera2D camera, float screenWidth, float screenHeight, Vector2 cursor)
 {
-    std::unordered_map<uint64_t, OSMNode>& nodes = graph->nodes;
-    std::unordered_map<uint64_t, OSMWay>&  ways = graph->ways;
-    std::set<uint64_t>&  selected_path = graph->selected_path;
+    std::unordered_map<uint64_t, OSMNode>& nodes = m_pGraph->nodes;
+    std::unordered_map<uint64_t, OSMWay>&  ways = m_pGraph->ways;
+    std::set<uint64_t>&  selected_path = m_pGraph->selectedPath;
 
     Vector2 topLeft     = GetScreenToWorld2D({ 0,0 }, camera);
     Vector2 bottomRight = GetScreenToWorld2D({ screenWidth, screenHeight }, camera);
@@ -71,7 +71,7 @@ void OSMRenderer::DrawGraph(Camera2D camera, float screenWidth, float screenHeig
     std::vector<MapObject> waysToRender;
     nodesToRender.reserve(4096);
     waysToRender.reserve(4096);
-    tree.Query({minLon, minLat, maxLon, maxLat}, &nodesToRender, &waysToRender);
+    m_Tree.Query({minLon, minLat, maxLon, maxLat}, &nodesToRender, &waysToRender);
 
     for (const MapObject& wayObj : waysToRender) 
     {   
@@ -94,7 +94,7 @@ void OSMRenderer::DrawGraph(Camera2D camera, float screenWidth, float screenHeig
             rlBegin(RL_TRIANGLES);
             rlColor4ub(200, 200, 200, 255);
 
-            for (Vector2& point : building)
+            for (const Vector2& point : building)
             {
                 rlVertex2f(point.x, point.y);
             }
@@ -125,10 +125,10 @@ void OSMRenderer::DrawGraph(Camera2D camera, float screenWidth, float screenHeig
                 width = 0.05F;
             }
             
-            for (size_t i = 0; i < way.nodeRefs.size() - 1; i++)
+            for (size_t i = 0; i < way.nodes.size() - 1; i++)
             {
-                OSMNode& node1 = nodes[way.nodeRefs[i]];
-                OSMNode& node2 = nodes[way.nodeRefs[i + 1]];
+                OSMNode& node1 = nodes[way.nodes[i]];
+                OSMNode& node2 = nodes[way.nodes[i + 1]];
 
                 if ((node1.lat < minLat && node2.lat < minLat) ||
                     (node1.lat > maxLat && node2.lat > maxLat) ||
@@ -142,7 +142,7 @@ void OSMRenderer::DrawGraph(Camera2D camera, float screenWidth, float screenHeig
                 Vector2 p2 = MercatorProjection(node2.lat, node2.lon);
                     
                 bool inPath =
-                    selected_path.contains(way.nodeRefs[i]) && selected_path.contains(way.nodeRefs[i + 1]);
+                    selected_path.contains(way.nodes[i]) && selected_path.contains(way.nodes[i + 1]);
 
                 DrawLineEx(
                     p1, 
@@ -157,7 +157,7 @@ void OSMRenderer::DrawGraph(Camera2D camera, float screenWidth, float screenHeig
     if (camera.zoom < 7.F)
         return;
 
-    // Draw node
+    // Draw nodes
     for (MapObject& nodeObj : nodesToRender)
     {
         uint64_t id = nodeObj.id;
@@ -173,10 +173,18 @@ void OSMRenderer::DrawGraph(Camera2D camera, float screenWidth, float screenHeig
 
         Vector2 p1 = MercatorProjection(node.lat, node.lon);
 
-        bool isSelected = (id == graph->selected_node_a || id == graph->selected_node_b);
+        float distToCursor = Vector2Distance(p1, cursor);
+
+        if (distToCursor > 30.0F)
+            continue;
+
+        bool isSelected = (id == m_pGraph->GetNodeA() || id == m_pGraph->GetNodeB());
+        bool isHovering = distToCursor < 0.2F;
+
+
         DrawCircleV(
             p1,
-            isSelected ? std::fmax(2.5F * (1.0 / camera.zoom), 0.1F) : 0.1F, 
+            isHovering ? 0.5F * (1.F / camera.zoom) * 25.F : (2.F / (distToCursor + 6.F)) * (1.F / camera.zoom) * 25.F, 
             isSelected ? SKYBLUE : MAROON
         );
     }
@@ -196,9 +204,9 @@ Polygon& OSMRenderer::CachePolygonSingle(uint64_t wayId, const OSMWay& way)
     Polygon shape;
     std::vector<std::vector<Point>> polygon(1);
 
-    for (size_t i = 0; i < way.nodeRefs.size() - 1; i++)
+    for (size_t i = 0; i < way.nodes.size() - 1; i++)
     {
-        OSMNode& n1 = graph->nodes[way.nodeRefs[i]];
+        OSMNode& n1 = m_pGraph->nodes[way.nodes[i]];
         Vector2 p1 = MercatorProjection(n1.lat, n1.lon);
         Point point = {p1.x, p1.y};
         polygon[0].push_back(point);
@@ -217,7 +225,6 @@ Polygon& OSMRenderer::CachePolygonSingle(uint64_t wayId, const OSMWay& way)
     auto polygonIt2 = m_CachedPolygons.find(wayId); 
 
     return polygonIt2->second;
-
 }
 
 
@@ -260,8 +267,8 @@ bool QuadTree::InsertNode(const MapObject& obj)
     return false;
 }
 
-bool QuadTree::InsertWay(const MapObject& obj) {
-
+bool QuadTree::InsertWay(const MapObject& obj) 
+{
     if (!boundary.intersects(obj.bounds))
         return false;
 
@@ -287,7 +294,6 @@ bool QuadTree::InsertWay(const MapObject& obj) {
         if (inSE) return se->InsertWay(obj);
     }
 
-    // overlaps multiple children → keep here
     ways.push_back(obj);
     return true;
 }

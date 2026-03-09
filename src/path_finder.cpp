@@ -19,9 +19,5 @@ void PathFinder(OSMGraph& graph, PathfindingModel model)
             return;
     }
 
-    pathfinder->FindPath(
-        graph,
-        graph.selected_node_a,
-        graph.selected_node_b,
-        graph.selected_path);
+    pathfinder->FindPath(graph);
 };

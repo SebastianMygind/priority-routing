@@ -19,10 +19,9 @@ int main() {
     UIState uiState;
 
     OSMGraph graph;
-    OSMRenderer renderer(&graph);
+    graph.ParseXML("../data/Copenhagen.osm");
 
-    ParseOSM("../data/Copenhagen.osm", graph);
-
+    OSMRenderer renderer(&graph); 
     renderer.BuildQuadTree();
 
     SetTraceLogCallback(SPDLogger);
@@ -78,21 +77,22 @@ int main() {
             double maxLon = bottomRightLatLon.lon;
 
             std::vector<MapObject> visibleNodes;
-            renderer.tree.Query({minLon, minLat, maxLon, maxLat}, &visibleNodes, nullptr);
+            renderer.m_Tree.Query({minLon, minLat, maxLon, maxLat}, &visibleNodes, nullptr);
 
-            for (MapObject& obj : visibleNodes) {
-                OSMNode& node = graph.nodes[obj.id];
+            for (MapObject& obj : visibleNodes) 
+            {
+                OSMNode node = graph.GetNode(obj.id);
                 if (Vector2Distance(MercatorProjection(node.lat, node.lon), mouseWorldPos) < 0.2F)
                 {
-                    if (graph.selected_node_a == 0xFFFFFFFF) {              // Click one, A
-                        graph.selected_node_a = obj.id;
-                    } else if (graph.selected_node_b == 0xFFFFFFFF) {       // Click two, B, calculate path
-                        graph.selected_node_b = obj.id;
+                    if (graph.GetNodeA() == 0xFFFFFFFF) {              // Click one, A
+                        graph.SetNodeA(obj.id);
+                    } else if (graph.GetNodeB() == 0xFFFFFFFF) {       // Click two, B, calculate path
+                        graph.SetNodeB(obj.id);
                         PathFinder(graph, uiState.modelSelection);
                     } else {                                                // Click three, reset
-                        graph.selected_node_a = 0xFFFFFFFF;
-                        graph.selected_node_b = 0xFFFFFFFF;
-                        graph.selected_path.clear();
+                        graph.SetNodeA(0xFFFFFFFF);
+                        graph.SetNodeB(0xFFFFFFFF);
+                        graph.ClearPath();
                     }
                     break;
                 }
@@ -113,7 +113,7 @@ int main() {
         ClearBackground(RAYWHITE);
 
         BeginMode2D(camera);
-        renderer.DrawGraph(camera, (float)window.width * dpi.x, (float)window.height * dpi.y);
+        renderer.DrawGraph(camera, (float)window.width * dpi.x, (float)window.height * dpi.y, mouseWorldPos);
         EndMode2D();
 
         DrawUserInterface(window, mouseWorldPos, graph, uiState);

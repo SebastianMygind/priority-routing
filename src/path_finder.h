@@ -6,11 +6,7 @@ class IPathFinder
 public:
     virtual ~IPathFinder() = default;
 
-    virtual bool FindPath(
-        OSMGraph& graph,
-        uint64_t start_node,
-        uint64_t end_node,
-        std::set<uint64_t>& out_path) = 0;
+    virtual bool FindPath(OSMGraph& graph) = 0;
 };
 
 enum class PathfindingModel {

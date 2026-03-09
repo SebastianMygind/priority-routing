@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <memory>
 
+typedef std::vector<Vector2> Polygon;
+
 struct AABB 
 {
     double minX, minY;
@@ -32,11 +34,13 @@ struct AABB
     }
 };
 
+
 struct MapObject 
 {
     uint64_t id;
     AABB bounds;
 };
+
 
 class QuadTree 
 {
@@ -64,19 +68,20 @@ private:
     void Subdivide();
 };
 
+
 class OSMRenderer
 {
 public:
     OSMRenderer(OSMGraph* graph);
 
     void BuildQuadTree();
-    void DrawGraph(Camera2D camera, float screenWidth, float screenHeight);
+    void DrawGraph(Camera2D camera, float screenWidth, float screenHeight, Vector2 cursor);
 
 private:
     Polygon& CachePolygonSingle(uint64_t wayId, const OSMWay& way);
 
 public:
-    OSMGraph* graph;
-    QuadTree tree;
+    OSMGraph* m_pGraph;
+    QuadTree m_Tree;
     std::unordered_map<uint64_t, Polygon> m_CachedPolygons; // WayID, Polygon data
 };
