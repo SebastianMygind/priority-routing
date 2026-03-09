@@ -67,7 +67,7 @@ bool Dijkstra::FindPath(
     Graph& graph,
     uint64_t start_node,
     uint64_t end_node,
-    std::vector<uint64_t>& out_path)
+    std::set<uint64_t>& out_path)
 {
     std::unordered_map<uint64_t, double>   dist;
     std::unordered_map<uint64_t, uint64_t> prev;
