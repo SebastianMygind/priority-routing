@@ -4,7 +4,6 @@
 #include "spdlog/spdlog.h"
 
 inline void SPDLogger(const int msgType, const char *msg, va_list args) {
-
     // 1. Determine the length of the formatted string
     va_list argsCopy;
     va_copy(argsCopy, args);
@@ -20,12 +19,18 @@ inline void SPDLogger(const int msgType, const char *msg, va_list args) {
 
     // 3. Pass to spdlog
     switch (msgType) {
-        case LOG_TRACE:   spdlog::trace(formattedMsg);   break;
-        case LOG_DEBUG:   spdlog::debug(formattedMsg);   break;
-        case LOG_INFO:    spdlog::info(formattedMsg);    break;
-        case LOG_WARNING: spdlog::warn(formattedMsg);    break;
-        case LOG_ERROR:   spdlog::error(formattedMsg);   break;
-        case LOG_FATAL:   spdlog::critical(formattedMsg); break;
+        case LOG_TRACE: spdlog::trace(formattedMsg);
+            break;
+        case LOG_DEBUG: spdlog::debug(formattedMsg);
+            break;
+        case LOG_INFO: spdlog::info(formattedMsg);
+            break;
+        case LOG_WARNING: spdlog::warn(formattedMsg);
+            break;
+        case LOG_ERROR: spdlog::error(formattedMsg);
+            break;
+        case LOG_FATAL: spdlog::critical(formattedMsg);
+            break;
         default: break;
     }
 }

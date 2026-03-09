@@ -10,5 +10,6 @@ public:
     bool showGrid = true;
     bool showDebug = true;
 
-    explicit Window(std::string i_title) : title(std::move(i_title)){}
+    explicit Window(std::string i_title) : title(std::move(i_title)) {
+    }
 };
