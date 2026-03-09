@@ -41,16 +41,16 @@ set(CORE_SOURCES
         src/Window.cpp
         src/Window.h
         src/raylib_logger.h
-        src/Graph.cpp
-        src/Graph.h
         src/path_finder.cpp
         src/path_finder.h
-        src/Parser.cpp
-        src/Parser.h
         src/user_interface.cpp
         src/user_interface.h
         src/models/dijkstra.cpp
         src/models/dijkstra.h
+        src/osm/graph.cpp
+        src/osm/graph.h
+        src/osm/renderer.cpp
+        src/osm/renderer.h
         vendor/raygui.h
 )
 

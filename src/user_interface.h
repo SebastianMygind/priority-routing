@@ -1,5 +1,5 @@
 #pragma once
-#include "Graph.h"
+#include "osm/graph.h"
 #include "raylib.h"
 #include "Window.h"
 #include "path_finder.h"

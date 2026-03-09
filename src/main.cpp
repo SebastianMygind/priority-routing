@@ -3,8 +3,8 @@
 #include <vector>
 #include <thread>
 
-#include "Graph.h"
-#include "Parser.h"
+#include "osm/graph.h"
+#include "osm/renderer.h"
 #include "path_finder.h"
 #include "raylib.h"
 #include "Window.h"
@@ -33,7 +33,7 @@ int main() {
 
     InitWindow(window.width, window.height, window.title.c_str());
     // Setup Application logic at this stage.
-    Camera2D camera = {0};
+    Camera2D camera = {};
     camera.zoom = 1.0F;
 
 #ifdef __APPLE__
@@ -78,7 +78,7 @@ int main() {
             double maxLon = bottomRightLatLon.lon;
 
             std::vector<MapObject> visibleNodes;
-            renderer.tree.query({minLon, minLat, maxLon, maxLat}, &visibleNodes, nullptr);
+            renderer.tree.Query({minLon, minLat, maxLon, maxLat}, &visibleNodes, nullptr);
 
             for (MapObject& obj : visibleNodes) {
                 OSMNode& node = graph.nodes[obj.id];

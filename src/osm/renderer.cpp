@@ -1,22 +1,13 @@
-﻿#include "Graph.h"
+#include "renderer.h"
 #include "tags.h"
 #include "earcut.hpp"
-
-#include <algorithm>
-#include <cmath>
-#include <array>
 
 #include "rlgl.h"
 #include "spdlog/spdlog.h"
 
-OSMGraph::OSMGraph() : selected_node_a(UINT32_MAX), selected_node_b(UINT32_MAX)
+OSMRenderer::OSMRenderer(OSMGraph* graph) : graph(graph), tree({11.271273842, 55.1959946, 13.008736992, 56.13105965}, 8)
 {
 }
-
-OSMRenderer::OSMRenderer(OSMGraph* graph) : tree({11.271273842, 55.1959946, 13.008736992, 56.13105965}, 8), graph(graph)
-{
-}
-
 
 void OSMRenderer::BuildQuadTree()
 {
@@ -46,14 +37,14 @@ void OSMRenderer::BuildQuadTree()
                 MapObject obj;
                 obj.id = nodeRef;
                 obj.bounds = {node.lon, node.lat, node.lon, node.lat};
-                tree.insertnode(obj);
+                tree.InsertNode(obj);
             }
         }
 
         MapObject wayobj;
         wayobj.id = id;
         wayobj.bounds = box;
-        tree.insertway(wayobj);
+        tree.InsertWay(wayobj);
     }
 }
 
@@ -78,15 +69,12 @@ void OSMRenderer::DrawGraph(Camera2D camera, float screenWidth, float screenHeig
     std::vector<MapObject> waysToRender;
     nodesToRender.reserve(4096);
     waysToRender.reserve(4096);
-    tree.query({minLon, minLat, maxLon, maxLat}, &nodesToRender, &waysToRender);
+    tree.Query({minLon, minLat, maxLon, maxLat}, &nodesToRender, &waysToRender);
 
     for (const MapObject& wayObj : waysToRender) 
     {   
         const uint64_t& id = wayObj.id;
         const OSMWay& way = ways[id];
-
-        OSMNode& firstNode = nodes[way.nodeRefs.front()];
-        OSMNode& lastNode = nodes[way.nodeRefs.back()];
 
         const AABB& bounds = wayObj.bounds;
 
@@ -135,7 +123,7 @@ void OSMRenderer::DrawGraph(Camera2D camera, float screenWidth, float screenHeig
                 width = 0.05F;
             }
             
-            for (uint32_t i = 0; i < way.nodeRefs.size() - 1; i++)
+            for (size_t i = 0; i < way.nodeRefs.size() - 1; i++)
             {
                 OSMNode& node1 = nodes[way.nodeRefs[i]];
                 OSMNode& node2 = nodes[way.nodeRefs[i + 1]];
@@ -206,7 +194,7 @@ Polygon& OSMRenderer::CachePolygonSingle(uint64_t wayId, const OSMWay& way)
     Polygon shape;
     std::vector<std::vector<Point>> polygon(1);
 
-    for (int i = 0; i < way.nodeRefs.size() - 1; i++)
+    for (size_t i = 0; i < way.nodeRefs.size() - 1; i++)
     {
         OSMNode& n1 = graph->nodes[way.nodeRefs[i]];
         Vector2 p1 = MercatorProjection(n1.lat, n1.lon);
@@ -216,7 +204,7 @@ Polygon& OSMRenderer::CachePolygonSingle(uint64_t wayId, const OSMWay& way)
 
     std::vector<uint16_t> indices = mapbox::earcut<uint16_t>(polygon);
 
-    for (int i = 0; i < indices.size(); i++)
+    for (size_t i = 0; i < indices.size(); i++)
     {
         Point& v = polygon[0][indices[i]];
         shape.push_back({v[0], v[1]});
@@ -231,70 +219,7 @@ Polygon& OSMRenderer::CachePolygonSingle(uint64_t wayId, const OSMWay& way)
 }
 
 
-
-Vector2 MercatorProjection(double lat, double lon)
-{
-    double centerLatitude = 55.6539977;
-    double centerLongitude = 12.5422305;
-
-    //constexpr double _PI = 3.14159265358979323846;
-
-    // Clamp latitude to avoid infinity
-    lat       = std::clamp(lat,      -85.05112878, 85.05112878);
-    centerLatitude = std::clamp(centerLatitude,-85.05112878, 85.05112878);
-
-    // Convert to radians
-    double latRad        = lat        * PI / 180.0;
-    double lonRad        = lon       * PI / 180.0;
-    double centerLatRad  = centerLatitude  * PI / 180.0;
-    double centerLonRad  = centerLongitude * PI / 180.0;
-
-    // Proper Mercator projection
-    double x  = lonRad;
-    double y  = std::log(std::tan(PI / 4.0 + latRad / 2.0));
-
-    double cx = centerLonRad;
-    double cy = std::log(std::tan(PI / 4.0 + centerLatRad / 2.0));
-
-    return {
-        static_cast<float>((x - cx) * 500000.0),
-        static_cast<float>((cy - y) * 500000.0) // flip Y for screen coords
-    };
-
-}
-
-Coord InverseMercatorProjection(float worldX, float worldY)
-{
-    double centerLatitude  = 55.6539977;
-    double centerLongitude = 12.5422305;
-
-    constexpr double scale = 500000.0;
-
-    // Clamp center latitude (same as forward projection)
-    centerLatitude = std::clamp(centerLatitude, -85.05112878, 85.05112878);
-
-    double centerLatRad = centerLatitude  * PI / 180.0;
-    double centerLonRad = centerLongitude * PI / 180.0;
-
-    // Reconstruct Mercator center Y
-    double cy = std::log(std::tan(PI / 4.0 + centerLatRad / 2.0));
-
-    // --- Invert screen transform ---
-    double x = (worldX / scale) + centerLonRad;
-    double y = cy - (worldY / scale);
-
-    // --- Invert Mercator ---
-    double lonRad = x;
-    double latRad = 2.0 * std::atan(std::exp(y)) - PI / 2.0;
-
-    return {
-        latRad * 180.0 / PI,
-        lonRad * 180.0 / PI
-    };
-}
-
-
-void QuadTree::subdivide() 
+void QuadTree::Subdivide() 
 {
     double midX = (boundary.minX + boundary.maxX) / 2.0;
     double midY = (boundary.minY + boundary.maxY) / 2.0;
@@ -312,7 +237,7 @@ void QuadTree::subdivide()
     divided = true;
 }
 
-bool QuadTree::insertnode(const MapObject& obj) 
+bool QuadTree::InsertNode(const MapObject& obj) 
 {
     if (!boundary.intersects(obj.bounds))
         return false;
@@ -323,17 +248,17 @@ bool QuadTree::insertnode(const MapObject& obj)
     }
 
     if (!divided)
-        subdivide();
+        Subdivide();
 
-    if (nw->insertnode(obj)) return true;
-    if (ne->insertnode(obj)) return true;
-    if (sw->insertnode(obj)) return true;
-    if (se->insertnode(obj)) return true;
+    if (nw->InsertNode(obj)) return true;
+    if (ne->InsertNode(obj)) return true;
+    if (sw->InsertNode(obj)) return true;
+    if (se->InsertNode(obj)) return true;
 
     return false;
 }
 
-bool QuadTree::insertway(const MapObject& obj) {
+bool QuadTree::InsertWay(const MapObject& obj) {
 
     if (!boundary.intersects(obj.bounds))
         return false;
@@ -344,7 +269,7 @@ bool QuadTree::insertway(const MapObject& obj) {
     }
 
     if (!divided)
-        subdivide();
+        Subdivide();
 
     bool inNW = nw->boundary.contains(obj.bounds);
     bool inNE = ne->boundary.contains(obj.bounds);
@@ -354,10 +279,10 @@ bool QuadTree::insertway(const MapObject& obj) {
     int count = inNW + inNE + inSW + inSE;
 
     if (count == 1) {
-        if (inNW) return nw->insertway(obj);
-        if (inNE) return ne->insertway(obj);
-        if (inSW) return sw->insertway(obj);
-        if (inSE) return se->insertway(obj);
+        if (inNW) return nw->InsertWay(obj);
+        if (inNE) return ne->InsertWay(obj);
+        if (inSW) return sw->InsertWay(obj);
+        if (inSE) return se->InsertWay(obj);
     }
 
     // overlaps multiple children → keep here
@@ -365,7 +290,7 @@ bool QuadTree::insertway(const MapObject& obj) {
     return true;
 }
 
-void QuadTree::query(const AABB& range, std::vector<MapObject>* foundNodes, std::vector<MapObject>* foundWays) const 
+void QuadTree::Query(const AABB& range, std::vector<MapObject>* foundNodes, std::vector<MapObject>* foundWays) const 
 {
     if (!boundary.intersects(range))
         return;
@@ -391,8 +316,8 @@ void QuadTree::query(const AABB& range, std::vector<MapObject>* foundNodes, std:
     if (!divided)
         return;
 
-    nw->query(range, foundNodes, foundWays);
-    ne->query(range, foundNodes, foundWays);
-    sw->query(range, foundNodes, foundWays);
-    se->query(range, foundNodes, foundWays);
+    nw->Query(range, foundNodes, foundWays);
+    ne->Query(range, foundNodes, foundWays);
+    sw->Query(range, foundNodes, foundWays);
+    se->Query(range, foundNodes, foundWays);
 }

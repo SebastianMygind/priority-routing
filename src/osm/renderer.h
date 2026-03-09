@@ -1,18 +1,11 @@
 #pragma once
-#include <vector>
-#include <unordered_map>
-#include <unordered_set>
-#include <cstdint>
-#include <string>
-#include <set>
-#include <utility>
-#include <memory>
-
+#include "graph.h"
 #include "raylib.h"
 #include "raymath.h"
 
+#include <vector>
+#include <unordered_map>
 
-// Quad-tree bounding box
 struct AABB 
 {
     double minX, minY;
@@ -50,13 +43,13 @@ public:
     QuadTree(const AABB& boundary, int capacity)
         : boundary(boundary), capacity(capacity), divided(false) {}
 
-    bool insertnode(const MapObject& obj);
-    bool insertway(const MapObject& obj);
-    void query(const AABB& range, std::vector<MapObject>* foundNodes, std::vector<MapObject>* foundWays) const;
+    bool InsertNode(const MapObject& obj);
+    bool InsertWay(const MapObject& obj);
+    void Query(const AABB& range, std::vector<MapObject>* foundNodes, std::vector<MapObject>* foundWays) const;
 
 private:
     AABB boundary;
-    int capacity;
+    size_t capacity;
     bool divided;
 
     std::vector<MapObject> nodes;
@@ -67,43 +60,8 @@ private:
     std::unique_ptr<QuadTree> sw;
     std::unique_ptr<QuadTree> se;
 
-    void subdivide();
+    void Subdivide();
 };
-
-
-
-// Route
-struct OSMNode 
-{
-    double lat, lon;
-};
-
-struct OSMWay 
-{
-    std::vector<uint64_t> nodeRefs;
-    std::unordered_map<std::string, std::string> tags;
-};
-
-typedef OSMNode Coord;
-typedef std::vector<Vector2> Polygon;
-
-
-class OSMGraph
-{
-public:
-    OSMGraph();
-
-public:
-    std::unordered_map<uint64_t, OSMNode> nodes;
-    std::unordered_map<uint64_t, OSMWay>  ways;
-
-    std::set<uint64_t> selected_path;
-    uint64_t selected_node_a;
-    uint64_t selected_node_b;
-
-    friend class OSMRenderer;
-};
-
 
 class OSMRenderer
 {
@@ -121,7 +79,3 @@ public:
     QuadTree tree;
     std::unordered_map<uint64_t, Polygon> m_CachedPolygons; // WayID, Polygon data
 };
-
-
-inline Vector2 MercatorProjection(double lat, double lon);
-inline Coord InverseMercatorProjection(float worldX, float worldY);

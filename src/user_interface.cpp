@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <format>
 
-#include "Graph.h"
 #include "raymath.h"
 #include "../vendor/raygui.h"
 #include "Window.h"
