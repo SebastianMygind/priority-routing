@@ -1,5 +1,5 @@
 #include "dijkstra.h"
-#include "../Tags.h"
+#include "../tags.h"
 
 #include <cmath>
 #include <cstdint>

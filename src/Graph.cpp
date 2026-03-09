@@ -1,6 +1,6 @@
 #include "Graph.h"
-#include "Tags.h"
-#include "Earcut.hpp"
+#include "tags.h"
+#include "earcut.hpp"
 
 #include <algorithm>
 #include <cmath>
