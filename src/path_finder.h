@@ -10,7 +10,7 @@ public:
         Graph& graph,
         uint64_t start_node,
         uint64_t end_node,
-        std::vector<uint64_t>& out_path) = 0;
+        std::set<uint64_t>& out_path) = 0;
 };
 
 enum class PathfindingModel {

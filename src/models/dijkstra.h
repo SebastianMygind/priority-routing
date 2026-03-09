@@ -9,5 +9,5 @@ public:
         Graph& graph,
         uint64_t start_node,
         uint64_t end_node,
-        std::vector<uint64_t>& out_path) override;
+        std::set<uint64_t>& out_path) override;
 };
