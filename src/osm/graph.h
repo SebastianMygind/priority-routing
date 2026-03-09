@@ -39,7 +39,6 @@ public:
     inline void     SetNodeA(uint64_t id)       { selectedNodeA = id; }
     inline void     SetNodeB(uint64_t id)       { selectedNodeB = id; }
     inline void     ClearPath()                 { selectedPath.clear(); }
-    inline std::set<uint64_t>& ChangePath()     { selectedPath; }
 
 private:
     std::unordered_map<uint64_t, OSMNode> nodes;
