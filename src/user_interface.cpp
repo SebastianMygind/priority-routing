@@ -16,9 +16,9 @@ constexpr float WINDOW_WIDTH = 0.20;
 constexpr std::pair<float, float> MIN_UI_SIZE = {200.F, 600.F};
 
 
-void DrawCursor(const Rectangle& userInterface, const Vector2 &mouseWorldPos, Vector2 mousePos);
-void DrawRouteInfo(const Rectangle& userInterface, const Vector2 &mousePos, const Graph& graph, UIState& state);
-void DrawDebugInfo(const Rectangle& userInterface, const Window& window);
+void DrawCursor(const Rectangle& uiRect, const Vector2 &mWorldPos, Vector2 mPos);
+void DrawRouteInfo(const Rectangle& uiRect, const Vector2 &mPos, const Graph& graph, UIState& state);
+void DrawDebugInfo(const Rectangle& uiRect, const Window& window);
 
 void DrawUserInterface(const Window &window, const Vector2 &mWorldPos, const Graph& graph, UIState& state) {
 
@@ -114,9 +114,6 @@ void DrawDebugInfo(const Rectangle &uiRect, const Window &window) {
 //  );
 
 void DrawRouteInfo(const Rectangle& uiRect, const Vector2 &mPos, const Graph &graph, UIState &state) {
-
-
-
     // GuiTextBox();
 
     char* text = "Hello World";
