@@ -15,6 +15,7 @@ FetchContent_Declare(
         GIT_REPOSITORY https://github.com/raysan5/raylib.git
         GIT_TAG 5.5
         GIT_PROGRESS TRUE
+        SYSTEM
 )
 FetchContent_Declare(
         tinyxml2
@@ -52,6 +53,8 @@ set(CORE_SOURCES
         src/models/dijkstra.h
         vendor/raygui.h
 )
+
+add_compile_options(-Wall -Wextra -Wpedantic)
 
 # Main executable that runs the application
 

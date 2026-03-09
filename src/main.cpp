@@ -40,7 +40,7 @@ int main() {
 #endif
 
     // Main game loop
-    while (!WindowShouldClose())  // Detect window close button or ESC key
+    while (!WindowShouldClose()) // Detect window close button or ESC key
     {
         // Get the world point that is under the mouse
         const Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition() * dpi, camera);
@@ -66,7 +66,7 @@ int main() {
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) 
         {
             for (std::pair<uint64_t, Node*> node : graph.nodes_highways) {
-                if (Vector2Distance(MercatorProjection(node.second->lat, node.second->lon), mouseWorldPos) < 0.2F) 
+                if (Vector2Distance(MercatorProjection(node.second->lat, node.second->lon), mouseWorldPos) < 0.2F)
                 {
                     if (graph.selected_node_a == 0xFFFFFFFF) {              // Click one, A
                         graph.selected_node_a = node.first;
@@ -116,7 +116,7 @@ int main() {
 
         EndMode2D();
 
-        DrawUserInterface(window, mouseWorldPos, uiState);
+        DrawUserInterface(window, mouseWorldPos, graph, uiState);
 
         EndDrawing();
     }
