@@ -4,12 +4,17 @@
 
 #include <algorithm>
 
-bool ParseOSM(std::string path, Graph& out_graph)
+bool ParseOSM(std::string path, OSMGraph& out_graph)
 {
     tinyxml2::XMLDocument doc;
 
     out_graph.nodes.clear();
     out_graph.ways.clear();
+
+    out_graph.nodes.reserve(10'000'000);
+    out_graph.ways.reserve(1'000'000);
+
+    spdlog::info("Loading OSM XML file from path: {}", path);
 
     if (doc.LoadFile(path.c_str()) != tinyxml2::XML_SUCCESS)
     {
@@ -17,9 +22,10 @@ bool ParseOSM(std::string path, Graph& out_graph)
         return false;
     }
 
+    spdlog::info("Successfully loaded OSM XML file, parsing...");
+
     tinyxml2::XMLNode* root = doc.FirstChildElement("osm");
 
-    std::unordered_map<uint64_t, Node> temp_nodes;
     {
         tinyxml2::XMLElement* element = root->FirstChildElement("node");
         while (element)
@@ -28,7 +34,8 @@ bool ParseOSM(std::string path, Graph& out_graph)
             double lat = std::stod(element->Attribute("lat"));
             double lon = std::stod(element->Attribute("lon"));
 
-            out_graph.nodes.insert({ id, Node{lat, lon} });
+            out_graph.nodes.insert({ id, OSMNode{lat, lon} });
+
             element = element->NextSiblingElement("node");
         }
     }
@@ -37,7 +44,7 @@ bool ParseOSM(std::string path, Graph& out_graph)
         tinyxml2::XMLElement* element = root->FirstChildElement("way");
         while (element)
         {
-            Way way = {};
+            OSMWay way = {};
 
             uint64_t id = std::stoull(element->Attribute("id"));
 
@@ -60,17 +67,10 @@ bool ParseOSM(std::string path, Graph& out_graph)
             {
                 uint64_t ref = std::stoull(child->Attribute("ref"));
                 way.nodeRefs.push_back(ref);
-
-                Node& node = out_graph.nodes[ref];
-
-                if (isHighway)
-                    out_graph.nodes_highways.push_back({ref, &node});
-
                 child = child->NextSiblingElement("nd");
             }
             
-            out_graph.ways.push_back({id, way});
-
+            out_graph.ways.insert({id, way});
             element = element->NextSiblingElement("way");
         }
     }

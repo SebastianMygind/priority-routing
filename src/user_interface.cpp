@@ -17,10 +17,10 @@ constexpr std::pair<float, float> MIN_UI_SIZE = {200.F, 600.F};
 
 
 void DrawCursor(const Rectangle& uiRect, const Vector2 &mWorldPos, Vector2 mPos);
-void DrawRouteInfo(const Rectangle& uiRect, const Vector2 &mPos, const Graph& graph, UIState& state);
+void DrawRouteInfo(const Rectangle& uiRect, const Vector2 &mPos, const OSMGraph& graph, UIState& state);
 void DrawDebugInfo(const Rectangle& uiRect, const Window& window);
 
-void DrawUserInterface(const Window &window, const Vector2 &mWorldPos, const Graph& graph, UIState& state) {
+void DrawUserInterface(const Window &window, const Vector2 &mWorldPos, const OSMGraph& graph, UIState& state) {
 
     const auto screenX = static_cast<float>(window.width);
     const auto screenY = static_cast<float>(window.height);
@@ -113,10 +113,10 @@ void DrawDebugInfo(const Rectangle &uiRect, const Window &window) {
 //  {10, 10}, 20, 2, BLACK
 //  );
 
-void DrawRouteInfo(const Rectangle& uiRect, const Vector2 &mPos, const Graph &graph, UIState &state) {
+void DrawRouteInfo(const Rectangle& uiRect, const Vector2 &mPos, const OSMGraph &graph, UIState &state) {
     // GuiTextBox();
 
-    char* text = "Hello World";
+    char* text = nullptr; // MSVC complained about a string literal being not const, so this just made it compile
     const Rectangle boxBounds = {
         .x = uiRect.x + 10,
         .y = uiRect.y + 10,
@@ -130,7 +130,7 @@ void DrawRouteInfo(const Rectangle& uiRect, const Vector2 &mPos, const Graph &gr
 
     int modelSelectionIndex = static_cast<int>(state.modelSelection);
     if (GuiDropdownBox(
-        (Rectangle){
+        Rectangle{
             .x = uiRect.x + 10,
             .y = uiRect.y + 50,
             .width = uiRect.width - 20,

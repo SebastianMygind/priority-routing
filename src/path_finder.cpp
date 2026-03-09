@@ -2,7 +2,7 @@
 #include "models/dijkstra.h"
 #include "spdlog/spdlog.h"
 
-void PathFinder(Graph& graph, PathfindingModel model)
+void PathFinder(OSMGraph& graph, PathfindingModel model)
 {
     IPathFinder* pathfinder = nullptr;
 

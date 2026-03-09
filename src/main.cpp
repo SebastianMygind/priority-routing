@@ -18,9 +18,12 @@ int main() {
 
     UIState uiState;
 
-    Graph graph;
+    OSMGraph graph;
+    OSMRenderer renderer(&graph);
 
-    ParseOSM("../data/map.osm", graph);
+    ParseOSM("../data/Copenhagen.osm", graph);
+
+    renderer.BuildQuadTree();
 
     SetTraceLogCallback(SPDLogger);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI | FLAG_VSYNC_HINT);
@@ -39,8 +42,7 @@ int main() {
     Vector2 dpi = GetWindowScaleDPI();
 #endif
 
-    // Main game loop
-    while (!WindowShouldClose()) // Detect window close button or ESC key
+    while (!WindowShouldClose())
     {
         // Get the world point that is under the mouse
         const Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition() * dpi, camera);
@@ -65,13 +67,27 @@ int main() {
 
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) 
         {
-            for (std::pair<uint64_t, Node*> node : graph.nodes_highways) {
-                if (Vector2Distance(MercatorProjection(node.second->lat, node.second->lon), mouseWorldPos) < 0.2F)
+            Vector2 topLeft           = GetScreenToWorld2D({ 0,0 }, camera);
+            Vector2 bottomRight       = GetScreenToWorld2D({ (float)window.width, (float)window.height }, camera);
+            Coord   topLeftLatLon     = InverseMercatorProjection(topLeft.x, topLeft.y);
+            Coord   bottomRightLatLon = InverseMercatorProjection(bottomRight.x, bottomRight.y);
+
+            double minLat = bottomRightLatLon.lat;
+            double maxLat = topLeftLatLon.lat;
+            double minLon = topLeftLatLon.lon;
+            double maxLon = bottomRightLatLon.lon;
+
+            std::vector<MapObject> visibleNodes;
+            renderer.tree.query({minLon, minLat, maxLon, maxLat}, &visibleNodes, nullptr);
+
+            for (MapObject& obj : visibleNodes) {
+                OSMNode& node = graph.nodes[obj.id];
+                if (Vector2Distance(MercatorProjection(node.lat, node.lon), mouseWorldPos) < 0.2F)
                 {
                     if (graph.selected_node_a == 0xFFFFFFFF) {              // Click one, A
-                        graph.selected_node_a = node.first;
+                        graph.selected_node_a = obj.id;
                     } else if (graph.selected_node_b == 0xFFFFFFFF) {       // Click two, B, calculate path
-                        graph.selected_node_b = node.first;
+                        graph.selected_node_b = obj.id;
                         PathFinder(graph, uiState.modelSelection);
                     } else {                                                // Click three, reset
                         graph.selected_node_a = 0xFFFFFFFF;
@@ -83,37 +99,21 @@ int main() {
             }
         }
 
-        if (const float wheel = GetMouseWheelMove(); wheel != 0) {
-            // Set the offset to where the mouse is
+        if (const float wheel = GetMouseWheelMove(); wheel != 0) 
+        {
             camera.offset = GetMousePosition() * dpi;
-
-            // Set the target to match, so that the camera maps the world space point
-            // under the cursor to the screen space point under the cursor at any zoom
             camera.target = mouseWorldPos;
 
-            // Zoom increment
-            // Uses log scaling to provide consistent zoom speed
             const float scale = 0.2F * wheel;
             camera.zoom = Clamp(expf(logf(camera.zoom) + scale), 0.125F, 64.0F);
         }
 
-        // Draw
-        //----------------------------------------------------------------------------------
         BeginDrawing();
 
         ClearBackground(RAYWHITE);
 
         BeginMode2D(camera);
-        // Draw the 3d grid, rotated 90 degrees and centered around 0,0
-        // just so we have something in the XY plane
-        // rlPushMatrix();
-        // rlTranslatef(0, 25 * 50, 0);
-        // rlRotatef(90, 1, 0, 0);
-        // DrawGrid(100, 50);
-        // rlPopMatrix();
-
-        graph.DrawGraph(camera, (float)window.width * dpi.x, (float)window.height * dpi.y);
-
+        renderer.DrawGraph(camera, (float)window.width * dpi.x, (float)window.height * dpi.y);
         EndMode2D();
 
         DrawUserInterface(window, mouseWorldPos, graph, uiState);

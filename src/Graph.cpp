@@ -1,45 +1,100 @@
-#include "Graph.h"
+﻿#include "Graph.h"
 #include "tags.h"
 #include "earcut.hpp"
 
 #include <algorithm>
 #include <cmath>
+#include <array>
 
 #include "rlgl.h"
+#include "spdlog/spdlog.h"
 
-Graph::Graph() : selected_node_a(UINT32_MAX), selected_node_b(UINT32_MAX)
+OSMGraph::OSMGraph() : selected_node_a(UINT32_MAX), selected_node_b(UINT32_MAX)
 {
-
 }
 
-void Graph::DrawGraph(Camera2D camera, float screenWidth, float screenHeight)
+OSMRenderer::OSMRenderer(OSMGraph* graph) : tree({11.271273842, 55.1959946, 13.008736992, 56.13105965}, 8), graph(graph)
 {
+}
+
+
+void OSMRenderer::BuildQuadTree()
+{
+    spdlog::info("Building QuadTree..");
+
+    for (const auto& wayPair : graph->ways)
+    {
+        const uint64_t& id = wayPair.first;
+        const OSMWay& way = wayPair.second;
+
+        bool isHighway = way.tags.find("highway") != way.tags.end();
+
+        AABB box;
+        OSMNode& node = graph->nodes[way.nodeRefs[0]];
+        box.minX = box.maxX = node.lon;
+        box.minY = box.maxY = node.lat;
+        for (const uint64_t& nodeRef : way.nodeRefs) 
+        {
+            OSMNode& node = graph->nodes[nodeRef];
+            box.minX = std::min(box.minX, node.lon);
+            box.maxX = std::max(box.maxX, node.lon);
+            box.minY = std::min(box.minY, node.lat);
+            box.maxY = std::max(box.maxY, node.lat);
+
+            if (isHighway)
+            {
+                MapObject obj;
+                obj.id = nodeRef;
+                obj.bounds = {node.lon, node.lat, node.lon, node.lat};
+                tree.insertnode(obj);
+            }
+        }
+
+        MapObject wayobj;
+        wayobj.id = id;
+        wayobj.bounds = box;
+        tree.insertway(wayobj);
+    }
+}
+
+void OSMRenderer::DrawGraph(Camera2D camera, float screenWidth, float screenHeight)
+{
+    std::unordered_map<uint64_t, OSMNode>& nodes = graph->nodes;
+    std::unordered_map<uint64_t, OSMWay>&  ways = graph->ways;
+    std::set<uint64_t>&  selected_path = graph->selected_path;
+
     Vector2 topLeft     = GetScreenToWorld2D({ 0,0 }, camera);
     Vector2 bottomRight = GetScreenToWorld2D({ screenWidth, screenHeight }, camera);
 
-    Node topLeftLatLon     = InverseMercatorProjection(topLeft.x, topLeft.y);
-    Node bottomRightLatLon = InverseMercatorProjection(bottomRight.x, bottomRight.y);
+    Coord topLeftLatLon     = InverseMercatorProjection(topLeft.x, topLeft.y);
+    Coord bottomRightLatLon = InverseMercatorProjection(bottomRight.x, bottomRight.y);
 
     double minLat = bottomRightLatLon.lat;
     double maxLat = topLeftLatLon.lat;
     double minLon = topLeftLatLon.lon;
     double maxLon = bottomRightLatLon.lon;
 
-    for (const auto& it : ways) 
+    std::vector<MapObject> nodesToRender;
+    std::vector<MapObject> waysToRender;
+    nodesToRender.reserve(4096);
+    waysToRender.reserve(4096);
+    tree.query({minLon, minLat, maxLon, maxLat}, &nodesToRender, &waysToRender);
+
+    for (const MapObject& wayObj : waysToRender) 
     {   
-        const uint64_t id = it.first;
-        const Way& way = it.second;
+        const uint64_t& id = wayObj.id;
+        const OSMWay& way = ways[id];
 
-        Node& firstNode = nodes[way.nodeRefs.front()];
-        Node& lastNode = nodes[way.nodeRefs.back()];
+        OSMNode& firstNode = nodes[way.nodeRefs.front()];
+        OSMNode& lastNode = nodes[way.nodeRefs.back()];
 
-        // if ((firstNode.lat < minLat && lastNode.lat < minLat) ||
-        //     (firstNode.lat > maxLat && lastNode.lat > maxLat) ||
-        //     (firstNode.lon < minLon && lastNode.lon < minLon) ||
-        //     (firstNode.lon > maxLon && lastNode.lon > maxLon))
-        // {
-        //     continue;
-        // }
+        const AABB& bounds = wayObj.bounds;
+
+         if ((bounds.maxY < minLat) || (bounds.minY > maxLat) ||
+             (bounds.maxX < minLon) || (bounds.minX > maxLon))
+         {
+             continue;
+         }
 
         if (auto tag = way.tags.find("building"); tag != way.tags.end())
         {
@@ -82,8 +137,8 @@ void Graph::DrawGraph(Camera2D camera, float screenWidth, float screenHeight)
             
             for (uint32_t i = 0; i < way.nodeRefs.size() - 1; i++)
             {
-                Node& node1 = nodes[way.nodeRefs[i]];
-                Node& node2 = nodes[way.nodeRefs[i + 1]];
+                OSMNode& node1 = nodes[way.nodeRefs[i]];
+                OSMNode& node2 = nodes[way.nodeRefs[i + 1]];
 
                 if ((node1.lat < minLat && node2.lat < minLat) ||
                     (node1.lat > maxLat && node2.lat > maxLat) ||
@@ -113,17 +168,22 @@ void Graph::DrawGraph(Camera2D camera, float screenWidth, float screenHeight)
         return;
 
     // Draw node
-    for (std::pair<uint64_t, Node*> node : nodes_highways)
+    for (MapObject& nodeObj : nodesToRender)
     {
-        if (node.second->lon < minLon || node.second->lon > maxLon ||
-            node.second->lat < minLat || node.second->lat > maxLat)
-        {
-            continue;
-        }
+        uint64_t id = nodeObj.id;
+        OSMNode& node = nodes[id];
 
-        Vector2 p1 = MercatorProjection(node.second->lat, node.second->lon);
+        const AABB& bounds = nodeObj.bounds;
 
-        bool isSelected = (node.first == selected_node_a || node.first == selected_node_b);
+         if ((bounds.maxY < minLat) || (bounds.minY > maxLat) ||
+             (bounds.maxX < minLon) || (bounds.minX > maxLon))
+         {
+             continue;
+         }
+
+        Vector2 p1 = MercatorProjection(node.lat, node.lon);
+
+        bool isSelected = (id == graph->selected_node_a || id == graph->selected_node_b);
         DrawCircleV(
             p1,
             isSelected ? std::fmax(2.5F * (1.0 / camera.zoom), 0.1F) : 0.1F, 
@@ -132,7 +192,7 @@ void Graph::DrawGraph(Camera2D camera, float screenWidth, float screenHeight)
     }
 }
 
-Polygon& Graph::CachePolygonSingle(uint64_t wayId, const Way& way)
+Polygon& OSMRenderer::CachePolygonSingle(uint64_t wayId, const OSMWay& way)
 {
     auto polygonIt = m_CachedPolygons.find(wayId);
 
@@ -148,9 +208,10 @@ Polygon& Graph::CachePolygonSingle(uint64_t wayId, const Way& way)
 
     for (int i = 0; i < way.nodeRefs.size() - 1; i++)
     {
-        Node& n1 = nodes[way.nodeRefs[i]];
+        OSMNode& n1 = graph->nodes[way.nodeRefs[i]];
         Vector2 p1 = MercatorProjection(n1.lat, n1.lon);
-        polygon[0].push_back({p1.x, p1.y});
+        Point point = {p1.x, p1.y};
+        polygon[0].push_back(point);
     }
 
     std::vector<uint16_t> indices = mapbox::earcut<uint16_t>(polygon);
@@ -202,7 +263,7 @@ Vector2 MercatorProjection(double lat, double lon)
 
 }
 
-Node InverseMercatorProjection(float screenX, float screenY)
+Coord InverseMercatorProjection(float worldX, float worldY)
 {
     double centerLatitude  = 55.6539977;
     double centerLongitude = 12.5422305;
@@ -219,8 +280,8 @@ Node InverseMercatorProjection(float screenX, float screenY)
     double cy = std::log(std::tan(PI / 4.0 + centerLatRad / 2.0));
 
     // --- Invert screen transform ---
-    double x = (screenX / scale) + centerLonRad;
-    double y = cy - (screenY / scale);
+    double x = (worldX / scale) + centerLonRad;
+    double y = cy - (worldY / scale);
 
     // --- Invert Mercator ---
     double lonRad = x;
@@ -230,4 +291,108 @@ Node InverseMercatorProjection(float screenX, float screenY)
         latRad * 180.0 / PI,
         lonRad * 180.0 / PI
     };
+}
+
+
+void QuadTree::subdivide() 
+{
+    double midX = (boundary.minX + boundary.maxX) / 2.0;
+    double midY = (boundary.minY + boundary.maxY) / 2.0;
+
+    AABB nw_box{boundary.minX, midY, midX, boundary.maxY};
+    AABB ne_box{midX, midY, boundary.maxX, boundary.maxY};
+    AABB sw_box{boundary.minX, boundary.minY, midX, midY};
+    AABB se_box{midX, boundary.minY, boundary.maxX, midY};
+
+    nw = std::make_unique<QuadTree>(nw_box, capacity);
+    ne = std::make_unique<QuadTree>(ne_box, capacity);
+    sw = std::make_unique<QuadTree>(sw_box, capacity);
+    se = std::make_unique<QuadTree>(se_box, capacity);
+
+    divided = true;
+}
+
+bool QuadTree::insertnode(const MapObject& obj) 
+{
+    if (!boundary.intersects(obj.bounds))
+        return false;
+
+    if (nodes.size() < capacity) {
+        nodes.push_back(obj);
+        return true;
+    }
+
+    if (!divided)
+        subdivide();
+
+    if (nw->insertnode(obj)) return true;
+    if (ne->insertnode(obj)) return true;
+    if (sw->insertnode(obj)) return true;
+    if (se->insertnode(obj)) return true;
+
+    return false;
+}
+
+bool QuadTree::insertway(const MapObject& obj) {
+
+    if (!boundary.intersects(obj.bounds))
+        return false;
+
+    if (ways.size() < capacity) {
+        ways.push_back(obj);
+        return true;
+    }
+
+    if (!divided)
+        subdivide();
+
+    bool inNW = nw->boundary.contains(obj.bounds);
+    bool inNE = ne->boundary.contains(obj.bounds);
+    bool inSW = sw->boundary.contains(obj.bounds);
+    bool inSE = se->boundary.contains(obj.bounds);
+
+    int count = inNW + inNE + inSW + inSE;
+
+    if (count == 1) {
+        if (inNW) return nw->insertway(obj);
+        if (inNE) return ne->insertway(obj);
+        if (inSW) return sw->insertway(obj);
+        if (inSE) return se->insertway(obj);
+    }
+
+    // overlaps multiple children → keep here
+    ways.push_back(obj);
+    return true;
+}
+
+void QuadTree::query(const AABB& range, std::vector<MapObject>* foundNodes, std::vector<MapObject>* foundWays) const 
+{
+    if (!boundary.intersects(range))
+        return;
+
+    if (foundNodes)
+    {
+        for (const auto& obj : nodes) {
+            if (range.intersects(obj.bounds))
+                foundNodes->push_back(obj);
+        }
+    }
+
+    
+    if (foundWays)
+    {
+        for (const auto& obj : ways) {
+            if (range.intersects(obj.bounds))
+                foundWays->push_back(obj);
+        }
+    }
+
+
+    if (!divided)
+        return;
+
+    nw->query(range, foundNodes, foundWays);
+    ne->query(range, foundNodes, foundWays);
+    sw->query(range, foundNodes, foundWays);
+    se->query(range, foundNodes, foundWays);
 }

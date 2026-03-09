@@ -11,10 +11,10 @@
 
 static double DegToRad(double deg)
 {
-    return deg * M_PI / 180.0;
+    return deg * PI / 180.0;
 }
 
-static double Haversine(const Node& a, const Node& b)
+static double Haversine(const OSMNode& a, const OSMNode& b)
 {
     constexpr double R = 6371000.0; // Earth radius in meters
 
@@ -64,7 +64,7 @@ using AdjList = std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, dou
 
 
 bool Dijkstra::FindPath(
-    Graph& graph,
+    OSMGraph& graph,
     uint64_t start_node,
     uint64_t end_node,
     std::set<uint64_t>& out_path)
@@ -79,7 +79,7 @@ bool Dijkstra::FindPath(
     std::unordered_map< uint64_t, std::vector<uint64_t> > adj_list;
     for (const auto& wayPair : graph.ways)
     {
-        const Way& way = wayPair.second;
+        const OSMWay& way = wayPair.second;
         
         const std::vector<uint64_t>& nodes = way.nodeRefs;
 
