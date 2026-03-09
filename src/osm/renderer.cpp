@@ -5,6 +5,8 @@
 #include "rlgl.h"
 #include "spdlog/spdlog.h"
 
+#include <array>
+
 OSMRenderer::OSMRenderer(OSMGraph* graph) : graph(graph), tree({11.271273842, 55.1959946, 13.008736992, 56.13105965}, 8)
 {
 }
