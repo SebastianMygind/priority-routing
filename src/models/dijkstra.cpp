@@ -31,7 +31,7 @@ static double Haversine(const Node& a, const Node& b)
     return R * c;
 }
 
-static double KmHToMS(double kmh)
+static double KmhToMS(double kmh)
 {
     return kmh * 1000.0 / 3600.0;
 }
@@ -57,7 +57,7 @@ static std::optional<double> ParseMaxSpeed(const std::string& value)
         return MphToMS(number);
 
     // Default assume km/h
-    return KmHToMS(number);
+    return KmhToMS(number);
 }
 
 using AdjList = std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, double>>>;
@@ -77,9 +77,9 @@ bool Dijkstra::FindPath(
     // std::priority_queue<PQNode, std::vector<PQNode>, std::greater<>> pq;
 
     std::unordered_map< uint64_t, std::vector<uint64_t> > adj_list;
-    for (const auto& it : graph.ways)
+    for (const auto& wayPair : graph.ways)
     {
-        const Way& way = it.second;
+        const Way& way = wayPair.second;
         
         const std::vector<uint64_t>& nodes = way.nodeRefs;
 
