@@ -10,6 +10,7 @@
 #include "raylib.h"
 #include "raymath.h"
 
+// Route
 struct Node 
 {
     double lat, lon;
@@ -22,11 +23,19 @@ struct Way
 };
 
 
+typedef std::vector<Vector2> Polygon;
+
 class Graph 
 {
 public:
-    std::unordered_map<uint64_t, Node> nodes;
-    std::vector<Way> ways;
+    std::unordered_map<uint64_t, Node>    nodes;
+    std::vector<std::pair<uint64_t, Way>> ways;
+
+    // Filtered lists
+    std::vector<std::pair<uint64_t, Node*>> nodes_highways;
+
+    // Cache objects
+    std::unordered_map<uint64_t, Polygon> m_CachedPolygons; // WayID, Polygon data
 
     std::set<uint64_t> selected_path;
     uint64_t selected_node_a;
@@ -35,13 +44,11 @@ public:
     Graph();
 
     void DrawGraph(Camera2D camera, float screenWidth, float screenHeight);
+
+    Polygon& CachePolygonSingle(uint64_t wayId, const Way& way);
 };
 
 
-inline Vector2 MercatorProjection(double lat, double lon, float screenHeight, float screenWidth);
+inline Vector2 MercatorProjection(double lat, double lon);
 
-inline Node InverseMercatorProjection(
-    float screenX,
-    float screenY,
-    float screenHeight,
-    float screenWidth);
+inline Node InverseMercatorProjection(float screenX, float screenY);

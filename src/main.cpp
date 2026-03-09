@@ -22,7 +22,6 @@ int main() {
 
     ParseOSM("../data/map.osm", graph);
 
-
     SetTraceLogCallback(SPDLogger);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI | FLAG_VSYNC_HINT);
 
@@ -66,8 +65,8 @@ int main() {
 
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) 
         {
-            for (auto& node : graph.nodes) {
-                if (Vector2Distance(MercatorProjection(node.second.lat, node.second.lon, (float)window.height, (float)window.width), mouseWorldPos) < 0.2F)
+            for (std::pair<uint64_t, Node*> node : graph.nodes_highways) {
+                if (Vector2Distance(MercatorProjection(node.second->lat, node.second->lon), mouseWorldPos) < 0.2F) 
                 {
                     if (graph.selected_node_a == 0xFFFFFFFF) {              // Click one, A
                         graph.selected_node_a = node.first;
@@ -107,11 +106,11 @@ int main() {
         BeginMode2D(camera);
         // Draw the 3d grid, rotated 90 degrees and centered around 0,0
         // just so we have something in the XY plane
-        rlPushMatrix();
-        rlTranslatef(0, 25 * 50, 0);
-        rlRotatef(90, 1, 0, 0);
-        DrawGrid(100, 50);
-        rlPopMatrix();
+        // rlPushMatrix();
+        // rlTranslatef(0, 25 * 50, 0);
+        // rlRotatef(90, 1, 0, 0);
+        // DrawGrid(100, 50);
+        // rlPopMatrix();
 
         graph.DrawGraph(camera, (float)window.width * dpi.x, (float)window.height * dpi.y);
 

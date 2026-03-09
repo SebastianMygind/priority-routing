@@ -77,8 +77,10 @@ bool Dijkstra::FindPath(
     // std::priority_queue<PQNode, std::vector<PQNode>, std::greater<>> pq;
 
     std::unordered_map< uint64_t, std::vector<uint64_t> > adj_list;
-    for (const Way& way : graph.ways)
+    for (const auto& it : graph.ways)
     {
+        const Way& way = it.second;
+        
         const std::vector<uint64_t>& nodes = way.nodeRefs;
 
         auto highway = way.tags.find("highway");
@@ -91,15 +93,15 @@ bool Dijkstra::FindPath(
         auto oneWayTag = way.tags.find("oneway");
         const bool oneWay = (oneWayTag != way.tags.end()) && (oneWayTag->second == "yes");
 
-        double speedMS = 0.0;
+        // double speedMS = 0.0;
 
-        auto speedIt = way.tags.find("maxspeed");
-        if (speedIt != way.tags.end())
-        {
-            auto parsed = ParseMaxSpeed(speedIt->second);
-            if (parsed.has_value())
-                speedMS = parsed.value();
-        }
+        // auto speedIt = way.tags.find("maxspeed");
+        // if (speedIt != way.tags.end())
+        // {
+        //     auto parsed = ParseMaxSpeed(speedIt->second);
+        //     if (parsed.has_value())
+        //         speedMS = parsed.value();
+        // }
 
         // double distMeters = Haversine(..);
         // double timeSeconds = distMeters / speedMS;

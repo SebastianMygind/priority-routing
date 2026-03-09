@@ -1,8 +1,11 @@
 #include "Graph.h"
 #include "Tags.h"
+#include "Earcut.hpp"
 
 #include <algorithm>
 #include <cmath>
+
+#include "rlgl.h"
 
 Graph::Graph() : selected_node_a(UINT32_MAX), selected_node_b(UINT32_MAX)
 {
@@ -14,28 +17,46 @@ void Graph::DrawGraph(Camera2D camera, float screenWidth, float screenHeight)
     Vector2 topLeft     = GetScreenToWorld2D({ 0,0 }, camera);
     Vector2 bottomRight = GetScreenToWorld2D({ screenWidth, screenHeight }, camera);
 
-    Node topLeftLatLon     = InverseMercatorProjection(topLeft.x, topLeft.y, screenHeight, screenWidth);
-    Node bottomRightLatLon = InverseMercatorProjection(bottomRight.x, bottomRight.y, screenHeight, screenWidth);
+    Node topLeftLatLon     = InverseMercatorProjection(topLeft.x, topLeft.y);
+    Node bottomRightLatLon = InverseMercatorProjection(bottomRight.x, bottomRight.y);
 
     double minLat = bottomRightLatLon.lat;
     double maxLat = topLeftLatLon.lat;
     double minLon = topLeftLatLon.lon;
     double maxLon = bottomRightLatLon.lon;
 
-    for (const Way& way : ways) 
-    {
+    for (const auto& it : ways) 
+    {   
+        const uint64_t id = it.first;
+        const Way& way = it.second;
+
         Node& firstNode = nodes[way.nodeRefs.front()];
         Node& lastNode = nodes[way.nodeRefs.back()];
 
-        if ((firstNode.lat < minLat && lastNode.lat < minLat) ||
-            (firstNode.lat > maxLat && lastNode.lat > maxLat) ||
-            (firstNode.lon < minLon && lastNode.lon < minLon) ||
-            (firstNode.lon > maxLon && lastNode.lon > maxLon))
-        {
-            continue;
-        }
+        // if ((firstNode.lat < minLat && lastNode.lat < minLat) ||
+        //     (firstNode.lat > maxLat && lastNode.lat > maxLat) ||
+        //     (firstNode.lon < minLon && lastNode.lon < minLon) ||
+        //     (firstNode.lon > maxLon && lastNode.lon > maxLon))
+        // {
+        //     continue;
+        // }
 
-        if (auto tag = way.tags.find("highway"); tag != way.tags.end())
+        if (auto tag = way.tags.find("building"); tag != way.tags.end())
+        {
+            Polygon& building = CachePolygonSingle(id, way);
+
+            rlDisableBackfaceCulling();
+            rlBegin(RL_TRIANGLES);
+            rlColor4ub(200, 200, 200, 255);
+
+            for (Vector2& point : building)
+            {
+                rlVertex2f(point.x, point.y);
+            }
+
+            rlEnd();
+        }
+        else if (auto tag = way.tags.find("highway"); tag != way.tags.end())
         {
             Color lineColor = { 0,0,0,255 };
 			float width = 0.2F;
@@ -72,8 +93,8 @@ void Graph::DrawGraph(Camera2D camera, float screenWidth, float screenHeight)
                     continue;
                 }
 
-                Vector2 p1 = MercatorProjection(node1.lat, node1.lon, screenHeight, screenWidth);
-                Vector2 p2 = MercatorProjection(node2.lat, node2.lon, screenHeight, screenWidth);
+                Vector2 p1 = MercatorProjection(node1.lat, node1.lon);
+                Vector2 p2 = MercatorProjection(node2.lat, node2.lon);
                     
                 bool inPath =
                     selected_path.contains(way.nodeRefs[i]) && selected_path.contains(way.nodeRefs[i + 1]);
@@ -92,15 +113,15 @@ void Graph::DrawGraph(Camera2D camera, float screenWidth, float screenHeight)
         return;
 
     // Draw node
-    for (auto& node : nodes)
+    for (std::pair<uint64_t, Node*> node : nodes_highways)
     {
-        if (node.second.lon < minLon || node.second.lon > maxLon ||
-            node.second.lat < minLat || node.second.lat > maxLat)
+        if (node.second->lon < minLon || node.second->lon > maxLon ||
+            node.second->lat < minLat || node.second->lat > maxLat)
         {
             continue;
         }
 
-        Vector2 p1 = MercatorProjection(node.second.lat, node.second.lon, screenHeight, screenWidth);
+        Vector2 p1 = MercatorProjection(node.second->lat, node.second->lon);
 
         bool isSelected = (node.first == selected_node_a || node.first == selected_node_b);
         DrawCircleV(
@@ -111,9 +132,46 @@ void Graph::DrawGraph(Camera2D camera, float screenWidth, float screenHeight)
     }
 }
 
+Polygon& Graph::CachePolygonSingle(uint64_t wayId, const Way& way)
+{
+    auto polygonIt = m_CachedPolygons.find(wayId);
+
+    // If polygon is already cached, use it
+    if (polygonIt != m_CachedPolygons.end())
+        return polygonIt->second;
+
+    // Otherwise, create a triangulated polygon
+    using Point = std::array<float, 2>;
+
+    Polygon shape;
+    std::vector<std::vector<Point>> polygon(1);
+
+    for (int i = 0; i < way.nodeRefs.size() - 1; i++)
+    {
+        Node& n1 = nodes[way.nodeRefs[i]];
+        Vector2 p1 = MercatorProjection(n1.lat, n1.lon);
+        polygon[0].push_back({p1.x, p1.y});
+    }
+
+    std::vector<uint16_t> indices = mapbox::earcut<uint16_t>(polygon);
+
+    for (int i = 0; i < indices.size(); i++)
+    {
+        Point& v = polygon[0][indices[i]];
+        shape.push_back({v[0], v[1]});
+    }
+
+    m_CachedPolygons.insert({wayId, shape});
+
+    auto polygonIt2 = m_CachedPolygons.find(wayId); 
+
+    return polygonIt2->second;
+
+}
 
 
-Vector2 MercatorProjection(double lat, double lon, float screenHeight, float screenWidth)
+
+Vector2 MercatorProjection(double lat, double lon)
 {
     double centerLatitude = 55.6539977;
     double centerLongitude = 12.5422305;
@@ -144,11 +202,7 @@ Vector2 MercatorProjection(double lat, double lon, float screenHeight, float scr
 
 }
 
-Node InverseMercatorProjection(
-    float screenX,
-    float screenY,
-    float screenHeight,
-    float screenWidth)
+Node InverseMercatorProjection(float screenX, float screenY)
 {
     double centerLatitude  = 55.6539977;
     double centerLongitude = 12.5422305;
