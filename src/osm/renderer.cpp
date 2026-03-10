@@ -22,12 +22,14 @@ void OSMRenderer::BuildQuadTree()
         const OSMWay& way = wayPair.second;
 
         auto highwayTag = way.tags.find("highway");
+        auto landuseTag = way.tags.find("landuse");
         bool isHighway = highwayTag != way.tags.end();
 
         bool isZoomLevel = isHighway && (kMotorways.find(highwayTag->second) != kMotorways.end() ||
                                          kPrimary.find(highwayTag->second) != kPrimary.end() ||
                                          kSecondary.find(highwayTag->second) != kSecondary.end() ||
-                                         kTertiary.find(highwayTag->second) != kTertiary.end());
+                                         kTertiary.find(highwayTag->second) != kTertiary.end()) || 
+                                         landuseTag != way.tags.end();
  
 
         AABB box;
@@ -122,6 +124,29 @@ void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
             rlColor4ub(200, 200, 200, 255);
 
             for (const Vector2& point : building)
+            {
+                rlVertex2f(point.x, point.y);
+            }
+
+            rlEnd();
+        }
+        else if (auto tag = way.tags.find("landuse"); tag != way.tags.end())
+        {
+            Polygon& landuse = CachePolygonSingle(id, way);
+
+            rlDisableBackfaceCulling();
+            rlBegin(RL_TRIANGLES);
+
+            if (tag->second == "residential")
+                rlColor4ub(230, 230, 230, 235);
+            else if (tag->second == "forest")
+                rlColor4ub(201, 207, 167, 255);
+            else if (tag->second == "cemetery")
+                rlColor4ub(201, 207, 167, 255);
+            else
+                rlColor4ub(240, 240, 240, 255);
+
+            for (const Vector2& point : landuse)
             {
                 rlVertex2f(point.x, point.y);
             }
