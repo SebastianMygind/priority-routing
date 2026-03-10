@@ -32,13 +32,18 @@ public:
 
     bool ParseXML(std::string path);
 
-    inline OSMNode   GetNode(OSMNodeID id) const { return nodes.at(id); }
-    inline OSMWay    GetWay(OSMWayID id) const   { return ways.at(id); }
-    inline OSMNodeID GetNodeA() const            { return selectedNodeA; }
-    inline OSMNodeID GetNodeB() const            { return selectedNodeB; }
-    inline void      SetNodeA(OSMNodeID id)      { selectedNodeA = id; }
-    inline void      SetNodeB(OSMNodeID id)      { selectedNodeB = id; }
-    inline void      ClearPath()                 { selectedPath.clear(); }
+    inline OSMNode GetNode(OSMNodeID id) const { return nodes.at(id); }
+    inline OSMWay  GetWay(OSMWayID id) const   { return ways.at(id); }
+
+    OSMNodeID GetNodeA() const            { return selectedNodeA; }
+    OSMNodeID GetNodeB() const            { return selectedNodeB; }
+    void      SetNodeA(OSMNodeID id)      { selectedNodeA = id; }
+    void      SetNodeB(OSMNodeID id)      { selectedNodeB = id; }
+    void      ClearPath()                 { selectedPath.clear(); }
+
+    // Stats
+    size_t GetNodeCount() const        { return nodes.size(); }
+    size_t GetWayCount() const         { return ways.size(); }
 
 private:
     std::unordered_map<OSMNodeID, OSMNode> nodes;

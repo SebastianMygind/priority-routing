@@ -129,14 +129,6 @@ int main() {
         Coord cursorCoord = InverseMercatorProjection(mouseWorldPos.x, mouseWorldPos.y);
         DrawUserInterface(window, { (float)cursorCoord.lon, (float)cursorCoord.lat }, graph, uiState);
 
-        DrawText(
-            std::format("Way count: {}", renderer.GetWayRenderCount()).c_str(),
-            50,
-            50,
-            20,
-            BLACK
-        );
-
         EndDrawing();
     }
 
