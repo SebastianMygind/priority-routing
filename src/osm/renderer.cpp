@@ -71,7 +71,7 @@ void OSMRenderer::DrawGraph(Camera2D camera, float screenWidth, float screenHeig
     std::vector<MapObject> waysToRender;
     nodesToRender.reserve(4096);
     waysToRender.reserve(4096);
-    m_Tree.Query({minLon, minLat, maxLon, maxLat}, &nodesToRender, &waysToRender);
+    m_Tree.Query({minLon, minLat, maxLon, maxLat}, &nodesToRender, &waysToRender, 4);
 
     for (const MapObject& wayObj : waysToRender) 
     {   
@@ -228,7 +228,7 @@ Polygon& OSMRenderer::CachePolygonSingle(uint64_t wayId, const OSMWay& way)
 }
 
 
-void QuadTree::Subdivide() 
+void QuadNode::Subdivide() 
 {
     double midX = (boundary.minX + boundary.maxX) / 2.0;
     double midY = (boundary.minY + boundary.maxY) / 2.0;
@@ -238,15 +238,15 @@ void QuadTree::Subdivide()
     AABB sw_box{boundary.minX, boundary.minY, midX, midY};
     AABB se_box{midX, boundary.minY, boundary.maxX, midY};
 
-    nw = std::make_unique<QuadTree>(nw_box, capacity);
-    ne = std::make_unique<QuadTree>(ne_box, capacity);
-    sw = std::make_unique<QuadTree>(sw_box, capacity);
-    se = std::make_unique<QuadTree>(se_box, capacity);
+    nw = std::make_unique<QuadNode>(nw_box, capacity);
+    ne = std::make_unique<QuadNode>(ne_box, capacity);
+    sw = std::make_unique<QuadNode>(sw_box, capacity);
+    se = std::make_unique<QuadNode>(se_box, capacity);
 
     divided = true;
 }
 
-bool QuadTree::InsertNode(const MapObject& obj) 
+bool QuadNode::InsertNode(const MapObject& obj) 
 {
     if (!boundary.intersects(obj.bounds))
         return false;
@@ -267,7 +267,7 @@ bool QuadTree::InsertNode(const MapObject& obj)
     return false;
 }
 
-bool QuadTree::InsertWay(const MapObject& obj) 
+bool QuadNode::InsertWay(const MapObject& obj) 
 {
     if (!boundary.intersects(obj.bounds))
         return false;
@@ -298,7 +298,7 @@ bool QuadTree::InsertWay(const MapObject& obj)
     return true;
 }
 
-void QuadTree::Query(const AABB& range, std::vector<MapObject>* foundNodes, std::vector<MapObject>* foundWays) const 
+void QuadNode::Query(const AABB& range, std::vector<MapObject>* foundNodes, std::vector<MapObject>* foundWays, int depth) const 
 {
     if (!boundary.intersects(range))
         return;
@@ -321,11 +321,11 @@ void QuadTree::Query(const AABB& range, std::vector<MapObject>* foundNodes, std:
     }
 
 
-    if (!divided)
+    if (!divided || depth == 0)
         return;
 
-    nw->Query(range, foundNodes, foundWays);
-    ne->Query(range, foundNodes, foundWays);
-    sw->Query(range, foundNodes, foundWays);
-    se->Query(range, foundNodes, foundWays);
+    nw->Query(range, foundNodes, foundWays, depth - 1);
+    ne->Query(range, foundNodes, foundWays, depth - 1);
+    sw->Query(range, foundNodes, foundWays, depth - 1);
+    se->Query(range, foundNodes, foundWays, depth - 1);
 }

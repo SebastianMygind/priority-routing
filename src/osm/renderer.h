@@ -42,15 +42,15 @@ struct MapObject
 };
 
 
-class QuadTree 
+class QuadNode 
 {
 public:
-    QuadTree(const AABB& boundary, int capacity)
+    QuadNode(const AABB& boundary, int capacity)
         : boundary(boundary), capacity(capacity), divided(false) {}
 
     bool InsertNode(const MapObject& obj);
     bool InsertWay(const MapObject& obj);
-    void Query(const AABB& range, std::vector<MapObject>* foundNodes, std::vector<MapObject>* foundWays) const;
+    void Query(const AABB& range, std::vector<MapObject>* foundNodes, std::vector<MapObject>* foundWays, int depth) const;
 
 private:
     AABB boundary;
@@ -60,10 +60,12 @@ private:
     std::vector<MapObject> nodes;
     std::vector<MapObject> ways;
 
-    std::unique_ptr<QuadTree> nw;
-    std::unique_ptr<QuadTree> ne;
-    std::unique_ptr<QuadTree> sw;
-    std::unique_ptr<QuadTree> se;
+    std::vector<MapObject> waysLod;
+
+    std::unique_ptr<QuadNode> nw;
+    std::unique_ptr<QuadNode> ne;
+    std::unique_ptr<QuadNode> sw;
+    std::unique_ptr<QuadNode> se;
 
     void Subdivide();
 };
@@ -82,6 +84,6 @@ private:
 
 public:
     OSMGraph* m_pGraph;
-    QuadTree m_Tree;
+    QuadNode m_Tree;
     std::unordered_map<uint64_t, Polygon> m_CachedPolygons; // WayID, Polygon data
 };

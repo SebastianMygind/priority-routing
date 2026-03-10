@@ -77,7 +77,7 @@ int main() {
             double maxLon = bottomRightLatLon.lon;
 
             std::vector<MapObject> visibleNodes;
-            renderer.m_Tree.Query({minLon, minLat, maxLon, maxLat}, &visibleNodes, nullptr);
+            renderer.m_Tree.Query({minLon, minLat, maxLon, maxLat}, &visibleNodes, nullptr, 10);
 
             for (MapObject& obj : visibleNodes) 
             {
