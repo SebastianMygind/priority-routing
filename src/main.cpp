@@ -2,6 +2,7 @@
 #include <print>
 #include <vector>
 #include <thread>
+#include <format>
 
 #include "osm/graph.h"
 #include "osm/renderer.h"
@@ -64,7 +65,7 @@ int main() {
             camera.target = Vector2Add(camera.target, delta);
         }
 
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) 
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && camera.zoom > 7.F)
         {
             Vector2 topLeft           = GetScreenToWorld2D({ 0,0 }, camera);
             Vector2 bottomRight       = GetScreenToWorld2D({ (float)window.width, (float)window.height }, camera);
@@ -77,7 +78,7 @@ int main() {
             double maxLon = bottomRightLatLon.lon;
 
             std::vector<MapObject> visibleNodes;
-            renderer.m_Tree.Query({minLon, minLat, maxLon, maxLat}, &visibleNodes, nullptr, 10);
+            renderer.m_Tree.Query({minLon, minLat, maxLon, maxLat}, &visibleNodes, nullptr, 20);
 
             for (MapObject& obj : visibleNodes) 
             {
@@ -113,10 +114,28 @@ int main() {
         ClearBackground(RAYWHITE);
 
         BeginMode2D(camera);
-        renderer.DrawGraph(camera, (float)window.width * dpi.x, (float)window.height * dpi.y, mouseWorldPos);
+
+        static OSMRendererSettings settings;
+        settings.screenWidth = (float)window.width * dpi.x;
+        settings.screenHeight = (float)window.height * dpi.y;
+        settings.drawObjBounds = false;
+        settings.drawQuadBounds = window.showDebug;
+        settings.cursorPos = mouseWorldPos;
+
+        renderer.DrawGraph(camera, settings);
+
         EndMode2D();
 
-        DrawUserInterface(window, mouseWorldPos, graph, uiState);
+        Coord cursorCoord = InverseMercatorProjection(mouseWorldPos.x, mouseWorldPos.y);
+        DrawUserInterface(window, { (float)cursorCoord.lon, (float)cursorCoord.lat }, graph, uiState);
+
+        DrawText(
+            std::format("Way count: {}", renderer.GetWayRenderCount()).c_str(),
+            50,
+            50,
+            20,
+            BLACK
+        );
 
         EndDrawing();
     }

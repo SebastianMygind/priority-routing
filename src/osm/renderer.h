@@ -51,6 +51,7 @@ public:
     bool InsertNode(const MapObject& obj);
     bool InsertWay(const MapObject& obj);
     void Query(const AABB& range, std::vector<MapObject>* foundNodes, std::vector<MapObject>* foundWays, int depth) const;
+    void QueryQuads(const AABB& range, std::vector<AABB>* foundBounds, int depth) const;
 
 private:
     AABB boundary;
@@ -70,6 +71,14 @@ private:
     void Subdivide();
 };
 
+struct OSMRendererSettings
+{
+    float   screenWidth;
+    float   screenHeight;
+    bool    drawObjBounds;
+    bool    drawQuadBounds;
+    Vector2 cursorPos;
+};
 
 class OSMRenderer
 {
@@ -77,13 +86,23 @@ public:
     OSMRenderer(OSMGraph* graph);
 
     void BuildQuadTree();
-    void DrawGraph(Camera2D camera, float screenWidth, float screenHeight, Vector2 cursor);
+    void DrawGraph(Camera2D& camera, OSMRendererSettings& settings);
+
+    // Rendering stats (call after DrawGraph)
+    inline size_t GetNodeRenderCount() const { return m_NodesToRender.size(); }
+    inline size_t GetWayRenderCount() const { return m_WaysToRender.size(); }
 
 private:
-    Polygon& CachePolygonSingle(uint64_t wayId, const OSMWay& way);
+    Polygon& CachePolygonSingle(OSMWayID wayId, const OSMWay& way);
+    void     DrawBounds(const AABB& bounds, Camera2D camera);
 
 public:
     OSMGraph* m_pGraph;
     QuadNode m_Tree;
-    std::unordered_map<uint64_t, Polygon> m_CachedPolygons; // WayID, Polygon data
+    QuadNode m_Tree1;
+    std::unordered_map<OSMWayID, Polygon> m_CachedPolygons; // WayID, Polygon data
+
+    // Temporary buffers for rendering
+    std::vector<MapObject> m_NodesToRender;
+    std::vector<MapObject> m_WaysToRender;
 };

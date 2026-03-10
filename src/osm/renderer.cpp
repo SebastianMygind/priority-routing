@@ -7,7 +7,8 @@
 
 #include <array>
 
-OSMRenderer::OSMRenderer(OSMGraph* graph) : m_pGraph(graph), m_Tree({11.271273842, 55.1959946, 13.008736992, 56.13105965}, 8)
+OSMRenderer::OSMRenderer(OSMGraph* graph) : m_pGraph(graph), m_Tree({11.271273842, 55.1959946, 13.008736992, 56.13105965}, 8), 
+    m_Tree1({ 11.271273842, 55.1959946, 13.008736992, 56.13105965 }, 8)
 {
 }
 
@@ -20,7 +21,14 @@ void OSMRenderer::BuildQuadTree()
         const uint64_t& id = wayPair.first;
         const OSMWay& way = wayPair.second;
 
-        bool isHighway = way.tags.find("highway") != way.tags.end();
+        auto highwayTag = way.tags.find("highway");
+        bool isHighway = highwayTag != way.tags.end();
+
+        bool isZoomLevel = isHighway && (kMotorways.find(highwayTag->second) != kMotorways.end() ||
+                                         kPrimary.find(highwayTag->second) != kPrimary.end() ||
+                                         kSecondary.find(highwayTag->second) != kSecondary.end() ||
+                                         kTertiary.find(highwayTag->second) != kTertiary.end());
+ 
 
         AABB box;
         OSMNode& node = m_pGraph->nodes[way.nodes[0]];
@@ -38,7 +46,7 @@ void OSMRenderer::BuildQuadTree()
             {
                 MapObject obj;
                 obj.id = nodeRef;
-                obj.bounds = {node.lon, node.lat, node.lon, node.lat};
+                obj.bounds = { node.lon, node.lat, node.lon, node.lat };
                 m_Tree.InsertNode(obj);
             }
         }
@@ -47,17 +55,21 @@ void OSMRenderer::BuildQuadTree()
         wayobj.id = id;
         wayobj.bounds = box;
         m_Tree.InsertWay(wayobj);
+
+        if (isZoomLevel)
+            m_Tree1.InsertWay(wayobj);
+
     }
 }
 
-void OSMRenderer::DrawGraph(Camera2D camera, float screenWidth, float screenHeight, Vector2 cursor)
+void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
 {
-    std::unordered_map<uint64_t, OSMNode>& nodes = m_pGraph->nodes;
-    std::unordered_map<uint64_t, OSMWay>&  ways = m_pGraph->ways;
-    std::set<uint64_t>&  selected_path = m_pGraph->selectedPath;
+    std::unordered_map<OSMNodeID, OSMNode>& nodes = m_pGraph->nodes;
+    std::unordered_map<OSMWayID, OSMWay>&  ways = m_pGraph->ways;
+    std::set<OSMNodeID>&  selected_path = m_pGraph->selectedPath;
 
     Vector2 topLeft     = GetScreenToWorld2D({ 0,0 }, camera);
-    Vector2 bottomRight = GetScreenToWorld2D({ screenWidth, screenHeight }, camera);
+    Vector2 bottomRight = GetScreenToWorld2D({ settings.screenWidth, settings.screenHeight }, camera);
 
     Coord topLeftLatLon     = InverseMercatorProjection(topLeft.x, topLeft.y);
     Coord bottomRightLatLon = InverseMercatorProjection(bottomRight.x, bottomRight.y);
@@ -67,15 +79,27 @@ void OSMRenderer::DrawGraph(Camera2D camera, float screenWidth, float screenHeig
     double minLon = topLeftLatLon.lon;
     double maxLon = bottomRightLatLon.lon;
 
-    std::vector<MapObject> nodesToRender;
-    std::vector<MapObject> waysToRender;
-    nodesToRender.reserve(4096);
-    waysToRender.reserve(4096);
-    m_Tree.Query({minLon, minLat, maxLon, maxLat}, &nodesToRender, &waysToRender, 4);
+    if (settings.drawQuadBounds)
+    {
+        std::vector<AABB> quadBounds;
+        m_Tree.QueryQuads({minLon, minLat, maxLon, maxLat}, &quadBounds, 20);
+        for (const AABB& bounds : quadBounds)
+        {
+            DrawBounds(bounds, camera);
+        }
+    }
 
-    for (const MapObject& wayObj : waysToRender) 
+    m_NodesToRender.clear();
+    m_WaysToRender.clear();
+
+    if (camera.zoom > 4.F)
+        m_Tree.Query({minLon, minLat, maxLon, maxLat}, &m_NodesToRender, &m_WaysToRender, 20);
+    else
+        m_Tree1.Query({ minLon, minLat, maxLon, maxLat }, &m_NodesToRender, &m_WaysToRender, 20);
+
+    for (const MapObject& wayObj : m_WaysToRender)
     {   
-        const uint64_t& id = wayObj.id;
+        const OSMWayID& id = wayObj.id;
         const OSMWay& way = ways[id];
 
         const AABB& bounds = wayObj.bounds;
@@ -85,6 +109,9 @@ void OSMRenderer::DrawGraph(Camera2D camera, float screenWidth, float screenHeig
          {
              continue;
          }
+
+         if (settings.drawObjBounds)
+             DrawBounds(bounds, camera);
 
         if (auto tag = way.tags.find("building"); tag != way.tags.end())
         {
@@ -109,13 +136,24 @@ void OSMRenderer::DrawGraph(Camera2D camera, float screenWidth, float screenHeig
             if (kMotorways.find(tag->second) != kMotorways.end())
             {
                 lineColor = { 233,144,160,255 };
-                width = 0.4F;
+                width = std::fmax(2.5F * (1.0 / camera.zoom), width);
             }
             else if (kPrimary.find(tag->second) != kPrimary.end())
             {
                 lineColor = { 191, 117, 36,255 };
-                width = 0.4F;
+                width = std::fmax(2.0F * (1.0 / camera.zoom), width);
             }
+            else if (kSecondary.find(tag->second) != kSecondary.end())
+            {
+                lineColor = { 100,100,100,255 };
+                width = std::fmax(1.0F * (1.0 / camera.zoom), width);
+            }
+            else if (kTertiary.find(tag->second) != kTertiary.end())
+            {
+                lineColor = { 100,100,100,255 };
+                width = std::fmax(1.0F * (1.0 / camera.zoom), width);
+            }
+
 
             if (kDrivableHighways.find(tag->second) == kDrivableHighways.end())
             {
@@ -158,9 +196,9 @@ void OSMRenderer::DrawGraph(Camera2D camera, float screenWidth, float screenHeig
         return;
 
     // Draw nodes
-    for (MapObject& nodeObj : nodesToRender)
+    for (MapObject& nodeObj : m_NodesToRender)
     {
-        uint64_t id = nodeObj.id;
+        OSMNodeID& id = nodeObj.id;
         OSMNode& node = nodes[id];
 
         const AABB& bounds = nodeObj.bounds;
@@ -173,14 +211,13 @@ void OSMRenderer::DrawGraph(Camera2D camera, float screenWidth, float screenHeig
 
         Vector2 p1 = MercatorProjection(node.lat, node.lon);
 
-        float distToCursor = Vector2Distance(p1, cursor);
+        float distToCursor = Vector2Distance(p1, settings.cursorPos);
 
         if (distToCursor > 30.0F)
             continue;
 
         bool isSelected = (id == m_pGraph->GetNodeA() || id == m_pGraph->GetNodeB());
         bool isHovering = distToCursor < 0.2F;
-
 
         DrawCircleV(
             p1,
@@ -190,7 +227,7 @@ void OSMRenderer::DrawGraph(Camera2D camera, float screenWidth, float screenHeig
     }
 }
 
-Polygon& OSMRenderer::CachePolygonSingle(uint64_t wayId, const OSMWay& way)
+Polygon& OSMRenderer::CachePolygonSingle(OSMWayID wayId, const OSMWay& way)
 {
     auto polygonIt = m_CachedPolygons.find(wayId);
 
@@ -225,6 +262,24 @@ Polygon& OSMRenderer::CachePolygonSingle(uint64_t wayId, const OSMWay& way)
     auto polygonIt2 = m_CachedPolygons.find(wayId); 
 
     return polygonIt2->second;
+}
+
+void OSMRenderer::DrawBounds(const AABB& bounds, Camera2D camera)
+{
+    Vector2 p1 = MercatorProjection(bounds.minY, bounds.minX);
+    Vector2 p2 = MercatorProjection(bounds.maxY, bounds.maxX);
+
+    // Ensure rectangle has positive width/height and correct origin
+    float rx = std::min(p1.x, p2.x);
+    float ry = std::min(p1.y, p2.y);
+    float rw = std::fabs(p2.x - p1.x);
+    float rh = std::fabs(p2.y - p1.y);
+
+    DrawRectangleLinesEx(
+        { rx, ry, rw, rh },
+        1.F * (1.F / camera.zoom),
+        RED
+    );
 }
 
 
@@ -311,7 +366,7 @@ void QuadNode::Query(const AABB& range, std::vector<MapObject>* foundNodes, std:
         }
     }
 
-    
+
     if (foundWays)
     {
         for (const auto& obj : ways) {
@@ -320,7 +375,6 @@ void QuadNode::Query(const AABB& range, std::vector<MapObject>* foundNodes, std:
         }
     }
 
-
     if (!divided || depth == 0)
         return;
 
@@ -328,4 +382,19 @@ void QuadNode::Query(const AABB& range, std::vector<MapObject>* foundNodes, std:
     ne->Query(range, foundNodes, foundWays, depth - 1);
     sw->Query(range, foundNodes, foundWays, depth - 1);
     se->Query(range, foundNodes, foundWays, depth - 1);
+}
+
+void QuadNode::QueryQuads(const AABB& range, std::vector<AABB>* foundBounds, int depth) const
+{
+    if (!boundary.intersects(range))
+        return;
+
+    foundBounds->push_back(boundary);
+
+    if (!divided || depth == 0)
+        return;
+    nw->QueryQuads(range, foundBounds, depth - 1);
+    ne->QueryQuads(range, foundBounds, depth - 1);
+    sw->QueryQuads(range, foundBounds, depth - 1);
+    se->QueryQuads(range, foundBounds, depth - 1);
 }

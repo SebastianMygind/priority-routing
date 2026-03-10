@@ -19,7 +19,7 @@ struct OSMNode
 
 struct OSMWay 
 {
-    std::vector<uint64_t> nodes;
+    std::vector<OSMNodeID> nodes;
     std::unordered_map<std::string, std::string> tags;
 };
 
@@ -32,21 +32,21 @@ public:
 
     bool ParseXML(std::string path);
 
-    inline OSMNode  GetNode(uint64_t id) const  { return nodes.at(id); }
-    inline OSMWay   GetWay(uint64_t id) const   { return ways.at(id); }
-    inline uint64_t GetNodeA() const            { return selectedNodeA; }
-    inline uint64_t GetNodeB() const            { return selectedNodeB; }
-    inline void     SetNodeA(uint64_t id)       { selectedNodeA = id; }
-    inline void     SetNodeB(uint64_t id)       { selectedNodeB = id; }
-    inline void     ClearPath()                 { selectedPath.clear(); }
+    inline OSMNode   GetNode(OSMNodeID id) const { return nodes.at(id); }
+    inline OSMWay    GetWay(OSMWayID id) const   { return ways.at(id); }
+    inline OSMNodeID GetNodeA() const            { return selectedNodeA; }
+    inline OSMNodeID GetNodeB() const            { return selectedNodeB; }
+    inline void      SetNodeA(OSMNodeID id)      { selectedNodeA = id; }
+    inline void      SetNodeB(OSMNodeID id)      { selectedNodeB = id; }
+    inline void      ClearPath()                 { selectedPath.clear(); }
 
 private:
-    std::unordered_map<uint64_t, OSMNode> nodes;
-    std::unordered_map<uint64_t, OSMWay>  ways;
+    std::unordered_map<OSMNodeID, OSMNode> nodes;
+    std::unordered_map<OSMWayID,  OSMWay>  ways;
 
-    std::set<uint64_t> selectedPath;
-    uint64_t selectedNodeA;
-    uint64_t selectedNodeB;
+    std::set<OSMNodeID> selectedPath;
+    OSMNodeID selectedNodeA;
+    OSMNodeID selectedNodeB;
 
     friend class OSMRenderer;
     friend class Dijkstra;
