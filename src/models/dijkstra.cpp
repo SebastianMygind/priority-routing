@@ -1,5 +1,5 @@
 #include "dijkstra.h"
-#include "../tags.h"
+#include "../osm/tags.h"
 
 #include <cmath>
 #include <cstdint>
@@ -11,10 +11,10 @@
 
 static double DegToRad(double deg)
 {
-    return deg * M_PI / 180.0;
+    return deg * PI / 180.0;
 }
 
-static double Haversine(const Node& a, const Node& b)
+static double Haversine(const OSMNode& a, const OSMNode& b)
 {
     constexpr double R = 6371000.0; // Earth radius in meters
 
@@ -63,15 +63,11 @@ static std::optional<double> ParseMaxSpeed(const std::string& value)
 using AdjList = std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, double>>>;
 
 
-bool Dijkstra::FindPath(
-    Graph& graph,
-    uint64_t start_node,
-    uint64_t end_node,
-    std::set<uint64_t>& out_path)
+bool Dijkstra::FindPath(OSMGraph& graph)
 {
     std::unordered_map<uint64_t, double>   dist;
     std::unordered_map<uint64_t, uint64_t> prev;
-    std::vector<uint64_t> queue = {start_node};
+    std::vector<uint64_t> queue = { graph.GetNodeA() };
 
     // using PQNode = std::pair<double, uint64_t>;
     // std::priority_queue<PQNode, std::vector<PQNode>, std::greater<>> pq;
@@ -79,9 +75,9 @@ bool Dijkstra::FindPath(
     std::unordered_map< uint64_t, std::vector<uint64_t> > adj_list;
     for (const auto& wayPair : graph.ways)
     {
-        const Way& way = wayPair.second;
+        const OSMWay& way = wayPair.second;
         
-        const std::vector<uint64_t>& nodes = way.nodeRefs;
+        const std::vector<uint64_t>& nodes = way.nodes;
 
         auto highway = way.tags.find("highway");
         if (highway == way.tags.end())
@@ -125,9 +121,9 @@ bool Dijkstra::FindPath(
         }
     }
 
-    dist[start_node] = 0;
+    dist[graph.GetNodeA()] = 0;
 
-    while (!queue.empty()) 
+    while (!queue.empty())
     {
         // Find the node in the queue with the smallest distance
         uint64_t current = queue[0];
@@ -139,12 +135,12 @@ bool Dijkstra::FindPath(
         }
 
         // If we reached the end node, reconstruct the path
-        if (current == end_node) 
+        if (current == graph.GetNodeB()) 
         {
-            out_path.clear();
+            graph.selectedPath.clear();
             while (current != 0xFFFFFFFF) 
             {
-                out_path.insert(current);
+                graph.selectedPath.insert(current);
                 current = prev[current];
             }
             //std::reverse(out_path.begin(), out_path.end());

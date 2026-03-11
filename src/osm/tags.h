@@ -14,3 +14,11 @@ static const std::unordered_set<std::string> kMotorways = {
 static const std::unordered_set<std::string> kPrimary = {
     "primary", "primary_link"
 };
+
+static const std::unordered_set<std::string> kSecondary = {
+    "secondary", "secondary_link"
+};
+
+static const std::unordered_set<std::string> kTertiary = {
+    "tertiary", "tertiary_link"
+};

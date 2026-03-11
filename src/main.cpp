@@ -2,9 +2,10 @@
 #include <print>
 #include <vector>
 #include <thread>
+#include <format>
 
-#include "Graph.h"
-#include "Parser.h"
+#include "osm/graph.h"
+#include "osm/renderer.h"
 #include "path_finder.h"
 #include "raylib.h"
 #include "Window.h"
@@ -18,9 +19,11 @@ int main() {
 
     UIState uiState;
 
-    Graph graph;
+    OSMGraph graph;
+    graph.ParseXML("../data/map.osm");
 
-    ParseOSM("../data/map.osm", graph);
+    OSMRenderer renderer(&graph); 
+    renderer.BuildQuadTree();
 
     SetTraceLogCallback(SPDLogger);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI | FLAG_VSYNC_HINT);
@@ -30,7 +33,7 @@ int main() {
 
     InitWindow(window.width, window.height, window.title.c_str());
     // Setup Application logic at this stage.
-    Camera2D camera = {0};
+    Camera2D camera = {};
     camera.zoom = 1.0F;
 
 #ifdef __APPLE__
@@ -39,8 +42,7 @@ int main() {
     Vector2 dpi = GetWindowScaleDPI();
 #endif
 
-    // Main game loop
-    while (!WindowShouldClose()) // Detect window close button or ESC key
+    while (!WindowShouldClose())
     {
         // Get the world point that is under the mouse
         const Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition() * dpi, camera);
@@ -48,12 +50,17 @@ int main() {
         // Update
         if (IsWindowResized()) 
         {
+            // We divide here because some OS (Linux) return physical size on GetScreenWidth(). On others the dpi is 1.F
             window.width = static_cast<int>(static_cast<float>(GetScreenWidth()) / dpi.x);
-            window.height = static_cast<int>(static_cast<float>(GetScreenHeight())/ dpi.y);
+            window.height = static_cast<int>(static_cast<float>(GetScreenHeight()) / dpi.y);
         }
 
         if (IsKeyPressed(KEY_D)) {
             window.showDebug = !window.showDebug;
+        }
+
+        if (IsKeyPressed(KEY_V)) {
+            window.showDebugVisuals = !window.showDebugVisuals;
         }
 
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) 
@@ -63,60 +70,61 @@ int main() {
             camera.target = Vector2Add(camera.target, delta);
         }
 
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) 
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && camera.zoom > 7.F)
         {
-            for (std::pair<uint64_t, Node*> node : graph.nodes_highways) {
-                if (Vector2Distance(MercatorProjection(node.second->lat, node.second->lon), mouseWorldPos) < 0.2F)
+            AABB bounds = GetScreenLocationBounds(camera, (float)window.width * dpi.x, (float)window.height * dpi.y);
+
+            std::vector<MapObject> visibleNodes;
+            renderer.m_Tree.Query(bounds, &visibleNodes, nullptr, 20);
+
+            for (MapObject& obj : visibleNodes) 
+            {
+                OSMNode node = graph.GetNode(obj.id);
+                if (Vector2Distance(MercatorProjection(node.lat, node.lon), mouseWorldPos) < 0.2F)
                 {
-                    if (graph.selected_node_a == 0xFFFFFFFF) {              // Click one, A
-                        graph.selected_node_a = node.first;
-                    } else if (graph.selected_node_b == 0xFFFFFFFF) {       // Click two, B, calculate path
-                        graph.selected_node_b = node.first;
+                    if (graph.GetNodeA() == 0xFFFFFFFF) {              // Click one, A
+                        graph.SetNodeA(obj.id);
+                    } else if (graph.GetNodeB() == 0xFFFFFFFF) {       // Click two, B, calculate path
+                        graph.SetNodeB(obj.id);
                         PathFinder(graph, uiState.modelSelection);
                     } else {                                                // Click three, reset
-                        graph.selected_node_a = 0xFFFFFFFF;
-                        graph.selected_node_b = 0xFFFFFFFF;
-                        graph.selected_path.clear();
+                        graph.SetNodeA(0xFFFFFFFF);
+                        graph.SetNodeB(0xFFFFFFFF);
+                        graph.ClearPath();
                     }
                     break;
                 }
             }
         }
 
-        if (const float wheel = GetMouseWheelMove(); wheel != 0) {
-            // Set the offset to where the mouse is
+        if (const float wheel = GetMouseWheelMove(); wheel != 0) 
+        {
             camera.offset = GetMousePosition() * dpi;
-
-            // Set the target to match, so that the camera maps the world space point
-            // under the cursor to the screen space point under the cursor at any zoom
             camera.target = mouseWorldPos;
 
-            // Zoom increment
-            // Uses log scaling to provide consistent zoom speed
             const float scale = 0.2F * wheel;
             camera.zoom = Clamp(expf(logf(camera.zoom) + scale), 0.125F, 64.0F);
         }
 
-        // Draw
-        //----------------------------------------------------------------------------------
         BeginDrawing();
 
         ClearBackground(RAYWHITE);
 
         BeginMode2D(camera);
-        // Draw the 3d grid, rotated 90 degrees and centered around 0,0
-        // just so we have something in the XY plane
-        // rlPushMatrix();
-        // rlTranslatef(0, 25 * 50, 0);
-        // rlRotatef(90, 1, 0, 0);
-        // DrawGrid(100, 50);
-        // rlPopMatrix();
 
-        graph.DrawGraph(camera, (float)window.width * dpi.x, (float)window.height * dpi.y);
+        static OSMRendererSettings settings;
+        settings.screenWidth = (float)window.width * dpi.x;
+        settings.screenHeight = (float)window.height * dpi.y;
+        settings.drawObjBounds = false;
+        settings.drawQuadBounds = window.showDebugVisuals;
+        settings.cursorPos = mouseWorldPos;
+
+        renderer.DrawGraph(camera, settings);
 
         EndMode2D();
 
-        DrawUserInterface(window, mouseWorldPos, graph, uiState);
+        Coord cursorCoord = InverseMercatorProjection(mouseWorldPos.x, mouseWorldPos.y);
+        DrawUserInterface(window, { (float)cursorCoord.lon, (float)cursorCoord.lat }, graph, renderer, uiState);
 
         EndDrawing();
     }

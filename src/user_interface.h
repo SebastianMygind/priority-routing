@@ -1,5 +1,6 @@
 #pragma once
-#include "Graph.h"
+#include "osm/graph.h"
+#include "osm/renderer.h"
 #include "raylib.h"
 #include "Window.h"
 #include "path_finder.h"
@@ -9,4 +10,4 @@ struct UIState {
     bool modelDropdownEdit = false;
 };
 
-void DrawUserInterface(const Window &window, const Vector2 &mWorldPos, const Graph& graph, UIState &state);
+void DrawUserInterface(const Window &window, const Vector2 &mWorldPos, const OSMGraph& graph, OSMRenderer& renderer, UIState &state);
