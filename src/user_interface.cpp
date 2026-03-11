@@ -17,9 +17,9 @@ constexpr std::pair<float, float> MIN_UI_SIZE = {200.F, 600.F};
 
 void DrawCursor(const Rectangle& uiRect, const Vector2 &mWorldPos, Vector2 mPos);
 void DrawRouteInfo(const Rectangle& uiRect, const Vector2 &mPos, const OSMGraph& graph, UIState& state);
-void DrawDebugInfo(const Rectangle& uiRect, const Window& window);
+void DrawDebugInfo(const Rectangle& uiRect, const Window& window, const OSMGraph& graph, const OSMRenderer& renderer);
 
-void DrawUserInterface(const Window &window, const Vector2 &mWorldPos, const OSMGraph& graph, UIState& state) {
+void DrawUserInterface(const Window &window, const Vector2 &mWorldPos, const OSMGraph& graph, OSMRenderer& renderer, UIState& state) {
 
     const auto screenX = static_cast<float>(window.width);
     const auto screenY = static_cast<float>(window.height);
@@ -38,7 +38,7 @@ void DrawUserInterface(const Window &window, const Vector2 &mWorldPos, const OSM
 
     // These elements make up the UI and must not overlap as that will cause collisions.
     DrawCursor(uiRect, mWorldPos, mPos);
-    DrawDebugInfo(uiRect, window);
+    DrawDebugInfo(uiRect, window, graph, renderer);
     DrawRouteInfo(uiRect, mPos, graph, state);
 }
 
@@ -59,21 +59,21 @@ void DrawCursor(const Rectangle &uiRect, const Vector2 &mWorldPos, const Vector2
     );
 }
 
-void DrawDebugInfo(const Rectangle &uiRect, const Window &window) {
+void DrawDebugInfo(const Rectangle &uiRect, const Window &window, const OSMGraph& graph, const OSMRenderer& renderer) {
     if (!window.showDebug) {
         return;
     }
 
     const Vector2 startVec = {
         .x = uiRect.x + (uiRect.width * 0.05F),
-        .y = uiRect.y + (uiRect.height * 0.825F)
+        .y = uiRect.y + (uiRect.height * 0.6F)
     };
 
     const Rectangle debugRect = {
         .x = startVec.x,
         .y = startVec.y,
         .width = uiRect.width * 0.9F,
-        .height = uiRect.height * 0.15F
+        .height = uiRect.height * 0.4F
     };
 
     const auto currentFPS = GetFPS();
@@ -100,6 +100,30 @@ void DrawDebugInfo(const Rectangle &uiRect, const Window &window) {
         std::format("FPS: {}", currentFPS).c_str(),
         static_cast<int>(debugRect.x) + 10,
         static_cast<int>(debugRect.y) + 40,
+        18,
+        BLACK
+    );
+
+    DrawText(
+        std::format("Rendered ways: {}", renderer.GetWayRenderCount()).c_str(),
+        static_cast<int>(debugRect.x) + 10,
+        static_cast<int>(debugRect.y) + 70,
+        18,
+        BLACK
+    );
+
+    DrawText(
+        std::format("Total nodes: {}", graph.GetNodeCount()).c_str(),
+        static_cast<int>(debugRect.x) + 10,
+        static_cast<int>(debugRect.y) + 100,
+        18,
+        BLACK
+    );
+
+    DrawText(
+        std::format("Total way: {}", graph.GetWayCount()).c_str(),
+        static_cast<int>(debugRect.x) + 10,
+        static_cast<int>(debugRect.y) + 130,
         18,
         BLACK
     );

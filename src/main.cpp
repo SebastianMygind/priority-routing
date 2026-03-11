@@ -59,6 +59,10 @@ int main() {
             window.showDebug = !window.showDebug;
         }
 
+        if (IsKeyPressed(KEY_V)) {
+            window.showDebugVisuals = !window.showDebugVisuals;
+        }
+
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) 
         {
             Vector2 delta = GetMouseDelta();
@@ -112,7 +116,7 @@ int main() {
         settings.screenWidth = (float)window.width * dpi.x;
         settings.screenHeight = (float)window.height * dpi.y;
         settings.drawObjBounds = false;
-        settings.drawQuadBounds = window.showDebug;
+        settings.drawQuadBounds = window.showDebugVisuals;
         settings.cursorPos = mouseWorldPos;
 
         renderer.DrawGraph(camera, settings);
@@ -120,7 +124,7 @@ int main() {
         EndMode2D();
 
         Coord cursorCoord = InverseMercatorProjection(mouseWorldPos.x, mouseWorldPos.y);
-        DrawUserInterface(window, { (float)cursorCoord.lon, (float)cursorCoord.lat }, graph, uiState);
+        DrawUserInterface(window, { (float)cursorCoord.lon, (float)cursorCoord.lat }, graph, renderer, uiState);
 
         EndDrawing();
     }
