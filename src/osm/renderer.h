@@ -106,3 +106,5 @@ public:
     std::vector<MapObject> m_NodesToRender;
     std::vector<MapObject> m_WaysToRender;
 };
+
+AABB GetScreenLocationBounds(Camera2D camera, float renderWidth, float renderHeight);

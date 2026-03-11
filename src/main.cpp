@@ -20,7 +20,7 @@ int main() {
     UIState uiState;
 
     OSMGraph graph;
-    graph.ParseXML("../data/Copenhagen.osm");
+    graph.ParseXML("../data/map.osm");
 
     OSMRenderer renderer(&graph); 
     renderer.BuildQuadTree();
@@ -50,8 +50,9 @@ int main() {
         // Update
         if (IsWindowResized()) 
         {
+            // We divide here because some OS (Linux) return physical size on GetScreenWidth(). On others the dpi is 1.F
             window.width = static_cast<int>(static_cast<float>(GetScreenWidth()) / dpi.x);
-            window.height = static_cast<int>(static_cast<float>(GetScreenHeight())/ dpi.y);
+            window.height = static_cast<int>(static_cast<float>(GetScreenHeight()) / dpi.y);
         }
 
         if (IsKeyPressed(KEY_D)) {
@@ -67,18 +68,10 @@ int main() {
 
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && camera.zoom > 7.F)
         {
-            Vector2 topLeft           = GetScreenToWorld2D({ 0,0 }, camera);
-            Vector2 bottomRight       = GetScreenToWorld2D({ (float)window.width, (float)window.height }, camera);
-            Coord   topLeftLatLon     = InverseMercatorProjection(topLeft.x, topLeft.y);
-            Coord   bottomRightLatLon = InverseMercatorProjection(bottomRight.x, bottomRight.y);
-
-            double minLat = bottomRightLatLon.lat;
-            double maxLat = topLeftLatLon.lat;
-            double minLon = topLeftLatLon.lon;
-            double maxLon = bottomRightLatLon.lon;
+            AABB bounds = GetScreenLocationBounds(camera, (float)window.width * dpi.x, (float)window.height * dpi.y);
 
             std::vector<MapObject> visibleNodes;
-            renderer.m_Tree.Query({minLon, minLat, maxLon, maxLat}, &visibleNodes, nullptr, 20);
+            renderer.m_Tree.Query(bounds, &visibleNodes, nullptr, 20);
 
             for (MapObject& obj : visibleNodes) 
             {

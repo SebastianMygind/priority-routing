@@ -5,6 +5,7 @@
 
 class Window {
 public:
+    //Logical units
     int height{720}, width{1280};
     std::string title;
     bool showGrid = true;

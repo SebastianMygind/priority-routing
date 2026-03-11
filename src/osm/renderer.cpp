@@ -70,21 +70,12 @@ void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
     std::unordered_map<OSMWayID, OSMWay>&  ways = m_pGraph->ways;
     std::set<OSMNodeID>&  selected_path = m_pGraph->selectedPath;
 
-    Vector2 topLeft     = GetScreenToWorld2D({ 0,0 }, camera);
-    Vector2 bottomRight = GetScreenToWorld2D({ settings.screenWidth, settings.screenHeight }, camera);
-
-    Coord topLeftLatLon     = InverseMercatorProjection(topLeft.x, topLeft.y);
-    Coord bottomRightLatLon = InverseMercatorProjection(bottomRight.x, bottomRight.y);
-
-    double minLat = bottomRightLatLon.lat;
-    double maxLat = topLeftLatLon.lat;
-    double minLon = topLeftLatLon.lon;
-    double maxLon = bottomRightLatLon.lon;
+    AABB screenBounds = GetScreenLocationBounds(camera, settings.screenWidth, settings.screenHeight);
 
     if (settings.drawQuadBounds)
     {
         std::vector<AABB> quadBounds;
-        m_Tree.QueryQuads({minLon, minLat, maxLon, maxLat}, &quadBounds, 20);
+        m_Tree.QueryQuads(screenBounds, &quadBounds, 20);
         for (const AABB& bounds : quadBounds)
         {
             DrawBounds(bounds, camera);
@@ -95,9 +86,9 @@ void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
     m_WaysToRender.clear();
 
     if (camera.zoom > 4.F)
-        m_Tree.Query({minLon, minLat, maxLon, maxLat}, &m_NodesToRender, &m_WaysToRender, 20);
+        m_Tree.Query(screenBounds, &m_NodesToRender, &m_WaysToRender, 20);
     else
-        m_Tree1.Query({ minLon, minLat, maxLon, maxLat }, &m_NodesToRender, &m_WaysToRender, 20);
+        m_Tree1.Query(screenBounds, &m_NodesToRender, &m_WaysToRender, 20);
 
     for (const MapObject& wayObj : m_WaysToRender)
     {   
@@ -106,8 +97,8 @@ void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
 
         const AABB& bounds = wayObj.bounds;
 
-         if ((bounds.maxY < minLat) || (bounds.minY > maxLat) ||
-             (bounds.maxX < minLon) || (bounds.minX > maxLon))
+         if ((bounds.maxY < screenBounds.minY) || (bounds.minY > screenBounds.maxY) ||
+             (bounds.maxX < screenBounds.minX) || (bounds.minX > screenBounds.maxX))
          {
              continue;
          }
@@ -193,13 +184,13 @@ void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
                 OSMNode& node1 = nodes[way.nodes[i]];
                 OSMNode& node2 = nodes[way.nodes[i + 1]];
 
-                if ((node1.lat < minLat && node2.lat < minLat) ||
-                    (node1.lat > maxLat && node2.lat > maxLat) ||
-                    (node1.lon < minLon && node2.lon < minLon) ||
-                    (node1.lon > maxLon && node2.lon > maxLon))
-                {
-                    continue;
-                }
+                // if ((node1.lat < minY && node2.lat < minY) ||
+                //     (node1.lat > maxLat && node2.lat > maxLat) ||
+                //     (node1.lon < minLon && node2.lon < minLon) ||
+                //     (node1.lon > maxLon && node2.lon > maxLon))
+                // {
+                //     continue;
+                // }
 
                 Vector2 p1 = MercatorProjection(node1.lat, node1.lon);
                 Vector2 p2 = MercatorProjection(node2.lat, node2.lon);
@@ -228,8 +219,8 @@ void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
 
         const AABB& bounds = nodeObj.bounds;
 
-         if ((bounds.maxY < minLat) || (bounds.minY > maxLat) ||
-             (bounds.maxX < minLon) || (bounds.minX > maxLon))
+         if ((bounds.maxY < screenBounds.minY) || (bounds.minY > screenBounds.maxY) ||
+             (bounds.maxX < screenBounds.minX) || (bounds.minX > screenBounds.maxX))
          {
              continue;
          }
@@ -422,4 +413,19 @@ void QuadNode::QueryQuads(const AABB& range, std::vector<AABB>* foundBounds, int
     ne->QueryQuads(range, foundBounds, depth - 1);
     sw->QueryQuads(range, foundBounds, depth - 1);
     se->QueryQuads(range, foundBounds, depth - 1);
+}
+
+AABB GetScreenLocationBounds(Camera2D camera, float renderWidth, float renderHeight)
+{
+    Vector2 topLeft           = GetScreenToWorld2D({ 0,0 }, camera);
+    Vector2 bottomRight       = GetScreenToWorld2D({ renderWidth, renderHeight }, camera);
+    Coord   topLeftLatLon     = InverseMercatorProjection(topLeft.x, topLeft.y);
+    Coord   bottomRightLatLon = InverseMercatorProjection(bottomRight.x, bottomRight.y);
+
+    double minLat = bottomRightLatLon.lat;
+    double maxLat = topLeftLatLon.lat;
+    double minLon = topLeftLatLon.lon;
+    double maxLon = bottomRightLatLon.lon;
+
+    return AABB{minLon, minLat, maxLon, maxLat};
 }
