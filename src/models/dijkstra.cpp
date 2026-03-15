@@ -12,8 +12,9 @@ bool Dijkstra::FindPath(OSMGraph& graph)
 {
     std::unordered_map<uint64_t, double>   dist;
     std::unordered_map<uint64_t, uint64_t> prev;
-    
-    std::vector<uint64_t> queue = { graph.GetNodeA() };
+
+    using PQNode = std::pair<double, uint64_t>;
+    std::priority_queue<PQNode, std::vector<PQNode>, std::greater<>> p_queue;
     std::unordered_map< uint64_t, std::vector<uint64_t> > adj_list;
 
     for (const auto& wayPair : graph.ways)
@@ -31,19 +32,6 @@ bool Dijkstra::FindPath(OSMGraph& graph)
 
         auto oneWayTag = way.tags.find("oneway");
         const bool oneWay = (oneWayTag != way.tags.end()) && (oneWayTag->second == "yes");
-
-        // double speedMS = 0.0;
-
-        // auto speedIt = way.tags.find("maxspeed");
-        // if (speedIt != way.tags.end())
-        // {
-        //     auto parsed = ParseMaxSpeed(speedIt->second);
-        //     if (parsed.has_value())
-        //         speedMS = parsed.value();
-        // }
-
-        // double distMeters = Haversine(..);
-        // double timeSeconds = distMeters / speedMS;
 
         for (size_t i = 0; i + 1 < nodes.size(); ++i)
         {
@@ -65,17 +53,13 @@ bool Dijkstra::FindPath(OSMGraph& graph)
     }
 
     dist[graph.GetNodeA()] = 0;
+    p_queue.push({dist[graph.GetNodeA()], graph.GetNodeA()});
 
-    while (!queue.empty())
+    while (!p_queue.empty())
     {
-        // Find the node in the queue with the smallest distance
-        uint64_t current = queue[0];
-        for (uint64_t node : queue) 
-        {
-            if (dist[node] < dist[current]) {
-                current = node;
-            }
-        }
+        // Get the node with the smallest cost
+        uint64_t current = p_queue.top().second;
+        p_queue.pop();
 
         // If we reached the end node, reconstruct the path
         if (current == graph.GetNodeB()) 
@@ -89,22 +73,18 @@ bool Dijkstra::FindPath(OSMGraph& graph)
             return true;
         }
 
-        // Remove current from queue
-        queue.erase(std::remove(queue.begin(), queue.end(), current), queue.end());
-
         // Update distances to neighbors
         for (uint64_t neighbor : adj_list[current]) 
         {
-
             double alt = dist[current] + Haversine(graph.nodes.at(current), graph.nodes.at(neighbor));
             
             if (alt < dist[neighbor]) 
             {
                 dist[neighbor] = alt;
                 prev[neighbor] = current;
-                if (std::find(queue.begin(), queue.end(), neighbor) == queue.end()) {
-                    queue.push_back(neighbor);
-                }
+
+                // Push the neighbor onto the priority queue with cost
+                p_queue.push({alt, neighbor});
             }
         }
     }
