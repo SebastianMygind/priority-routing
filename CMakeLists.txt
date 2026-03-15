@@ -47,6 +47,8 @@ set(CORE_SOURCES
         src/user_interface.h
         src/models/dijkstra.cpp
         src/models/dijkstra.h
+        src/models/a_star.cpp
+        src/models/a_star.h
         src/osm/graph.cpp
         src/osm/graph.h
         src/osm/renderer.cpp

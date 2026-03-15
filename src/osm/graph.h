@@ -57,6 +57,7 @@ private:
 
     friend class OSMRenderer;
     friend class Dijkstra;
+    friend class AStar;
     friend class OSMHandler;
 };
 
