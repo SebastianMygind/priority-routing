@@ -10,6 +10,8 @@
 #include <sstream>
 #include <functional>
 
+const double H_WEIGHT = 2.0;
+
 bool AStar::FindPath(OSMGraph& graph)
 {
     std::unordered_map<uint64_t, double>   dist;
@@ -86,7 +88,7 @@ bool AStar::FindPath(OSMGraph& graph)
                 prev[neighbor] = current;
 
                 // Calculate the heuristic value
-                double h = Haversine(graph.nodes.at(neighbor), graph.nodes.at(graph.GetNodeB()));
+                double h = H_WEIGHT * Haversine(graph.nodes.at(neighbor), graph.nodes.at(graph.GetNodeB()));
 
                 // Push the neighbor onto the priority queue with cost + heuristic
                 p_queue.push({alt + h, neighbor});
