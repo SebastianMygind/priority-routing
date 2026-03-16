@@ -2,6 +2,7 @@
 #include "models/dijkstra.h"
 #include "models/a_star.h"
 #include "spdlog/spdlog.h"
+#include <chrono>
 
 const double EARTH_RADIUS = 6371000.0; // in meters
 
@@ -80,5 +81,13 @@ void PathFinder(OSMGraph& graph, PathfindingModel model)
             return;
     }
 
+    auto time_start = std::chrono::high_resolution_clock::now();
     pathfinder->FindPath(graph);
+
+    auto time_end = std::chrono::high_resolution_clock::now();
+    delete pathfinder;
+
+    std::chrono::duration<double, std::milli> duration = time_end - time_start;
+    spdlog::info("Time taken for pathfinding: {} ms", duration.count());
+    
 };
