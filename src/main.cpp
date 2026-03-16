@@ -21,6 +21,7 @@ int main() {
 
     OSMGraph graph;
     graph.load("../data/map.osm");
+    graph.BuildAdjList();
 
     OSMRenderer renderer(&graph); 
     renderer.BuildQuadTree();

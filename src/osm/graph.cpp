@@ -127,6 +127,50 @@ bool OSMGraph::load(const std::string& path)
     return false;
 }
 
+bool OSMGraph::BuildAdjList()
+{
+    adj_list.clear();
+    
+    spdlog::info("Building adjecency list...");
+
+    for (const auto& wayPair : ways)
+    {
+        const OSMWay& way = wayPair.second;
+        
+        const std::vector<uint64_t>& nodes = way.nodes;
+
+        auto highway = way.tags.find("highway");
+        if (highway == way.tags.end())
+            continue;
+
+        if (kDrivableHighways.find(highway->second) == kDrivableHighways.end())
+            continue;
+
+        auto oneWayTag = way.tags.find("oneway");
+        const bool oneWay = (oneWayTag != way.tags.end()) && (oneWayTag->second == "yes");
+
+        for (size_t i = 0; i + 1 < nodes.size(); ++i)
+        {
+            uint64_t a = nodes[i];
+            uint64_t b = nodes[i + 1];
+
+            adj_list_dist.insert({a, INFINITY});
+            adj_list_dist.insert({b, INFINITY});
+            adj_list_prev.insert({a, 0xFFFFFFFF});
+            adj_list_prev.insert({b, 0xFFFFFFFF});
+
+            adj_list[a].push_back(b);
+
+            if (!oneWay)
+            {
+                adj_list[b].push_back(a);
+            }
+        }
+    }
+    
+    return true;
+}
+
 Vector2 MercatorProjection(double lat, double lon)
 {
     double centerLatitude = 55.6539977;
