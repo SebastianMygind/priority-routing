@@ -20,7 +20,7 @@ int main() {
     UIState uiState;
 
     OSMGraph graph;
-    graph.ParseXML("../data/map.osm");
+    graph.load("../data/map.osm");
 
     OSMRenderer renderer(&graph); 
     renderer.BuildQuadTree();

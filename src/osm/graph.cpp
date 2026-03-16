@@ -7,9 +7,36 @@
 #include <algorithm>
 #include <cmath>
 #include <array>
+#include <osmium/io/any_input.hpp>
+#include <osmium/visitor.hpp>
+
+#include "osm_handler.h"
 
 OSMGraph::OSMGraph() : selectedNodeA(UINT32_MAX), selectedNodeB(UINT32_MAX)
 {
+}
+
+bool OSMGraph::ParsePBF(const std::string& path)
+{
+    nodes.clear();
+    ways.clear();
+
+    nodes.reserve(10'000'000);
+    ways.reserve(1'000'000);
+
+    spdlog::info("Loading OSM XML file from path: {}", path);
+
+    osmium::io::Reader reader(path);
+
+    OSMHandler handler(*this);
+
+    osmium::apply(reader, handler);
+
+    spdlog::info("Successfully loaded OSM XML file, parsing...");
+
+    reader.close();
+
+    return true;
 }
 
 
@@ -87,6 +114,18 @@ bool OSMGraph::ParseXML(std::string path)
     return true;
 }
 
+bool OSMGraph::load(const std::string& path)
+{
+    if (path.ends_with(".pbf"))
+    {
+        return ParsePBF(path);
+    }
+    if (path.ends_with(".xml") || path.ends_with(".osm"))
+    {
+        return ParseXML(path);
+    }
+    return false;
+}
 
 Vector2 MercatorProjection(double lat, double lon)
 {
