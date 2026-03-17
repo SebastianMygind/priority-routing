@@ -9,9 +9,9 @@ set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(BUILD_GAMES    OFF CACHE BOOL "" FORCE)
 
 find_package(spdlog REQUIRED)
-find_package(bzip2 REQUIRED)
-find_package(zlib REQUIRED)
-find_package(expat REQUIRED)
+find_package(BZip2 REQUIRED)
+find_package(ZLIB REQUIRED)
+find_package(EXPAT REQUIRED)
 include_directories(${OSMIUM_INCLUDE_DIRS})
 
 FetchContent_Declare(
@@ -81,9 +81,9 @@ target_link_libraries(
         raylib
         tinyxml2
         spdlog::spdlog
-        bzip2::bzip2
-        zlib::zlib
-        expat::expat
+        BZip2::BZip2
+        ZLIB::ZLIB
+        EXPAT::EXPAT
 )
 
 # Test executable for testing
@@ -100,9 +100,9 @@ target_link_libraries(
         raylib
         tinyxml2
         spdlog::spdlog
-        bzip2::bzip2
-        zlib::zlib
-        expat::expat
+        BZip2::BZip2
+        ZLIB::ZLIB
+        EXPAT::EXPAT
         GTest::gtest_main
 )
 
