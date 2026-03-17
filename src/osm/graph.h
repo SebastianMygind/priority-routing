@@ -30,6 +30,8 @@ class OSMGraph
 public:
     OSMGraph();
 
+    bool load(const std::string& path);
+    bool ParsePBF(const std::string& path);
     bool ParseXML(std::string path);
 
     inline OSMNode GetNode(OSMNodeID id) const { return nodes.at(id); }
@@ -55,6 +57,7 @@ private:
 
     friend class OSMRenderer;
     friend class Dijkstra;
+    friend class OSMHandler;
 };
 
 

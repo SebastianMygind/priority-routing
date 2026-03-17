@@ -52,6 +52,8 @@ set(CORE_SOURCES
         src/osm/renderer.cpp
         src/osm/renderer.h
         vendor/raygui.h
+        src/osm/osm_handler.cpp
+        src/osm/osm_handler.h
 )
 
 if (MSVC)
@@ -73,6 +75,9 @@ target_link_libraries(
         raylib
         tinyxml2
         spdlog::spdlog
+        bz2
+        z
+        expat
 )
 
 # Test executable for testing
