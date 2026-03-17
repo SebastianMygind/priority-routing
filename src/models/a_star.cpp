@@ -1,4 +1,4 @@
-#include "dijkstra.h"
+#include "a_star.h"
 #include "../osm/tags.h"
 
 #include <cmath>
@@ -8,7 +8,9 @@
 #include <algorithm>
 #include <queue>
 
-bool Dijkstra::FindPath(OSMGraph& graph)
+const double H_WEIGHT = 2.0;
+
+bool AStar::FindPath(OSMGraph& graph)
 {
     using PQNode = std::pair<double, uint64_t>;
     std::priority_queue<PQNode, std::vector<PQNode>, std::greater<>> p_queue;
@@ -50,8 +52,11 @@ bool Dijkstra::FindPath(OSMGraph& graph)
                 dist[neighbor] = alt;
                 prev[neighbor] = current;
 
-                // Push the neighbor onto the priority queue with cost
-                p_queue.push({alt, neighbor});
+                // Calculate the heuristic value
+                double h = H_WEIGHT * Haversine(graph.GetNode(neighbor), graph.GetNode(destination));
+
+                // Push the neighbor onto the priority queue with cost + heuristic
+                p_queue.push({alt + h, neighbor});
             }
         }
     }

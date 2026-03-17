@@ -6,7 +6,7 @@
 #include "path_finder.h"
 
 struct UIState {
-    PathfindingModel modelSelection = PathfindingModel::Dijkstra;
+    PathfindingModel modelSelection = PathfindingModel::AStar;
     bool modelDropdownEdit = false;
 };
 
