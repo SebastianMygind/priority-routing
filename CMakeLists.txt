@@ -9,7 +9,7 @@ set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(BUILD_GAMES    OFF CACHE BOOL "" FORCE)
 
 find_package(spdlog REQUIRED)
-find_package(bzip REQUIRED)
+find_package(bzip2 REQUIRED)
 find_package(zlib REQUIRED)
 find_package(expat REQUIRED)
 include_directories(${OSMIUM_INCLUDE_DIRS})
