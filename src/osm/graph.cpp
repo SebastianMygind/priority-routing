@@ -1,4 +1,8 @@
-﻿#include "graph.h"
+﻿#ifdef _WIN32
+#define NOUSER
+#endif
+
+#include "graph.h"
 #include "tags.h"
 #include "tinyxml2.h"
 #include "rlgl.h"

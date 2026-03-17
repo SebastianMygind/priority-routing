@@ -46,7 +46,7 @@ public:
     void      SetNodeA(OSMNodeID id)      { selectedNodeA = id; }
     void      SetNodeB(OSMNodeID id)      { selectedNodeB = id; }
     void      ClearPath()                 { selectedPath.clear(); }
-    void      InsertPath(u_int64_t path)  { selectedPath.insert(path); }
+    void      InsertPath(OSMNodeID path)  { selectedPath.insert(path); }
 
     // Stats
     size_t GetNodeCount() const        { return nodes.size(); }

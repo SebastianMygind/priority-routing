@@ -1,6 +1,7 @@
 #pragma once
 #include "osm/graph.h"
 #include <sstream>
+#include <optional>
 
 class IPathFinder
 {
