@@ -24,7 +24,7 @@ bool OSMGraph::ParsePBF(const std::string& path)
     nodes.reserve(10'000'000);
     ways.reserve(1'000'000);
 
-    spdlog::info("Loading OSM XML file from path: {}", path);
+    spdlog::info("Loading OSM PBF file from path: {}", path);
 
     osmium::io::Reader reader(path);
 
@@ -32,7 +32,7 @@ bool OSMGraph::ParsePBF(const std::string& path)
 
     osmium::apply(reader, handler);
 
-    spdlog::info("Successfully loaded OSM XML file, parsing...");
+    spdlog::info("Successfully loaded OSM PBF file, parsing...");
 
     reader.close();
 
