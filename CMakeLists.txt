@@ -64,6 +64,7 @@ set(CORE_SOURCES
 
 if (MSVC)
     add_compile_options(/W4 /permissive-)
+    add_definitions(/DNOMINMAX)
 else()
     add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
