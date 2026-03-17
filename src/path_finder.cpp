@@ -3,6 +3,7 @@
 #include "models/a_star.h"
 #include "spdlog/spdlog.h"
 #include <chrono>
+#include <memory>
 
 const double EARTH_RADIUS = 6371000.0; // in meters
 
@@ -66,15 +67,15 @@ double EuclideanDistance(const OSMNode& a, const OSMNode& b)
 
 void PathFinder(OSMGraph& graph, PathfindingModel model)
 {
-    IPathFinder* pathfinder = nullptr;
+    std::unique_ptr<IPathFinder> pathfinder = nullptr;
 
     switch (model)
     {
         case PathfindingModel::Dijkstra:
-            pathfinder = new Dijkstra();
+            pathfinder = std::make_unique<Dijkstra>();
             break;
         case PathfindingModel::AStar:
-            pathfinder = new AStar();
+            pathfinder = std::make_unique<AStar>();
             break;
         default:
             spdlog::error("Invalid pathfinding model selected");
@@ -83,9 +84,7 @@ void PathFinder(OSMGraph& graph, PathfindingModel model)
 
     auto time_start = std::chrono::high_resolution_clock::now();
     pathfinder->FindPath(graph);
-
     auto time_end = std::chrono::high_resolution_clock::now();
-    delete pathfinder;
 
     std::chrono::duration<double, std::milli> duration = time_end - time_start;
     spdlog::info("Time taken for pathfinding: {} ms", duration.count());
