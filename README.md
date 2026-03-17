@@ -6,6 +6,7 @@ from Aalborg University CPH.
 # Dependencies
 - spdlog (-devel)
 - libosmium (-devel)
+- protozero (-devel)
 
 # Development dependencies (Fedora Linux)
 - libXi-devel

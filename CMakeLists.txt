@@ -96,6 +96,9 @@ target_link_libraries(
         raylib
         tinyxml2
         spdlog::spdlog
+        bz2
+        z
+        expat
         GTest::gtest_main
 )
 
