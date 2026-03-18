@@ -10,4 +10,5 @@ struct UIState {
     bool modelDropdownEdit = false;
 };
 
-void DrawUserInterface(const Window &window, const Vector2 &mWorldPos, const OSMGraph& graph, OSMRenderer& renderer, UIState &state);
+void DrawUserInterface(const Window &window, const Vector2 &mWorldPos, const OSMGraph &graph,
+                       const OSMRenderer &renderer, UIState &state, bool &globalKeyIsLocked);

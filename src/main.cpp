@@ -2,25 +2,28 @@
 #include <print>
 #include <vector>
 #include <thread>
-#include <format>
 
 #include "osm/graph.h"
 #include "osm/renderer.h"
 #include "path_finder.h"
 #include "raylib.h"
 #include "Window.h"
-#include "rlgl.h"
 #include "raymath.h"
 #include "spdlog/spdlog.h"
 #include "raylib_logger.h"
 #include "user_interface.h"
+#include "widgets/text.h"
+
+
 
 int main() {
 
     UIState uiState;
 
+    bool globalKeyboardIsLocked = false;
+
     OSMGraph graph;
-    graph.load("../data/map.osm");
+    graph.load("../data/copenhagen.osm.pbf");
     graph.BuildAdjList();
 
     OSMRenderer renderer(&graph); 
@@ -34,6 +37,8 @@ int main() {
 
     InitWindow(window.width, window.height, window.title.c_str());
     // Setup Application logic at this stage.
+    SetupFontConfig();
+
     Camera2D camera = {};
     camera.zoom = 1.0F;
 
@@ -56,11 +61,11 @@ int main() {
             window.height = static_cast<int>(static_cast<float>(GetScreenHeight()) / dpi.y);
         }
 
-        if (IsKeyPressed(KEY_D)) {
+        if (IsKeyPressed(KEY_D) && !globalKeyboardIsLocked) {
             window.showDebug = !window.showDebug;
         }
 
-        if (IsKeyPressed(KEY_V)) {
+        if (IsKeyPressed(KEY_V) && !globalKeyboardIsLocked) {
             window.showDebugVisuals = !window.showDebugVisuals;
         }
 
@@ -124,8 +129,15 @@ int main() {
 
         EndMode2D();
 
-        Coord cursorCoord = InverseMercatorProjection(mouseWorldPos.x, mouseWorldPos.y);
-        DrawUserInterface(window, { (float)cursorCoord.lon, (float)cursorCoord.lat }, graph, renderer, uiState);
+        auto [lat, lon] = InverseMercatorProjection(mouseWorldPos.x, mouseWorldPos.y);
+        DrawUserInterface(
+            window,
+            { .x=static_cast<float>(lon), .y=static_cast<float>(lat) },
+            graph,
+            renderer,
+            uiState,
+            globalKeyboardIsLocked
+        );
 
         EndDrawing();
     }
