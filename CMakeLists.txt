@@ -9,6 +9,10 @@ set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(BUILD_GAMES    OFF CACHE BOOL "" FORCE)
 
 find_package(spdlog REQUIRED)
+find_package(BZip2 REQUIRED)
+find_package(ZLIB REQUIRED)
+find_package(EXPAT REQUIRED)
+include_directories(${OSMIUM_INCLUDE_DIRS})
 
 FetchContent_Declare(
         raylib
@@ -60,6 +64,7 @@ set(CORE_SOURCES
 
 if (MSVC)
     add_compile_options(/W4 /permissive-)
+    add_definitions(/DNOMINMAX)
 else()
     add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
@@ -77,9 +82,9 @@ target_link_libraries(
         raylib
         tinyxml2
         spdlog::spdlog
-        bz2
-        z
-        expat
+        BZip2::BZip2
+        ZLIB::ZLIB
+        EXPAT::EXPAT
 )
 
 # Test executable for testing
@@ -96,9 +101,9 @@ target_link_libraries(
         raylib
         tinyxml2
         spdlog::spdlog
-        bz2
-        z
-        expat
+        BZip2::BZip2
+        ZLIB::ZLIB
+        EXPAT::EXPAT
         GTest::gtest_main
 )
 
