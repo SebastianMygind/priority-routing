@@ -7,9 +7,10 @@
 
 #include <array>
 
-OSMRenderer::OSMRenderer(OSMGraph* graph) : m_pGraph(graph), m_Tree({11.271273842, 55.1959946, 13.008736992, 56.13105965}, 8), 
-    m_Tree1({ 11.271273842, 55.1959946, 13.008736992, 56.13105965 }, 8)
+OSMRenderer::OSMRenderer(OSMGraph* graph) : m_pGraph(graph), m_Tree({ 4.4, 53.3, 16.2, 58.7 }, 8),
+m_Tree1({ 4.4, 53.3, 16.2, 58.7 }, 8)
 {
+    m_WaysToRender.resize(2); // We have two layers: 0 for landuse, 1 for highways
 }
 
 void OSMRenderer::BuildQuadTree()
@@ -49,6 +50,7 @@ void OSMRenderer::BuildQuadTree()
                 MapObject obj;
                 obj.id = nodeRef;
                 obj.bounds = { node.lon, node.lat, node.lon, node.lat };
+                obj.layer = -1;
                 m_Tree.InsertNode(obj);
             }
         }
@@ -56,6 +58,7 @@ void OSMRenderer::BuildQuadTree()
         MapObject wayobj;
         wayobj.id = id;
         wayobj.bounds = box;
+        wayobj.layer = (landuseTag != way.tags.end()) ? 0 : 1;
         m_Tree.InsertWay(wayobj);
 
         if (isZoomLevel)
@@ -72,6 +75,169 @@ void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
 
     AABB screenBounds = GetScreenLocationBounds(camera, settings.screenWidth, settings.screenHeight);
 
+    m_NodesToRender.clear();
+    m_WaysToRender[0].clear();
+    m_WaysToRender[1].clear();
+
+    if (camera.zoom > 4.F)
+        m_Tree.Query(screenBounds, &m_NodesToRender, &m_WaysToRender, 20);
+    else
+        m_Tree1.Query(screenBounds, &m_NodesToRender, &m_WaysToRender, 20);
+
+    for (const MapObjects& layer : m_WaysToRender)
+    {
+        for (const MapObject& wayObj : layer)
+        {
+            const OSMWayID& id = wayObj.id;
+            const OSMWay& way = ways[id];
+
+            const AABB& bounds = wayObj.bounds;
+
+            if ((bounds.maxY < screenBounds.minY) || (bounds.minY > screenBounds.maxY) ||
+                (bounds.maxX < screenBounds.minX) || (bounds.minX > screenBounds.maxX))
+            {
+                continue;
+            }
+
+            if (settings.drawObjBounds)
+                DrawBounds(bounds, camera);
+
+            if (auto tag = way.tags.find("building"); tag != way.tags.end())
+            {
+                Polygon& building = CachePolygonSingle(id, way);
+
+                rlDisableBackfaceCulling();
+                rlBegin(RL_TRIANGLES);
+                rlColor4ub(200, 200, 200, 255);
+
+                for (const Vector2& point : building)
+                {
+                    rlVertex2f(point.x, point.y);
+                }
+
+                rlEnd();
+            }
+            else if (auto tag = way.tags.find("landuse"); tag != way.tags.end())
+            {
+                Polygon& landuse = CachePolygonSingle(id, way);
+
+                rlDisableBackfaceCulling();
+                rlBegin(RL_TRIANGLES);
+
+                if (tag->second == "residential")
+                    rlColor4ub(230, 230, 230, 235);
+                else if (tag->second == "forest")
+                    rlColor4ub(201, 207, 167, 255);
+                else if (tag->second == "cemetery")
+                    rlColor4ub(201, 207, 167, 255);
+                else
+                    rlColor4ub(240, 240, 240, 255);
+
+                for (const Vector2& point : landuse)
+                {
+                    rlVertex2f(point.x, point.y);
+                }
+
+                rlEnd();
+            }
+            else if (auto tag = way.tags.find("highway"); tag != way.tags.end())
+            {
+                Color lineColor = { 0,0,0,255 };
+                float width = 0.2F;
+
+                if (kMotorways.find(tag->second) != kMotorways.end())
+                {
+                    lineColor = { 233,144,160,255 };
+                    width = std::fmax(2.5F * (1.0 / camera.zoom), width);
+                }
+                else if (kPrimary.find(tag->second) != kPrimary.end())
+                {
+                    lineColor = { 191, 117, 36,255 };
+                    width = std::fmax(2.0F * (1.0 / camera.zoom), width);
+                }
+                else if (kSecondary.find(tag->second) != kSecondary.end())
+                {
+                    lineColor = { 100,100,100,255 };
+                    width = std::fmax(1.0F * (1.0 / camera.zoom), width);
+                }
+                else if (kTertiary.find(tag->second) != kTertiary.end())
+                {
+                    lineColor = { 100,100,100,255 };
+                    width = std::fmax(1.0F * (1.0 / camera.zoom), width);
+                }
+
+
+                if (kDrivableHighways.find(tag->second) == kDrivableHighways.end())
+                {
+                    if (camera.zoom < 7.F)
+                        continue;
+                    lineColor = { 100,100,100,255 };
+                    width = 0.05F;
+                }
+
+                for (size_t i = 0; i < way.nodes.size() - 1; i++)
+                {
+                    OSMNode& node1 = nodes[way.nodes[i]];
+                    OSMNode& node2 = nodes[way.nodes[i + 1]];
+
+                    // if ((node1.lat < minY && node2.lat < minY) ||
+                    //     (node1.lat > maxLat && node2.lat > maxLat) ||
+                    //     (node1.lon < minLon && node2.lon < minLon) ||
+                    //     (node1.lon > maxLon && node2.lon > maxLon))
+                    // {
+                    //     continue;
+                    // }
+
+                    Vector2 p1 = MercatorProjection(node1.lat, node1.lon);
+                    Vector2 p2 = MercatorProjection(node2.lat, node2.lon);
+
+                    bool inPath =
+                        selected_path.contains(way.nodes[i]) && selected_path.contains(way.nodes[i + 1]);
+
+                    DrawLineEx(
+                        p1,
+                        p2,
+                        inPath ? std::fmax(2.5F * (1.0 / camera.zoom), width) : width,
+                        inPath ? SKYBLUE : lineColor
+                    );
+                }
+            }
+        }
+    }
+
+    if (camera.zoom > 7.F)
+    {
+        for (MapObject& nodeObj : m_NodesToRender)
+        {
+            OSMNodeID& id = nodeObj.id;
+            OSMNode& node = nodes[id];
+
+            const AABB& bounds = nodeObj.bounds;
+
+            if ((bounds.maxY < screenBounds.minY) || (bounds.minY > screenBounds.maxY) ||
+                (bounds.maxX < screenBounds.minX) || (bounds.minX > screenBounds.maxX))
+            {
+                continue;
+            }
+
+            Vector2 p1 = MercatorProjection(node.lat, node.lon);
+
+            float distToCursor = Vector2Distance(p1, settings.cursorPos);
+
+            if (distToCursor > 30.0F)
+                continue;
+
+            bool isSelected = (id == m_pGraph->GetNodeA() || id == m_pGraph->GetNodeB());
+            bool isHovering = distToCursor < 0.2F;
+
+            DrawCircleV(
+                p1,
+                isHovering ? 0.5F * (1.F / camera.zoom) * 25.F : (2.F / (distToCursor + 6.F)) * (1.F / camera.zoom) * 25.F,
+                isSelected ? SKYBLUE : MAROON
+            );
+        }
+    }
+
     if (settings.drawQuadBounds)
     {
         std::vector<AABB> quadBounds;
@@ -80,166 +246,6 @@ void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
         {
             DrawBounds(bounds, camera);
         }
-    }
-
-    m_NodesToRender.clear();
-    m_WaysToRender.clear();
-
-    if (camera.zoom > 4.F)
-        m_Tree.Query(screenBounds, &m_NodesToRender, &m_WaysToRender, 20);
-    else
-        m_Tree1.Query(screenBounds, &m_NodesToRender, &m_WaysToRender, 20);
-
-    for (const MapObject& wayObj : m_WaysToRender)
-    {   
-        const OSMWayID& id = wayObj.id;
-        const OSMWay& way = ways[id];
-
-        const AABB& bounds = wayObj.bounds;
-
-         if ((bounds.maxY < screenBounds.minY) || (bounds.minY > screenBounds.maxY) ||
-             (bounds.maxX < screenBounds.minX) || (bounds.minX > screenBounds.maxX))
-         {
-             continue;
-         }
-
-         if (settings.drawObjBounds)
-             DrawBounds(bounds, camera);
-
-        if (auto tag = way.tags.find("building"); tag != way.tags.end())
-        {
-            Polygon& building = CachePolygonSingle(id, way);
-
-            rlDisableBackfaceCulling();
-            rlBegin(RL_TRIANGLES);
-            rlColor4ub(200, 200, 200, 255);
-
-            for (const Vector2& point : building)
-            {
-                rlVertex2f(point.x, point.y);
-            }
-
-            rlEnd();
-        }
-        else if (auto tag = way.tags.find("landuse"); tag != way.tags.end())
-        {
-            Polygon& landuse = CachePolygonSingle(id, way);
-
-            rlDisableBackfaceCulling();
-            rlBegin(RL_TRIANGLES);
-
-            if (tag->second == "residential")
-                rlColor4ub(230, 230, 230, 235);
-            else if (tag->second == "forest")
-                rlColor4ub(201, 207, 167, 255);
-            else if (tag->second == "cemetery")
-                rlColor4ub(201, 207, 167, 255);
-            else
-                rlColor4ub(240, 240, 240, 255);
-
-            for (const Vector2& point : landuse)
-            {
-                rlVertex2f(point.x, point.y);
-            }
-
-            rlEnd();
-        }
-        else if (auto tag = way.tags.find("highway"); tag != way.tags.end())
-        {
-            Color lineColor = { 0,0,0,255 };
-			float width = 0.2F;
-
-            if (kMotorways.find(tag->second) != kMotorways.end())
-            {
-                lineColor = { 233,144,160,255 };
-                width = std::fmax(2.5F * (1.0 / camera.zoom), width);
-            }
-            else if (kPrimary.find(tag->second) != kPrimary.end())
-            {
-                lineColor = { 191, 117, 36,255 };
-                width = std::fmax(2.0F * (1.0 / camera.zoom), width);
-            }
-            else if (kSecondary.find(tag->second) != kSecondary.end())
-            {
-                lineColor = { 100,100,100,255 };
-                width = std::fmax(1.0F * (1.0 / camera.zoom), width);
-            }
-            else if (kTertiary.find(tag->second) != kTertiary.end())
-            {
-                lineColor = { 100,100,100,255 };
-                width = std::fmax(1.0F * (1.0 / camera.zoom), width);
-            }
-
-
-            if (kDrivableHighways.find(tag->second) == kDrivableHighways.end())
-            {
-                if (camera.zoom < 7.F)
-                    continue;
-                lineColor = { 100,100,100,255 };
-                width = 0.05F;
-            }
-            
-            for (size_t i = 0; i < way.nodes.size() - 1; i++)
-            {
-                OSMNode& node1 = nodes[way.nodes[i]];
-                OSMNode& node2 = nodes[way.nodes[i + 1]];
-
-                // if ((node1.lat < minY && node2.lat < minY) ||
-                //     (node1.lat > maxLat && node2.lat > maxLat) ||
-                //     (node1.lon < minLon && node2.lon < minLon) ||
-                //     (node1.lon > maxLon && node2.lon > maxLon))
-                // {
-                //     continue;
-                // }
-
-                Vector2 p1 = MercatorProjection(node1.lat, node1.lon);
-                Vector2 p2 = MercatorProjection(node2.lat, node2.lon);
-                    
-                bool inPath =
-                    selected_path.contains(way.nodes[i]) && selected_path.contains(way.nodes[i + 1]);
-
-                DrawLineEx(
-                    p1, 
-                    p2, 
-                    inPath ? std::fmax(2.5F * (1.0 / camera.zoom), width) : width, 
-                    inPath ? SKYBLUE : lineColor
-                );
-            }
-        }
-    }
-
-    if (camera.zoom < 7.F)
-        return;
-
-    // Draw nodes
-    for (MapObject& nodeObj : m_NodesToRender)
-    {
-        OSMNodeID& id = nodeObj.id;
-        OSMNode& node = nodes[id];
-
-        const AABB& bounds = nodeObj.bounds;
-
-         if ((bounds.maxY < screenBounds.minY) || (bounds.minY > screenBounds.maxY) ||
-             (bounds.maxX < screenBounds.minX) || (bounds.minX > screenBounds.maxX))
-         {
-             continue;
-         }
-
-        Vector2 p1 = MercatorProjection(node.lat, node.lon);
-
-        float distToCursor = Vector2Distance(p1, settings.cursorPos);
-
-        if (distToCursor > 30.0F)
-            continue;
-
-        bool isSelected = (id == m_pGraph->GetNodeA() || id == m_pGraph->GetNodeB());
-        bool isHovering = distToCursor < 0.2F;
-
-        DrawCircleV(
-            p1,
-            isHovering ? 0.5F * (1.F / camera.zoom) * 25.F : (2.F / (distToCursor + 6.F)) * (1.F / camera.zoom) * 25.F, 
-            isSelected ? SKYBLUE : MAROON
-        );
     }
 }
 
@@ -369,7 +375,7 @@ bool QuadNode::InsertWay(const MapObject& obj)
     return true;
 }
 
-void QuadNode::Query(const AABB& range, std::vector<MapObject>* foundNodes, std::vector<MapObject>* foundWays, int depth) const 
+void QuadNode::Query(const AABB& range, MapObjects* foundNodes, LayeredMapObjects* foundWays, int depth) const
 {
     if (!boundary.intersects(range))
         return;
@@ -382,12 +388,11 @@ void QuadNode::Query(const AABB& range, std::vector<MapObject>* foundNodes, std:
         }
     }
 
-
     if (foundWays)
     {
         for (const auto& obj : ways) {
             if (range.intersects(obj.bounds))
-                foundWays->push_back(obj);
+                foundWays->at(obj.layer).push_back(obj);
         }
     }
 
