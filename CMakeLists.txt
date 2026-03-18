@@ -39,6 +39,11 @@ FetchContent_MakeAvailable(googletest)
 FetchContent_MakeAvailable(raylib)
 FetchContent_MakeAvailable(tinyxml2)
 
+# 1. Define raygui as a library so it's only compiled once
+add_library(raygui_lib OBJECT vendor/raygui_impl.cpp)
+target_include_directories(raygui_lib PRIVATE vendor/)
+target_link_libraries(raygui_lib PRIVATE raylib)
+
 enable_testing()
 
 set(CORE_SOURCES
@@ -58,6 +63,10 @@ set(CORE_SOURCES
         src/osm/renderer.cpp
         src/osm/renderer.h
         vendor/raygui.h
+        src/widgets/text_box.cpp
+        src/widgets/text_box.h
+        src/widgets/text.cpp
+        src/widgets/text.h
         src/osm/osm_handler.cpp
         src/osm/osm_handler.h
 )
@@ -76,6 +85,9 @@ add_executable(
         src/main.cpp
         ${CORE_SOURCES}
 )
+
+target_include_directories(priority_routing PRIVATE vendor)
+
 target_link_libraries(
         priority_routing
         PRIVATE
@@ -85,6 +97,7 @@ target_link_libraries(
         BZip2::BZip2
         ZLIB::ZLIB
         EXPAT::EXPAT
+        raygui_lib
 )
 
 # Test executable for testing
@@ -94,6 +107,8 @@ add_executable(
         tests/example_test.cpp
         ${CORE_SOURCES}
 )
+
+target_include_directories(priority_routing_tests PRIVATE vendor)
 
 target_link_libraries(
         priority_routing_tests
@@ -105,6 +120,7 @@ target_link_libraries(
         ZLIB::ZLIB
         EXPAT::EXPAT
         GTest::gtest_main
+        raygui_lib
 )
 
 include(GoogleTest)

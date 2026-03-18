@@ -6,7 +6,7 @@ Standard:        c++20
 IndentWidth:     4
 TabWidth:        4
 UseTab:          Never
-ColumnLimit:     100
+ColumnLimit:     80
 AlignAfterOpenBracket: Align
 BinPackParameters: false
 AlignEscapedNewlines: Left
@@ -15,4 +15,3 @@ PackConstructorInitializers: Never
 BreakConstructorInitializersBeforeComma: false
 IndentPPDirectives: None
 SortIncludes:    Never
-...

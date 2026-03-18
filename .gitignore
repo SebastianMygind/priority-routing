@@ -2,6 +2,7 @@ build/
 .vscode/
 .vs/
 .idea/
+data/
 
 .DS_Store
 
