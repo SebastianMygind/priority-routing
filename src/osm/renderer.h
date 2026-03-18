@@ -90,7 +90,12 @@ public:
 
     // Rendering stats (call after DrawGraph)
     inline size_t GetNodeRenderCount() const { return m_NodesToRender.size(); }
-    inline size_t GetWayRenderCount() const { return m_WaysToRender.size(); }
+    inline size_t GetWayRenderCount() const 
+    { 
+        size_t a = 0; 
+        for (const MapObjects& layer : m_WaysToRender) { a += layer.size(); }
+        return a; 
+    }
 
 private:
     Polygon& CachePolygonSingle(OSMWayID wayId, const OSMWay& way);
