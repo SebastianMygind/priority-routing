@@ -34,13 +34,15 @@ struct AABB
     }
 };
 
-
-struct MapObject 
+struct MapObject
 {
     uint64_t id;
     AABB bounds;
+    int layer;
 };
 
+using MapObjects = std::vector<MapObject>;
+using LayeredMapObjects = std::vector<MapObjects>;
 
 class QuadNode 
 {
@@ -50,7 +52,7 @@ public:
 
     bool InsertNode(const MapObject& obj);
     bool InsertWay(const MapObject& obj);
-    void Query(const AABB& range, std::vector<MapObject>* foundNodes, std::vector<MapObject>* foundWays, int depth) const;
+    void Query(const AABB& range, MapObjects* foundNodes, LayeredMapObjects* foundWays, int depth) const;
     void QueryQuads(const AABB& range, std::vector<AABB>* foundBounds, int depth) const;
 
 private:
@@ -60,8 +62,6 @@ private:
 
     std::vector<MapObject> nodes;
     std::vector<MapObject> ways;
-
-    std::vector<MapObject> waysLod;
 
     std::unique_ptr<QuadNode> nw;
     std::unique_ptr<QuadNode> ne;
@@ -103,8 +103,8 @@ public:
     std::unordered_map<OSMWayID, Polygon> m_CachedPolygons; // WayID, Polygon data
 
     // Temporary buffers for rendering
-    std::vector<MapObject> m_NodesToRender;
-    std::vector<MapObject> m_WaysToRender;
+    MapObjects        m_NodesToRender;
+    LayeredMapObjects m_WaysToRender;
 };
 
 AABB GetScreenLocationBounds(Camera2D camera, float renderWidth, float renderHeight);
