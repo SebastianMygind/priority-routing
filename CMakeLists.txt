@@ -12,7 +12,6 @@ find_package(spdlog REQUIRED)
 find_package(BZip2 REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(EXPAT REQUIRED)
-find_package(osmium REQUIRED)
 include_directories(${OSMIUM_INCLUDE_DIRS})
 
 FetchContent_Declare(
