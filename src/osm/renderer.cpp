@@ -71,7 +71,7 @@ void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
 {
     std::unordered_map<OSMNodeID, OSMNode>& nodes = m_pGraph->nodes;
     std::unordered_map<OSMWayID, OSMWay>&  ways = m_pGraph->ways;
-    std::set<OSMNodeID>&  selected_path = m_pGraph->selectedPath;
+    std::vector<OSMNodeID>&  selected_path = m_pGraph->selectedPath;
 
     AABB screenBounds = GetScreenLocationBounds(camera, settings.screenWidth, settings.screenHeight);
 
@@ -157,15 +157,14 @@ void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
                 }
                 else if (kSecondary.find(tag->second) != kSecondary.end())
                 {
-                    lineColor = { 100,100,100,255 };
+                    lineColor = { 0,0,0,255 };
                     width = std::fmax(1.0F * (1.0 / camera.zoom), width);
                 }
                 else if (kTertiary.find(tag->second) != kTertiary.end())
                 {
-                    lineColor = { 100,100,100,255 };
+                    lineColor = { 0,0,0,255 };
                     width = std::fmax(1.0F * (1.0 / camera.zoom), width);
                 }
-
 
                 if (kDrivableHighways.find(tag->second) == kDrivableHighways.end())
                 {
@@ -180,28 +179,38 @@ void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
                     OSMNode& node1 = nodes[way.nodes[i]];
                     OSMNode& node2 = nodes[way.nodes[i + 1]];
 
-                    // if ((node1.lat < minY && node2.lat < minY) ||
-                    //     (node1.lat > maxLat && node2.lat > maxLat) ||
-                    //     (node1.lon < minLon && node2.lon < minLon) ||
-                    //     (node1.lon > maxLon && node2.lon > maxLon))
-                    // {
-                    //     continue;
-                    // }
-
                     Vector2 p1 = MercatorProjection(node1.lat, node1.lon);
                     Vector2 p2 = MercatorProjection(node2.lat, node2.lon);
-
-                    bool inPath =
-                        selected_path.contains(way.nodes[i]) && selected_path.contains(way.nodes[i + 1]);
 
                     DrawLineEx(
                         p1,
                         p2,
-                        inPath ? std::fmax(2.5F * (1.0 / camera.zoom), width) : width,
-                        inPath ? SKYBLUE : lineColor
+                        width,
+                        lineColor
                     );
                 }
             }
+        }
+    }
+
+    if (!selected_path.empty())
+    {
+        for (size_t i = 0; i < selected_path.size() - 1; i++)
+        {
+            OSMNode& node1 = nodes[selected_path[i]];
+            OSMNode& node2 = nodes[selected_path[i + 1]];
+
+            Vector2 p1 = MercatorProjection(node1.lat, node1.lon);
+            Vector2 p2 = MercatorProjection(node2.lat, node2.lon);
+
+            float width = std::fmax(2.6F * (1.0 / camera.zoom), 0.2F);
+
+            DrawLineEx(
+                p1,
+                p2,
+                width,
+                SKYBLUE
+            );
         }
     }
 
