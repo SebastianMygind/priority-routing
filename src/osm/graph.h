@@ -46,7 +46,7 @@ public:
     void      SetNodeA(OSMNodeID id)      { selectedNodeA = id; }
     void      SetNodeB(OSMNodeID id)      { selectedNodeB = id; }
     void      ClearPath()                 { selectedPath.clear(); }
-    void      InsertPath(OSMNodeID path)  { selectedPath.insert(path); }
+    void      InsertPath(OSMNodeID path)  { selectedPath.push_back(path); }
 
     // Stats
     size_t GetNodeCount() const        { return nodes.size(); }
@@ -56,7 +56,7 @@ private:
     std::unordered_map<OSMNodeID, OSMNode> nodes;
     std::unordered_map<OSMWayID,  OSMWay>  ways;
 
-    std::set<OSMNodeID> selectedPath;
+    std::vector<OSMNodeID> selectedPath;
     OSMNodeID selectedNodeA;
     OSMNodeID selectedNodeB;
 

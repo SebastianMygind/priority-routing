@@ -10,7 +10,7 @@ public:
     std::string title;
 
     bool showDebug = true;
-    bool showDebugVisuals = true;
+    bool showDebugVisuals = false;
 
     explicit Window(std::string i_title) : title(std::move(i_title)) {
     }
