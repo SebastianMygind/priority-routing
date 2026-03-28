@@ -20,8 +20,6 @@ int main() {
 
     UserInterface ui;
 
-    bool globalKeyboardIsLocked = false;
-
     OSMGraph graph;
     graph.load("../data/copenhagen.osm.pbf");
     graph.BuildAdjList();
@@ -61,7 +59,7 @@ int main() {
             window.height = static_cast<int>(static_cast<float>(GetScreenHeight()) / dpi.y);
         }
 
-        if (!ui.KeyboardInUI()) 
+        if (!ui.KeyboardInUI())
         {
             if (IsKeyPressed(KEY_U)) { ui.ToggleUI();    }
             if (IsKeyPressed(KEY_D)) { ui.ToggleDebug(); }
@@ -133,8 +131,7 @@ int main() {
             window,
             { .x=static_cast<float>(lon), .y=static_cast<float>(lat) },
             graph,
-            renderer,
-            globalKeyboardIsLocked
+            renderer
         );
 
         EndDrawing();
