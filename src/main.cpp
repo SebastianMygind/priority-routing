@@ -69,7 +69,7 @@ int main() {
             window.showDebugVisuals = !window.showDebugVisuals;
         }
 
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) 
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && GetMousePosition().x > 300) 
         {
             Vector2 delta = GetMouseDelta();
             delta = Vector2Scale(delta, -1.0F / camera.zoom);

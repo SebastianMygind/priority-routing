@@ -10,6 +10,7 @@
 
 #include "widgets/text_box.h"
 #include "widgets/text.h"
+#include "spdlog/spdlog.h"
 
 static TextBox textBoxFrom;
 static TextBox textBoxTo;
@@ -20,16 +21,24 @@ static TextBox textBoxTo;
 constexpr float BORDER_SPACING = 0.01;
 constexpr float WINDOW_WIDTH = 0.20;
 
-constexpr int TEXT_FIELD_HEIGHT = 40;
+// Height of elements, effectively their size
+constexpr int HEADING_HEIGHT = 30;
+constexpr int TEXT_HEIGHT = 20;
+constexpr int BOX_HEIGHT = 40;
+constexpr int SLIDER_HEIGHT = 20;
+
+// Padding between elements, horizontal and vertical
+constexpr std::pair<int, int> H_PAD = {10, -20};
+constexpr int V_PAD_S = 5;
+constexpr int V_PAD_M = 20;
+
 constexpr int BOX_BORDER_WIDTH = 2;
 
-constexpr int TEXT_TITLE_SIZE = 28;
+
 constexpr int DEBUG_TEXT_TITLE_SIZE = 32;
 constexpr int DEBUG_ENTRY_TEXT_SIZE = 20;
 
-constexpr int UI_PADDING_S = 5;
-constexpr int UI_PADDING_M = 10;
-constexpr int UI_PADDING_L = 30;
+
 
 // We need to set a minimum size for UI elements which will be done "globally"
 // here
@@ -41,7 +50,6 @@ void DrawCursor(const Rectangle &uiRect,
 
 void DrawRouteInfo(const Rectangle &uiRect,
                    const Vector2 &mPos,
-                   const OSMGraph &graph,
                    UIState &state,
                    bool &globalKeyIsLocked);
 
@@ -77,7 +85,7 @@ void DrawUserInterface(const Window &window,
     // collisions.
     DrawCursor(uiRect, mWorldPos, mPos);
     DrawDebugInfo(uiRect, window, graph, renderer);
-    DrawRouteInfo(uiRect, mPos, graph, state, globalKeyIsLocked);
+    DrawRouteInfo(uiRect, mPos, state, globalKeyIsLocked);
 }
 
 // Only draw the cursor if we are not hovering over UI elements.
@@ -154,61 +162,108 @@ void DrawDebugInfo(const Rectangle &uiRect,
 //  graph.selected_node_b), {10, 10}, 20, 2, BLACK
 //  );
 
+// Set up the accumulator used to space out the UI elements
+// Calling the accumulator returns an element's y pos and sets up next element's y pos
+
+enum AccumulatorTypes {heading = HEADING_HEIGHT + V_PAD_S, 
+                       text = TEXT_HEIGHT + V_PAD_S,
+                       box = BOX_HEIGHT + V_PAD_S,
+                       slider = SLIDER_HEIGHT + V_PAD_S,
+                       padding = V_PAD_M};
+
 void DrawRouteInfo(const Rectangle &uiRect,
                    const Vector2 &mPos,
-                   const OSMGraph &graph,
                    UIState &state,
                    bool &globalKeyIsLocked) {
-    // Height accumulator for UI elements
-    auto heightAccumulator = static_cast<int>(uiRect.y) + (2 * UI_PADDING_M);
 
-    // Origin TextBox
-    DrawCustomText("Origin", static_cast<int>(uiRect.x) + (UI_PADDING_M),
-                   heightAccumulator, TEXT_TITLE_SIZE, BLACK);
-    heightAccumulator += UI_PADDING_L;
+    // Define sizes and positions of UI elements
 
-    const Rectangle fromRect = {.x = uiRect.x + UI_PADDING_M,
-                                .y = static_cast<float>(heightAccumulator),
-                                .width = uiRect.width - (2 * UI_PADDING_M),
-                                .height = TEXT_FIELD_HEIGHT};
+    auto elementX = uiRect.x + H_PAD.first;
+    auto elementWidth = uiRect.width + H_PAD.second;
+    auto accumulator = uiRect.y + V_PAD_M;
+    auto elementY = [&](int type) {
+        int current = accumulator;
+        accumulator += type;
+        return current;
+    };
 
-    heightAccumulator += (UI_PADDING_M * 2) + TEXT_FIELD_HEIGHT;
+    // Location elements
 
-    textBoxFrom.Update(fromRect, mPos, globalKeyIsLocked);
+    DrawCustomText("Location", elementX, elementY(heading), HEADING_HEIGHT, BLACK);
+    DrawRectangle(elementX, elementY(padding), elementWidth, 1, GRAY);
 
-    // Destination TextBox
+    DrawCustomText("Origin", elementX, elementY(text), TEXT_HEIGHT, BLACK);
+    textBoxFrom.Update(Rectangle{.x = elementX,
+                                 .y = static_cast<float>(elementY(box)),
+                                 .width = elementWidth,
+                                 .height = BOX_HEIGHT}, 
+                                 mPos, globalKeyIsLocked);
 
-    DrawCustomText("Destination", static_cast<int>(uiRect.x) + (UI_PADDING_M),
-                   heightAccumulator, TEXT_TITLE_SIZE, BLACK);
+    DrawCustomText("Destination", elementX, elementY(text), TEXT_HEIGHT, BLACK);
+    textBoxTo.Update(Rectangle{.x = elementX,
+                               .y = static_cast<float>(elementY(box)),
+                               .width = elementWidth,
+                               .height = BOX_HEIGHT}, 
+                               mPos, globalKeyIsLocked);
 
-    heightAccumulator += UI_PADDING_L;
+    elementY(padding);
 
-    const Rectangle toRect = {.x = uiRect.x + UI_PADDING_M,
-                              .y = static_cast<float>(heightAccumulator),
-                              .width = uiRect.width - (UI_PADDING_M * 2),
-                              .height = TEXT_FIELD_HEIGHT};
+    // Algorithm elements
 
-    textBoxTo.Update(toRect, mPos, globalKeyIsLocked);
-    // Model selection dropdown
-    // DrawCustomText("Model/Algorithm", static_cast<int>(toRect.x) + 5,
-    //               static_cast<int>(uiRect.y));
+    DrawCustomText("Algorithm", elementX, elementY(heading), HEADING_HEIGHT, BLACK);
+    DrawRectangle(elementX, elementY(padding), elementWidth, 1, GRAY);
 
-    heightAccumulator += (UI_PADDING_M * 2) + TEXT_FIELD_HEIGHT;
+    DrawCustomText("Model", elementX, elementY(text), TEXT_HEIGHT, BLACK);
+    auto dropdownY = elementY(box); // Save the y pos, draw later
 
-    DrawCustomText("Algorithm", static_cast<int>(uiRect.x) + (UI_PADDING_M),
-                   heightAccumulator, TEXT_TITLE_SIZE, BLACK);
+    DrawCustomText("Distance", elementX, elementY(text), TEXT_HEIGHT, BLACK);
+    GuiSliderBar(Rectangle{.x = elementX,
+                           .y = static_cast<float>(elementY(slider)),
+                           .width = elementWidth,
+                           .height = SLIDER_HEIGHT}, 
+                           "", "", &state.objDistance, 0.F, 1.F);
 
-    heightAccumulator += UI_PADDING_L;
+    DrawCustomText("Time", elementX, elementY(text), TEXT_HEIGHT, BLACK);
+    GuiSliderBar(Rectangle{.x = elementX,
+                           .y = static_cast<float>(elementY(slider)),
+                           .width = elementWidth,
+                           .height = SLIDER_HEIGHT}, 
+                           "", "", &state.objTime, 0.F, 1.F);
+
+    DrawCustomText("Scenery", elementX, elementY(text), TEXT_HEIGHT, BLACK);
+    GuiSliderBar(Rectangle{.x = elementX,
+                           .y = static_cast<float>(elementY(slider)),
+                           .width = elementWidth,
+                           .height = SLIDER_HEIGHT}, 
+                           "", "", &state.objScenery, 0.F, 1.F);
+
+    DrawCustomText("Tourism", elementX, elementY(text), TEXT_HEIGHT, BLACK);
+    GuiSliderBar(Rectangle{.x = elementX,
+                           .y = static_cast<float>(elementY(slider)),
+                           .width = elementWidth,
+                           .height = SLIDER_HEIGHT}, 
+                           "", "", &state.objTourism, 0.F, 1.F);
+
+    DrawCustomText("Comfort", elementX, elementY(text), TEXT_HEIGHT, BLACK);
+    GuiSliderBar(Rectangle{.x = elementX,
+                           .y = static_cast<float>(elementY(slider)),
+                           .width = elementWidth,
+                           .height = SLIDER_HEIGHT}, 
+                           "", "", &state.objComfort, 0.F, 1.F);
+
+    elementY(padding);
+
+    // Lastly the dropdown box
 
     int modelSelectionIndex = static_cast<int>(state.modelSelection);
-    if (GuiDropdownBox(Rectangle{.x = uiRect.x + UI_PADDING_M,
-                                 .y = static_cast<float>(heightAccumulator),
-                                 .width = uiRect.width - 20,
-                                 .height = TEXT_FIELD_HEIGHT},
-                       "Dijkstra;A Star", &modelSelectionIndex,
-                       state.modelDropdownEdit) != 0) {
+    if (GuiDropdownBox(Rectangle{.x = elementX,
+                                 .y = static_cast<float>(dropdownY),
+                                 .width = elementWidth,
+                                 .height = BOX_HEIGHT},
+                                 "Dijkstra;A Star", &modelSelectionIndex,
+                                 state.modelDropdownEdit) != 0) 
+    {
         state.modelDropdownEdit = !state.modelDropdownEdit;
-        state.modelSelection =
-            static_cast<PathfindingModel>(modelSelectionIndex);
+        state.modelSelection = static_cast<PathfindingModel>(modelSelectionIndex);
     }
 }
