@@ -28,8 +28,8 @@ void UserInterface::DrawUserInterface(const Window &window,
 
     // Set up the UI box dimensions based on the window size
 
-    screenX = static_cast<float>(window.width);
-    screenY = static_cast<float>(window.height);
+    const auto screenX = static_cast<float>(window.width);
+    const auto screenY = static_cast<float>(window.height);
 
     const auto winX = H_PAD.first;
     const auto winY = H_PAD.first;
@@ -169,7 +169,7 @@ void UserInterface::DrawDebugInfo(const OSMGraph &graph, const OSMRenderer &rend
     // Similar definition as the ones in DrawUserInterface() and DrawRouteInfo()
 
     const auto debX = uiRect.width - H_PAD.second;
-    const auto debY = (screenY - UI_DEBUG_SIZE) - H_PAD.first;
+    const auto debY = uiRect.height - UI_DEBUG_SIZE + H_PAD.first;
     const auto debWidth  = uiRect.width;
     const auto debHeight = UI_DEBUG_SIZE;
 

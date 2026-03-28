@@ -66,9 +66,6 @@ private:
     Rectangle uiRect;
     Vector2 mousePos;
 
-    float screenX;
-    float screenY;
-
     float objDistance = 0.5;
     float objTime     = 0.5;
     float objScenery  = 0.5;
