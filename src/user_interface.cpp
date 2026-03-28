@@ -197,5 +197,4 @@ void UserInterface::DrawDebugInfo(const OSMGraph &graph, const OSMRenderer &rend
     DrawCustomText(std::format("Rendered ways: {}", renderer.GetWayRenderCount()).c_str(), elementX, elementY(text), TEXT_HEIGHT, BLACK);
     DrawCustomText(std::format("Total nodes: {}", graph.GetNodeCount()).c_str(), elementX, elementY(text), TEXT_HEIGHT, BLACK);
     DrawCustomText(std::format("Total ways: {}", graph.GetWayCount()).c_str(), elementX, elementY(text), TEXT_HEIGHT, BLACK);
-    DrawCustomText(std::format("Time to pathfind: {}ms", graph.GetWayCount()).c_str(), elementX, elementY(text), TEXT_HEIGHT, BLACK);
 }

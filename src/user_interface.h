@@ -21,7 +21,7 @@ constexpr int       V_PAD = 5;
 
 constexpr std::pair UI_MIN_SIZE   = {200.F, 600.F};
 constexpr float     UI_MULTIPLIER = 0.20;
-constexpr float     UI_DEBUG_SIZE = 210.F;
+constexpr float     UI_DEBUG_SIZE = 200.F;
 
 // Accumulator types are used with elementY to determine the y position of the next element
 // Use the type of the element you're drawing or call elementY(padding) to add spacing between elements
