@@ -18,7 +18,7 @@
 
 int main() {
 
-    UIState uiState;
+    UserInterface ui;
 
     bool globalKeyboardIsLocked = false;
 
@@ -61,15 +61,14 @@ int main() {
             window.height = static_cast<int>(static_cast<float>(GetScreenHeight()) / dpi.y);
         }
 
-        if (IsKeyPressed(KEY_D) && !globalKeyboardIsLocked) {
-            window.showDebug = !window.showDebug;
+        if (!ui.KeyboardInUI()) 
+        {
+            if (IsKeyPressed(KEY_U)) { ui.ToggleUI();    }
+            if (IsKeyPressed(KEY_D)) { ui.ToggleDebug(); }
+            if (IsKeyPressed(KEY_V)) { ui.ToggleQuad();  }
         }
 
-        if (IsKeyPressed(KEY_V) && !globalKeyboardIsLocked) {
-            window.showDebugVisuals = !window.showDebugVisuals;
-        }
-
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && GetMousePosition().x > 300) 
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && !ui.MouseInUI()) 
         {
             Vector2 delta = GetMouseDelta();
             delta = Vector2Scale(delta, -1.0F / camera.zoom);
@@ -92,8 +91,8 @@ int main() {
                         graph.SetNodeA(obj.id);
                     } else if (graph.GetNodeB() == 0xFFFFFFFF) {       // Click two, B, calculate path
                         graph.SetNodeB(obj.id);
-                        PathFinder(graph, uiState.modelSelection);
-                    } else {                                                // Click three, reset
+                        PathFinder(graph, ui.GetModel());
+                    } else {                                           // Click three, reset
                         graph.SetNodeA(0xFFFFFFFF);
                         graph.SetNodeB(0xFFFFFFFF);
                         graph.ClearPath();
@@ -122,7 +121,7 @@ int main() {
         settings.screenWidth = (float)window.width * dpi.x;
         settings.screenHeight = (float)window.height * dpi.y;
         settings.drawObjBounds = false;
-        settings.drawQuadBounds = window.showDebugVisuals;
+        settings.drawQuadBounds = ui.GetQuad();
         settings.cursorPos = mouseWorldPos;
 
         renderer.DrawGraph(camera, settings);
@@ -130,12 +129,11 @@ int main() {
         EndMode2D();
 
         auto [lat, lon] = InverseMercatorProjection(mouseWorldPos.x, mouseWorldPos.y);
-        DrawUserInterface(
+        ui.DrawUserInterface(
             window,
             { .x=static_cast<float>(lon), .y=static_cast<float>(lat) },
             graph,
             renderer,
-            uiState,
             globalKeyboardIsLocked
         );
 

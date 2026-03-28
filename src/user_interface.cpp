@@ -21,17 +21,6 @@ static TextBox textBoxTo;
 constexpr float BORDER_SPACING = 0.01;
 constexpr float WINDOW_WIDTH = 0.20;
 
-// Height of elements, effectively their size
-constexpr int HEADING_HEIGHT = 30;
-constexpr int TEXT_HEIGHT = 20;
-constexpr int BOX_HEIGHT = 40;
-constexpr int SLIDER_HEIGHT = 20;
-
-// Padding between elements, horizontal and vertical
-constexpr std::pair<int, int> H_PAD = {10, -20};
-constexpr int V_PAD_S = 5;
-constexpr int V_PAD_M = 20;
-
 constexpr int BOX_BORDER_WIDTH = 2;
 
 
@@ -39,78 +28,63 @@ constexpr int DEBUG_TEXT_TITLE_SIZE = 32;
 constexpr int DEBUG_ENTRY_TEXT_SIZE = 20;
 
 
-
 // We need to set a minimum size for UI elements which will be done "globally"
 // here
 constexpr std::pair MIN_UI_SIZE = {200.F, 600.F};
 
-void DrawCursor(const Rectangle &uiRect,
-                const Vector2 &mWorldPos,
-                Vector2 mPos);
 
-void DrawRouteInfo(const Rectangle &uiRect,
-                   const Vector2 &mPos,
-                   UIState &state,
-                   bool &globalKeyIsLocked);
-
-void DrawDebugInfo(const Rectangle &uiRect,
-                   const Window &window,
-                   const OSMGraph &graph,
-                   const OSMRenderer &renderer);
-
-void DrawUserInterface(const Window &window,
-                       const Vector2 &mWorldPos,
+void UserInterface::DrawUserInterface(const Window &window,
+                       const Vector2 &mouseWorldPos,
                        const OSMGraph &graph,
                        const OSMRenderer &renderer,
-                       UIState &state,
-                       bool &globalKeyIsLocked) {
-    const auto screenX = static_cast<float>(window.width);
-    const auto screenY = static_cast<float>(window.height);
+                       bool &globalKeyIsLocked) 
+{
+    // Skip drawing if UI is hidden
 
-    // Only fetch mouse position once for UI logic, might save some compute.
-    const auto mPos = GetMousePosition();
-
-    const auto winStartX = screenX * BORDER_SPACING;
-    const auto winStartY = screenY * BORDER_SPACING;
-    const auto winLenX = std::max(screenX * WINDOW_WIDTH, MIN_UI_SIZE.first);
-    const auto winLenY =
-        std::max(screenY - (2 * winStartY), MIN_UI_SIZE.second);
-
-    const Rectangle uiRect = {
-        .x = winStartX, .y = winStartY, .width = winLenX, .height = winLenY};
-
-    GuiPanel(uiRect, nullptr);
-
-    // These elements make up the UI and must not overlap as that will cause
-    // collisions.
-    DrawCursor(uiRect, mWorldPos, mPos);
-    DrawDebugInfo(uiRect, window, graph, renderer);
-    DrawRouteInfo(uiRect, mPos, state, globalKeyIsLocked);
-}
-
-// Only draw the cursor if we are not hovering over UI elements.
-void DrawCursor(const Rectangle &uiRect,
-                const Vector2 &mWorldPos,
-                const Vector2 mPos) {
-    const Rectangle mRect = {
-        .x = mPos.x - 1, .y = mPos.y - 1, .width = 2, .height = 2};
-
-    if (CheckCollisionRecs(uiRect, mRect)) {
+    if (!showUI) {
         return;
     }
 
-    DrawCircleV(mPos, 4, DARKGRAY);
+    // Set up the UI box dimensions based on the window size
+
+    const auto screenX = static_cast<float>(window.width);
+    const auto screenY = static_cast<float>(window.height);
+
+    const auto winX = screenX * BORDER_SPACING;
+    const auto winY = screenY * BORDER_SPACING;
+    const auto winWidth  = std::max(screenX * WINDOW_WIDTH, MIN_UI_SIZE.first);
+    const auto winHeight = std::max(screenY - (2 * winY), MIN_UI_SIZE.second);
+
+    // Set up the UI box and mouse pos used throughout the class
+
+    uiRect = {.x = winX, .y = winY, .width = winWidth, .height = winHeight};
+    mousePos = GetMousePosition();
+
+    // Draw the UI
+
+    GuiPanel(uiRect, nullptr);
+    DrawRouteInfo(globalKeyIsLocked);
+    DrawDebugInfo(graph, renderer);
+    DrawCursor(mouseWorldPos);
+}
+
+void UserInterface::DrawCursor(const Vector2 &mouseWorldPos) 
+{
+    if (CheckCollisionPointRec(mousePos, uiRect)) {
+        return;
+    }
+
+    DrawCircleV(mousePos, 4, DARKGRAY);
 
     DrawTextEx(
-        GetFontDefault(), TextFormat("[%.2f, %.2f]", mWorldPos.x, mWorldPos.y),
+        GetFontDefault(), TextFormat("[%.2f, %.2f]", mouseWorldPos.x, mouseWorldPos.y),
         Vector2Add(GetMousePosition(), {.x = -44, .y = -24}), 20, 2, BLACK);
 }
 
-void DrawDebugInfo(const Rectangle &uiRect,
-                   const Window &window,
+void UserInterface::DrawDebugInfo(
                    const OSMGraph &graph,
                    const OSMRenderer &renderer) {
-    if (!window.showDebug) {
+    if (!showDebug) {
         return;
     }
 
@@ -162,25 +136,26 @@ void DrawDebugInfo(const Rectangle &uiRect,
 //  graph.selected_node_b), {10, 10}, 20, 2, BLACK
 //  );
 
-// Set up the accumulator used to space out the UI elements
-// Calling the accumulator returns an element's y pos and sets up next element's y pos
+// Accumulator types are used with elementY to determine the y position of the next element
+// Use the type of the element you're drawing or call elementY(padding) to add spacing between elements
 
-enum AccumulatorTypes {heading = HEADING_HEIGHT + V_PAD_S, 
-                       text = TEXT_HEIGHT + V_PAD_S,
-                       box = BOX_HEIGHT + V_PAD_S,
-                       slider = SLIDER_HEIGHT + V_PAD_S,
-                       padding = V_PAD_M};
+enum AccumulatorTypes 
+{
+    heading = HEADING_HEIGHT + V_PAD, 
+    text = TEXT_HEIGHT + V_PAD,
+    box = BOX_HEIGHT + V_PAD,
+    slider = SLIDER_HEIGHT + V_PAD,
+    padding = 4 * V_PAD
+};
 
-void DrawRouteInfo(const Rectangle &uiRect,
-                   const Vector2 &mPos,
-                   UIState &state,
-                   bool &globalKeyIsLocked) {
-
+void UserInterface::DrawRouteInfo(bool &globalKeyIsLocked) 
+{
     // Define sizes and positions of UI elements
 
-    auto elementX = uiRect.x + H_PAD.first;
-    auto elementWidth = uiRect.width + H_PAD.second;
-    auto accumulator = uiRect.y + V_PAD_M;
+    const auto elementX = uiRect.x + H_PAD.first;
+    const auto elementWidth = uiRect.width + H_PAD.second;
+
+    auto accumulator = uiRect.y;
     auto elementY = [&](int type) {
         int current = accumulator;
         accumulator += type;
@@ -189,6 +164,7 @@ void DrawRouteInfo(const Rectangle &uiRect,
 
     // Location elements
 
+    elementY(padding);
     DrawCustomText("Location", elementX, elementY(heading), HEADING_HEIGHT, BLACK);
     DrawRectangle(elementX, elementY(padding), elementWidth, 1, GRAY);
 
@@ -197,73 +173,75 @@ void DrawRouteInfo(const Rectangle &uiRect,
                                  .y = static_cast<float>(elementY(box)),
                                  .width = elementWidth,
                                  .height = BOX_HEIGHT}, 
-                                 mPos, globalKeyIsLocked);
+                                 mousePos, globalKeyIsLocked);
 
     DrawCustomText("Destination", elementX, elementY(text), TEXT_HEIGHT, BLACK);
     textBoxTo.Update(Rectangle{.x = elementX,
                                .y = static_cast<float>(elementY(box)),
                                .width = elementWidth,
                                .height = BOX_HEIGHT}, 
-                               mPos, globalKeyIsLocked);
-
-    elementY(padding);
+                               mousePos, globalKeyIsLocked);
 
     // Algorithm elements
 
+    elementY(padding);
     DrawCustomText("Algorithm", elementX, elementY(heading), HEADING_HEIGHT, BLACK);
     DrawRectangle(elementX, elementY(padding), elementWidth, 1, GRAY);
 
     DrawCustomText("Model", elementX, elementY(text), TEXT_HEIGHT, BLACK);
-    auto dropdownY = elementY(box); // Save the y pos, draw later
+    auto modelSelectionY = elementY(box); // Save the y pos, draw later
 
     DrawCustomText("Distance", elementX, elementY(text), TEXT_HEIGHT, BLACK);
     GuiSliderBar(Rectangle{.x = elementX,
                            .y = static_cast<float>(elementY(slider)),
                            .width = elementWidth,
                            .height = SLIDER_HEIGHT}, 
-                           "", "", &state.objDistance, 0.F, 1.F);
+                           nullptr, nullptr, &objDistance, 0.F, 1.F);
 
     DrawCustomText("Time", elementX, elementY(text), TEXT_HEIGHT, BLACK);
     GuiSliderBar(Rectangle{.x = elementX,
                            .y = static_cast<float>(elementY(slider)),
                            .width = elementWidth,
                            .height = SLIDER_HEIGHT}, 
-                           "", "", &state.objTime, 0.F, 1.F);
+                           nullptr, nullptr, &objTime, 0.F, 1.F);
 
     DrawCustomText("Scenery", elementX, elementY(text), TEXT_HEIGHT, BLACK);
     GuiSliderBar(Rectangle{.x = elementX,
                            .y = static_cast<float>(elementY(slider)),
                            .width = elementWidth,
                            .height = SLIDER_HEIGHT}, 
-                           "", "", &state.objScenery, 0.F, 1.F);
+                           nullptr, nullptr, &objScenery, 0.F, 1.F);
 
     DrawCustomText("Tourism", elementX, elementY(text), TEXT_HEIGHT, BLACK);
     GuiSliderBar(Rectangle{.x = elementX,
                            .y = static_cast<float>(elementY(slider)),
                            .width = elementWidth,
                            .height = SLIDER_HEIGHT}, 
-                           "", "", &state.objTourism, 0.F, 1.F);
+                           nullptr, nullptr, &objTourism, 0.F, 1.F);
 
     DrawCustomText("Comfort", elementX, elementY(text), TEXT_HEIGHT, BLACK);
     GuiSliderBar(Rectangle{.x = elementX,
                            .y = static_cast<float>(elementY(slider)),
                            .width = elementWidth,
                            .height = SLIDER_HEIGHT}, 
-                           "", "", &state.objComfort, 0.F, 1.F);
-
-    elementY(padding);
+                           nullptr, nullptr, &objComfort, 0.F, 1.F);
 
     // Lastly the dropdown box
 
-    int modelSelectionIndex = static_cast<int>(state.modelSelection);
+    int modelSelectionIndex = static_cast<int>(modelSelection);
     if (GuiDropdownBox(Rectangle{.x = elementX,
-                                 .y = static_cast<float>(dropdownY),
+                                 .y = static_cast<float>(modelSelectionY),
                                  .width = elementWidth,
                                  .height = BOX_HEIGHT},
                                  "Dijkstra;A Star", &modelSelectionIndex,
-                                 state.modelDropdownEdit) != 0) 
+                                 modelDropdownEdit) != 0) 
     {
-        state.modelDropdownEdit = !state.modelDropdownEdit;
-        state.modelSelection = static_cast<PathfindingModel>(modelSelectionIndex);
+        modelDropdownEdit = !modelDropdownEdit;
+        modelSelection = static_cast<PathfindingModel>(modelSelectionIndex);
     }
+}
+
+bool UserInterface::MouseInUI() 
+{
+    return CheckCollisionPointRec(mousePos, uiRect) && showUI;
 }
