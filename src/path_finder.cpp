@@ -5,9 +5,10 @@
 #include <chrono>
 #include <memory>
 
-void PathFinder(OSMGraph& graph, PathfindingModel model)
+void PathFinder(OSMGraph& graph, UserInterface& ui)
 {
     std::unique_ptr<IPathFinder> pathfinder = nullptr;
+    PathfindingModel model = static_cast<PathfindingModel>(ui.GetModel());
 
     switch (model)
     {
@@ -26,7 +27,5 @@ void PathFinder(OSMGraph& graph, PathfindingModel model)
     pathfinder->FindPath(graph);
     auto time_end = std::chrono::high_resolution_clock::now();
 
-    std::chrono::duration<double, std::milli> duration = time_end - time_start;
-    spdlog::info("Time taken for pathfinding: {} ms", duration.count());
-    
+    ui.SetDebugModelTime(time_end - time_start);    
 };

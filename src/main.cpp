@@ -18,16 +18,20 @@
 
 int main() {
 
-    UserInterface ui;
-
     OSMGraph graph;
     graph.load(graph.pathForOSM);
     if (!graph.BuildAdjList()) {
         return -1;
     }
 
-    OSMRenderer renderer(&graph); 
+    OSMRenderer renderer(&graph);
+    OSMRendererSettings osmsettings;
+    // TODO: use renderer class to store settings instead of a global struct -K  
     renderer.BuildQuadTree();
+
+    UserInterface ui;
+    ui.SetDebugTotalNodes(graph.GetNodeCount());
+    ui.SetDebugTotalWays(graph.GetWayCount());
 
     SetTraceLogCallback(SPDLogger);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI | FLAG_VSYNC_HINT);
@@ -61,11 +65,20 @@ int main() {
             window.height = static_cast<int>(static_cast<float>(GetScreenHeight()) / dpi.y);
         }
 
+        osmsettings.screenWidth = (float)window.width * dpi.x;
+        osmsettings.screenHeight = (float)window.height * dpi.y;
+        osmsettings.cursorPos = mouseWorldPos;
+        
+        ui.UpdateLockState();
+ 
         if (!ui.KeyboardInUI())
         {
             if (IsKeyPressed(KEY_U)) { ui.ToggleUI();    }
             if (IsKeyPressed(KEY_D)) { ui.ToggleDebug(); }
-            if (IsKeyPressed(KEY_V)) { ui.ToggleQuad();  }
+            if (IsKeyPressed(KEY_V)) 
+            { 
+                osmsettings.drawQuadBounds = !osmsettings.drawQuadBounds;  
+            }
         }
 
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && !ui.MouseInUI())
@@ -75,7 +88,7 @@ int main() {
             camera.target = Vector2Add(camera.target, delta);
         }
 
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && camera.zoom > 7.F)
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !ui.MouseInUI() && camera.zoom > 7.F)
         {
             AABB bounds = GetScreenLocationBounds(camera, (float)window.width * dpi.x, (float)window.height * dpi.y);
 
@@ -91,7 +104,7 @@ int main() {
                         graph.SetNodeA(obj.id);
                     } else if (graph.GetNodeB() == 0xFFFFFFFF) {       // Click two, B, calculate path
                         graph.SetNodeB(obj.id);
-                        PathFinder(graph, ui.GetModel());
+                        PathFinder(graph, ui);
                     } else {                                           // Click three, reset
                         graph.SetNodeA(0xFFFFFFFF);
                         graph.SetNodeB(0xFFFFFFFF);
@@ -117,24 +130,15 @@ int main() {
 
         BeginMode2D(camera);
 
-        static OSMRendererSettings settings;
-        settings.screenWidth = (float)window.width * dpi.x;
-        settings.screenHeight = (float)window.height * dpi.y;
-        settings.drawObjBounds = false;
-        settings.drawQuadBounds = ui.GetQuad();
-        settings.cursorPos = mouseWorldPos;
-
-        renderer.DrawGraph(camera, settings);
+        renderer.DrawGraph(camera, osmsettings);
 
         EndMode2D();
 
-        auto [lat, lon, _] = InverseMercatorProjection(mouseWorldPos.x, mouseWorldPos.y);
-        ui.DrawUserInterface(
-            window,
-            { .x=static_cast<float>(lon), .y=static_cast<float>(lat) },
-            graph,
-            renderer
-        );
+        Coord coord = InverseMercatorProjection(mouseWorldPos.x, mouseWorldPos.y);
+        ui.SetDebugMouseCoords(static_cast<float>(coord.lat), static_cast<float>(coord.lon));
+        ui.SetDebugRenderedWays(renderer.GetWayRenderCount());
+        ui.SetDebugRenderNodes(renderer.GetNodeRenderCount());
+        ui.DrawUserInterface(window);
 
         EndDrawing();
     }

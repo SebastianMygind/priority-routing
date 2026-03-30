@@ -75,9 +75,9 @@ struct OSMRendererSettings
 {
     float   screenWidth;
     float   screenHeight;
-    bool    drawObjBounds;
-    bool    drawQuadBounds;
     Vector2 cursorPos;
+    bool    drawObjBounds = false;
+    bool    drawQuadBounds = false;
 };
 
 class OSMRenderer

@@ -5,7 +5,6 @@
 #include <format>
 
 #include "raymath.h"
-#include "../vendor/raygui.h"
 #include "Window.h"
 
 #include "widgets/text_box.h"
@@ -15,10 +14,37 @@
 static TextBox textBoxFrom;
 static TextBox textBoxTo;
 
-void UserInterface::DrawUserInterface(const Window &window,
-                       const Vector2 &mouseWorldPos,
-                       const OSMGraph &graph,
-                       const OSMRenderer &renderer) 
+// Height of elements, effectively their size
+
+constexpr int HEADING_HEIGHT = 30;
+constexpr int TEXT_HEIGHT    = 20;
+constexpr int BOX_HEIGHT     = 40;
+constexpr int SLIDER_HEIGHT  = 20;
+
+// Padding between elements, horizontal and vertical
+
+constexpr std::pair H_PAD = {10, -20};
+constexpr int       V_PAD = 5;
+
+// Used to scale the UI accordingly
+
+constexpr std::pair UI_MIN_SIZE   = {200.F, 600.F};
+constexpr float     UI_MULTIPLIER = 0.20;
+constexpr float     UI_DEBUG_HEIGHT = 250.F;
+
+// Accumulator types are used with elementY to determine the y position of the next element
+// Use the type of the element you're drawing or call elementY(padding) to add spacing between elements
+
+enum AccumulatorTypes 
+{
+    heading = HEADING_HEIGHT + V_PAD, 
+    text = TEXT_HEIGHT + V_PAD,
+    box = BOX_HEIGHT + V_PAD,
+    slider = SLIDER_HEIGHT + V_PAD,
+    padding = 4 * V_PAD
+};
+
+void UserInterface::DrawUserInterface(const Window &window) 
 {
     // Skip drawing if UI is hidden
 
@@ -43,22 +69,8 @@ void UserInterface::DrawUserInterface(const Window &window,
 
     // Draw the UI
 
-    DrawCursor(mouseWorldPos);
     DrawRouteInfo();
-    DrawDebugInfo(graph, renderer);
-}
-
-void UserInterface::DrawCursor(const Vector2 &mouseWorldPos) 
-{
-    if (CheckCollisionPointRec(mousePos, uiRect)) {
-        return;
-    }
-
-    DrawCircleV(mousePos, 4, DARKGRAY);
-
-    DrawTextEx(
-        GetFontDefault(), TextFormat("[%.2f, %.2f]", mouseWorldPos.x, mouseWorldPos.y),
-        Vector2Add(GetMousePosition(), {.x = -44, .y = -24}), 20, 2, BLACK);
+    DrawDebugInfo();
 }
 
 void UserInterface::DrawRouteInfo() 
@@ -145,20 +157,18 @@ void UserInterface::DrawRouteInfo()
 
     // Draw the model dropdown last so it's drawn over the sliders if open
 
-    int modelSelectionIndex = static_cast<int>(modelSelection);
     if (GuiDropdownBox(Rectangle{.x = elementX,
                                  .y = static_cast<float>(modelSelectionY),
                                  .width = elementWidth,
                                  .height = BOX_HEIGHT},
-                                 "Dijkstra;A Star", &modelSelectionIndex,
+                                 "Dijkstra;A Star", &modelSelection,
                                  modelDropdownEdit) != 0) 
     {
         modelDropdownEdit = !modelDropdownEdit;
-        modelSelection = static_cast<PathfindingModel>(modelSelectionIndex);
     }
 }
 
-void UserInterface::DrawDebugInfo(const OSMGraph &graph, const OSMRenderer &renderer) 
+void UserInterface::DrawDebugInfo() 
 {
     // Skip drawing if debug is hidden
 
@@ -169,9 +179,9 @@ void UserInterface::DrawDebugInfo(const OSMGraph &graph, const OSMRenderer &rend
     // Similar definition as the ones in DrawUserInterface() and DrawRouteInfo()
 
     const auto debX = uiRect.width - H_PAD.second;
-    const auto debY = uiRect.height - UI_DEBUG_SIZE + H_PAD.first;
+    const auto debY = uiRect.height - UI_DEBUG_HEIGHT + H_PAD.first;
     const auto debWidth  = uiRect.width;
-    const auto debHeight = UI_DEBUG_SIZE;
+    const auto debHeight = UI_DEBUG_HEIGHT;
 
     const Rectangle debRect = {.x = debX, .y = debY, .width = debWidth, .height = debHeight};
 
@@ -194,7 +204,33 @@ void UserInterface::DrawDebugInfo(const OSMGraph &graph, const OSMRenderer &rend
     DrawRectangle(elementX, elementY(padding), elementWidth, 1, GRAY);
 
     DrawCustomText(std::format("FPS: {}", GetFPS()).c_str(), elementX, elementY(text), TEXT_HEIGHT, BLACK);
-    DrawCustomText(std::format("Rendered ways: {}", renderer.GetWayRenderCount()).c_str(), elementX, elementY(text), TEXT_HEIGHT, BLACK);
-    DrawCustomText(std::format("Total nodes: {}", graph.GetNodeCount()).c_str(), elementX, elementY(text), TEXT_HEIGHT, BLACK);
-    DrawCustomText(std::format("Total ways: {}", graph.GetWayCount()).c_str(), elementX, elementY(text), TEXT_HEIGHT, BLACK);
+    DrawCustomText(std::format("Coords: {:.3f}, {:.3f}", debugMouseWorldPos.x, debugMouseWorldPos.y).c_str(), elementX, elementY(text), TEXT_HEIGHT, BLACK);
+    DrawCustomText(std::format("Nodes: {}/{}", debugRenderNodes, debugTotalNodes).c_str(), elementX, elementY(text), TEXT_HEIGHT, BLACK);
+    DrawCustomText(std::format("Ways: {}/{}", debugRenderedWays, debugTotalWays).c_str(), elementX, elementY(text), TEXT_HEIGHT, BLACK);
+    DrawCustomText(std::format("Model Time: {:.3f} ms", debugModelTime.count()).c_str(), elementX, elementY(text), TEXT_HEIGHT, BLACK);
+
+    // Mouse crosshair
+
+    DrawRectangle(mousePos.x-20, mousePos.y-1, 40, 2, DARKGRAY);
+    DrawRectangle(mousePos.x-1, mousePos.y-20, 2, 40, DARKGRAY);
+}
+
+
+/* 
+    A locked UI means that the mouse is interacting with the map, so the UI elements cannot be interacted with.
+    This function should be called before input handling and checks if the mouse is clicking inside the UI.
+    MouseInUI() would therefore signal if the mouse is focused on the UI (if it's left unlocked).
+*/
+void UserInterface::UpdateLockState() 
+{
+    // If the left mouse is pressed when the cursor is outside the visible UI box, lock it
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !(CheckCollisionPointRec(mousePos, uiRect) && showUI))
+    {
+        GuiLock();
+    }
+    // If the left mouse is released, unlock it
+    if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
+    {
+        GuiUnlock();
+    }
 }
