@@ -165,8 +165,8 @@ bool OSMGraph::BuildAdjList() {
             adj_list_prev.insert({a, 0xFFFFFFFF});
             adj_list_prev.insert({b, 0xFFFFFFFF});
 
-            double tourismCostA = 0;
-            double tourismCostB = 0;
+            double tourismCostA = cachedTourismFile.at(a).attributes.at("tourism");
+            double tourismCostB = cachedTourismFile.at(b).attributes.at("tourism");
 
             adj_list[a].push_back({b, tourismCostB});
 
@@ -290,7 +290,7 @@ file_format_t OSMGraph::GetNodeAttributes() {
         spdlog::info(
             "cached tourism file exists, loading from storage");
 
-        if (auto attrResult = ReadFromCache(filepath); attrResult.has_value()) {
+        if (auto attrResult = ReadFromCache(filepath, attributeMap); attrResult.has_value()) {
             nodeAttributes = attrResult.value();
         } else {
             spdlog::critical(attrResult.error());

@@ -6,6 +6,8 @@
 #include <string>
 #include <spdlog/spdlog.h>
 
+#include "attribute_utils.h"
+
 // HASH, NODE_COUNT, ATTR_COUNT, ...DATA
 
 std::expected<void, std::string>  WriteToCache(
@@ -33,7 +35,6 @@ std::expected<void, std::string>  WriteToCache(
         for (const double val : attributes.attributes | std::views::values) {
             file.write(reinterpret_cast<const char*>(&val), sizeof(val));
         }
-        file << '\n';
     }
     if (!file.good()) {
         std::unexpected("Error while writing to cache file");
@@ -42,13 +43,54 @@ std::expected<void, std::string>  WriteToCache(
     return {};
 }
 
-std::expected<file_format_t, std::string> ReadFromCache(std::string filePath) {
+std::expected<file_format_t, std::string> ReadFromCache(std::string filePath, const attr_map_t& attrMetaData) {
     file_format_t attrMap;
     std::ifstream file(filePath, std::ios::binary);
     if (!file.is_open()) {
         return std::unexpected("Could not open cache file");
     }
 
+    // Skip over filehash as that has already been validated.
+    file.ignore(sizeof(size_t));
+
+    size_t nodeCount = 0;
+    file.read(reinterpret_cast<char*>(&nodeCount), sizeof(nodeCount)); //NOLINT
+
+    size_t attrCount = 0;
+    file.read(reinterpret_cast<char*>(&attrCount), sizeof(attrCount)); //NOLINT
+    // Check for basic error states.
+    if (!file.good()) {
+        return std::unexpected("Error while reading cache file");
+    }
+    if (attrCount == 0 || nodeCount == 0) {
+        return std::unexpected("Error: No data has been read from cache file, 0 attributes or nodes");
+    }
+
+    std::vector<std::string> attrNames;
+
+    for (const auto& name : attrMetaData | std::views::keys) {
+        attrNames.emplace_back(name);
+    }
+
+    if (attrNames.size() != attrCount) {
+        return std::unexpected("Expected attribute count does not match with file disclosed count.");
+    }
+
+    // Read the data now
+    for (size_t i = 0; i < nodeCount; i++) {
+        OSMNodeID nodeId = 0;
+        NodeAttributes attribute;
+
+        file.read(reinterpret_cast<char*>(&nodeId), sizeof(nodeId));
+
+        for (const auto& name : attrNames) {
+            double value = 0.F;
+            file.read(reinterpret_cast<char*>(&value), sizeof(value));
+
+            attribute.attributes[name] = value;
+        }
+        attrMap[nodeId] = attribute;
+    }
 
     return attrMap;
 }

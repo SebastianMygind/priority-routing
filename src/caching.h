@@ -6,6 +6,8 @@
 #include <string>
 #include <unordered_map>
 
+#include "attribute_utils.h"
+
 using file_format_t = std::unordered_map<uint64_t, NodeAttributes>;
 
 std::expected<void, std::string>  WriteToCache(
@@ -14,6 +16,6 @@ std::expected<void, std::string>  WriteToCache(
     size_t hash,
     size_t attrCount) ;
 
-std::expected<file_format_t, std::string> ReadFromCache(std::string filePath);
+std::expected<file_format_t, std::string> ReadFromCache(std::string filePath, const attr_map_t& attrMetaData);
 
 bool cacheIsValid(const std::string& filepath, size_t hash);
