@@ -1,5 +1,7 @@
 #include <cstdint>
+#include <cstring>
 #include <print>
+#include <string>
 #include <vector>
 #include <thread>
 
@@ -40,8 +42,7 @@ int main() {
     auto window = Window("Routing Simulation");
 
     InitWindow(window.width, window.height, window.title.c_str());
-    // Setup Application logic at this stage.
-    SetupFontConfig();
+    ui.SetupFontConfig("../fonts/JetBrainsMono-Regular.ttf");
 
     Camera2D camera = {};
     camera.zoom = 1.0F;
@@ -102,17 +103,34 @@ int main() {
                 {
                     if (graph.GetNodeA() == 0xFFFFFFFF) {              // Click one, A
                         graph.SetNodeA(obj.id);
+                        ui.SetOrigin(std::format("{}", obj.id));
                     } else if (graph.GetNodeB() == 0xFFFFFFFF) {       // Click two, B, calculate path
                         graph.SetNodeB(obj.id);
+                        ui.SetDestination(std::format("{}", obj.id));
                         PathFinder(graph, ui);
                     } else {                                           // Click three, reset
                         graph.SetNodeA(0xFFFFFFFF);
                         graph.SetNodeB(0xFFFFFFFF);
                         graph.ClearPath();
+                        ui.SetOrigin("");
+                        ui.SetDestination("");
                     }
                     break;
                 }
             }
+        }
+
+        if (ui.IsUpdated())
+        {
+            graph.ClearPath();
+            try {
+                graph.SetNodeA(std::stoull(ui.GetOrigin()));
+                graph.SetNodeB(std::stoull(ui.GetDestination()));
+            } catch (const std::exception& e) {
+                spdlog::error("In {}. Enter valid IDs bozo", e.what());
+                continue;
+            }
+            PathFinder(graph, ui);
         }
 
         if (const float wheel = GetMouseWheelMove(); wheel != 0) 

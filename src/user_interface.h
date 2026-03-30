@@ -2,6 +2,7 @@
 #include "raylib.h"
 #include "../vendor/raygui.h"
 #include "Window.h"
+#include <cstring>
 #include <chrono>
 
 typedef std::chrono::duration<double, std::milli> ms_duration;
@@ -11,13 +12,19 @@ class UserInterface
 public:
 
     void DrawUserInterface(const Window &window);
-    
+    void SetupFontConfig(const char* file);
     void UpdateLockState();
 
-    // Checks for exclusivity
+    bool KeyboardInUI() const { return originTextboxEdit || destinationTextboxEdit; }
+    bool MouseInUI()    const { return !GuiIsLocked(); }
+    bool IsUpdated();
 
-    auto MouseInUI()    const { return !GuiIsLocked(); }
-    auto KeyboardInUI() const { return textboxEdit; }
+    // Textbox getters/setters
+
+    void SetOrigin(std::string text)      { strncpy(originTextboxText, text.c_str(), sizeof(originTextboxText));           }
+    void SetDestination(std::string text) { strncpy(destinationTextboxText, text.c_str(), sizeof(destinationTextboxText)); }
+    std::string GetOrigin()         const { return std::string(originTextboxText);      }
+    std::string GetDestination()    const { return std::string(destinationTextboxText); }
 
     // Model getters
 
@@ -46,7 +53,8 @@ private:
 
     Rectangle uiRect;
     Vector2 mousePos;
-
+    Font fontText, fontHeading;
+    
     // Should match the PathfindingModel enum in path_finder.h
     int modelSelection = 1;
 
@@ -67,8 +75,12 @@ private:
     bool showUI    = true;
     
     bool modelDropdownEdit = false;
-    bool textboxEdit = false;
-    bool sliderEdit  = false;
+    bool originTextboxEdit = false;
+    bool destinationTextboxEdit = false;
+    bool wasPreviouslyEditing = false;
+
+    char originTextboxText[128] = "";
+    char destinationTextboxText[128] = "";
 
     void DrawRouteInfo();
     void DrawDebugInfo();
