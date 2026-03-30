@@ -10,205 +10,191 @@
 
 #include "widgets/text_box.h"
 #include "widgets/text.h"
+#include "spdlog/spdlog.h"
 
 static TextBox textBoxFrom;
 static TextBox textBoxTo;
 
-// This boolean should tell all the ui if it should ignore any input or not.
-// We should not change debug state if pressing d while writing to a textbox.
-
-constexpr float BORDER_SPACING = 0.01;
-constexpr float WINDOW_WIDTH = 0.20;
-
-constexpr int TEXT_FIELD_HEIGHT = 40;
-constexpr int BOX_BORDER_WIDTH = 2;
-
-constexpr int TEXT_TITLE_SIZE = 28;
-constexpr int DEBUG_TEXT_TITLE_SIZE = 32;
-constexpr int DEBUG_ENTRY_TEXT_SIZE = 20;
-
-constexpr int UI_PADDING_S = 5;
-constexpr int UI_PADDING_M = 10;
-constexpr int UI_PADDING_L = 30;
-
-// We need to set a minimum size for UI elements which will be done "globally"
-// here
-constexpr std::pair MIN_UI_SIZE = {200.F, 600.F};
-
-void DrawCursor(const Rectangle &uiRect,
-                const Vector2 &mWorldPos,
-                Vector2 mPos);
-
-void DrawRouteInfo(const Rectangle &uiRect,
-                   const Vector2 &mPos,
-                   const OSMGraph &graph,
-                   UIState &state,
-                   bool &globalKeyIsLocked);
-
-void DrawDebugInfo(const Rectangle &uiRect,
-                   const Window &window,
-                   const OSMGraph &graph,
-                   const OSMRenderer &renderer);
-
-void DrawUserInterface(const Window &window,
-                       const Vector2 &mWorldPos,
+void UserInterface::DrawUserInterface(const Window &window,
+                       const Vector2 &mouseWorldPos,
                        const OSMGraph &graph,
-                       const OSMRenderer &renderer,
-                       UIState &state,
-                       bool &globalKeyIsLocked) {
+                       const OSMRenderer &renderer) 
+{
+    // Skip drawing if UI is hidden
+
+    if (!showUI) {
+        return;
+    }
+
+    // Set up the UI box dimensions based on the window size
+
     const auto screenX = static_cast<float>(window.width);
     const auto screenY = static_cast<float>(window.height);
 
-    // Only fetch mouse position once for UI logic, might save some compute.
-    const auto mPos = GetMousePosition();
+    const auto winX = H_PAD.first;
+    const auto winY = H_PAD.first;
+    const auto winWidth  = std::max(screenX * UI_MULTIPLIER, UI_MIN_SIZE.first);
+    const auto winHeight = std::max(screenY + H_PAD.second, UI_MIN_SIZE.second);
 
-    const auto winStartX = screenX * BORDER_SPACING;
-    const auto winStartY = screenY * BORDER_SPACING;
-    const auto winLenX = std::max(screenX * WINDOW_WIDTH, MIN_UI_SIZE.first);
-    const auto winLenY =
-        std::max(screenY - (2 * winStartY), MIN_UI_SIZE.second);
+    // Set up the UI box and mouse pos used throughout the class
 
-    const Rectangle uiRect = {
-        .x = winStartX, .y = winStartY, .width = winLenX, .height = winLenY};
+    uiRect = {.x = winX, .y = winY, .width = winWidth, .height = winHeight};
+    mousePos = GetMousePosition();
 
-    GuiPanel(uiRect, nullptr);
+    // Draw the UI
 
-    // These elements make up the UI and must not overlap as that will cause
-    // collisions.
-    DrawCursor(uiRect, mWorldPos, mPos);
-    DrawDebugInfo(uiRect, window, graph, renderer);
-    DrawRouteInfo(uiRect, mPos, graph, state, globalKeyIsLocked);
+    DrawCursor(mouseWorldPos);
+    DrawRouteInfo();
+    DrawDebugInfo(graph, renderer);
 }
 
-// Only draw the cursor if we are not hovering over UI elements.
-void DrawCursor(const Rectangle &uiRect,
-                const Vector2 &mWorldPos,
-                const Vector2 mPos) {
-    const Rectangle mRect = {
-        .x = mPos.x - 1, .y = mPos.y - 1, .width = 2, .height = 2};
-
-    if (CheckCollisionRecs(uiRect, mRect)) {
+void UserInterface::DrawCursor(const Vector2 &mouseWorldPos) 
+{
+    if (CheckCollisionPointRec(mousePos, uiRect)) {
         return;
     }
 
-    DrawCircleV(mPos, 4, DARKGRAY);
+    DrawCircleV(mousePos, 4, DARKGRAY);
 
     DrawTextEx(
-        GetFontDefault(), TextFormat("[%.2f, %.2f]", mWorldPos.x, mWorldPos.y),
+        GetFontDefault(), TextFormat("[%.2f, %.2f]", mouseWorldPos.x, mouseWorldPos.y),
         Vector2Add(GetMousePosition(), {.x = -44, .y = -24}), 20, 2, BLACK);
 }
 
-void DrawDebugInfo(const Rectangle &uiRect,
-                   const Window &window,
-                   const OSMGraph &graph,
-                   const OSMRenderer &renderer) {
-    if (!window.showDebug) {
+void UserInterface::DrawRouteInfo() 
+{
+    // Define sizes and positions of UI elements
+
+    const auto elementX = uiRect.x + H_PAD.first;
+    const auto elementWidth = uiRect.width + H_PAD.second;
+
+    auto accumulator = uiRect.y;
+    auto elementY = [&](int type) {
+        int current = accumulator;
+        accumulator += type;
+        return current;
+    };
+
+    // The beginning of the ui panel
+    
+    GuiPanel(uiRect, nullptr);
+
+    // "Location" elements - heading text and two text boxes for origin and destination
+
+    elementY(padding);
+    DrawCustomText("Location", elementX, elementY(heading), HEADING_HEIGHT, BLACK);
+    DrawRectangle(elementX, elementY(padding), elementWidth, 1, GRAY);
+
+    DrawCustomText("Origin", elementX, elementY(text), TEXT_HEIGHT, BLACK);
+    textBoxFrom.Update(Rectangle{.x = elementX,
+                                 .y = static_cast<float>(elementY(box)),
+                                 .width = elementWidth,
+                                 .height = BOX_HEIGHT}, 
+                                 mousePos, textboxEdit);
+
+    DrawCustomText("Destination", elementX, elementY(text), TEXT_HEIGHT, BLACK);
+    textBoxTo.Update(Rectangle{.x = elementX,
+                               .y = static_cast<float>(elementY(box)),
+                               .width = elementWidth,
+                               .height = BOX_HEIGHT}, 
+                               mousePos, textboxEdit);
+
+    // "Algorithm" elements - heading text, dropdown for model selection and sliders for the different weights
+
+    elementY(padding);
+    DrawCustomText("Algorithm", elementX, elementY(heading), HEADING_HEIGHT, BLACK);
+    DrawRectangle(elementX, elementY(padding), elementWidth, 1, GRAY);
+
+    DrawCustomText("Model", elementX, elementY(text), TEXT_HEIGHT, BLACK);
+    auto modelSelectionY = elementY(box); // Save the y pos, draw later
+
+    DrawCustomText("Distance", elementX, elementY(text), TEXT_HEIGHT, BLACK);
+    GuiSliderBar(Rectangle{.x = elementX,
+                           .y = static_cast<float>(elementY(slider)),
+                           .width = elementWidth,
+                           .height = SLIDER_HEIGHT}, 
+                           nullptr, nullptr, &objDistance, 0.F, 1.F);
+
+    DrawCustomText("Time", elementX, elementY(text), TEXT_HEIGHT, BLACK);
+    GuiSliderBar(Rectangle{.x = elementX,
+                           .y = static_cast<float>(elementY(slider)),
+                           .width = elementWidth,
+                           .height = SLIDER_HEIGHT}, 
+                           nullptr, nullptr, &objTime, 0.F, 1.F);
+
+    DrawCustomText("Scenery", elementX, elementY(text), TEXT_HEIGHT, BLACK);
+    GuiSliderBar(Rectangle{.x = elementX,
+                           .y = static_cast<float>(elementY(slider)),
+                           .width = elementWidth,
+                           .height = SLIDER_HEIGHT}, 
+                           nullptr, nullptr, &objScenery, 0.F, 1.F);
+
+    DrawCustomText("Tourism", elementX, elementY(text), TEXT_HEIGHT, BLACK);
+    GuiSliderBar(Rectangle{.x = elementX,
+                           .y = static_cast<float>(elementY(slider)),
+                           .width = elementWidth,
+                           .height = SLIDER_HEIGHT}, 
+                           nullptr, nullptr, &objTourism, 0.F, 1.F);
+
+    DrawCustomText("Comfort", elementX, elementY(text), TEXT_HEIGHT, BLACK);
+    GuiSliderBar(Rectangle{.x = elementX,
+                           .y = static_cast<float>(elementY(slider)),
+                           .width = elementWidth,
+                           .height = SLIDER_HEIGHT}, 
+                           nullptr, nullptr, &objComfort, 0.F, 1.F);
+
+    // Draw the model dropdown last so it's drawn over the sliders if open
+
+    int modelSelectionIndex = static_cast<int>(modelSelection);
+    if (GuiDropdownBox(Rectangle{.x = elementX,
+                                 .y = static_cast<float>(modelSelectionY),
+                                 .width = elementWidth,
+                                 .height = BOX_HEIGHT},
+                                 "Dijkstra;A Star", &modelSelectionIndex,
+                                 modelDropdownEdit) != 0) 
+    {
+        modelDropdownEdit = !modelDropdownEdit;
+        modelSelection = static_cast<PathfindingModel>(modelSelectionIndex);
+    }
+}
+
+void UserInterface::DrawDebugInfo(const OSMGraph &graph, const OSMRenderer &renderer) 
+{
+    // Skip drawing if debug is hidden
+
+    if (!showDebug) {
         return;
     }
 
-    const Vector2 startVec = {.x = uiRect.x + (uiRect.width * 0.05F),
-                              .y = uiRect.y + (uiRect.height * 0.6F)};
+    // Similar definition as the ones in DrawUserInterface() and DrawRouteInfo()
 
-    const Rectangle debugRect = {.x = startVec.x,
-                                 .y = startVec.y,
-                                 .width = uiRect.width * 0.9F,
-                                 .height = uiRect.height * 0.35F};
+    const auto debX = uiRect.width - H_PAD.second;
+    const auto debY = uiRect.height - UI_DEBUG_SIZE + H_PAD.first;
+    const auto debWidth  = uiRect.width;
+    const auto debHeight = UI_DEBUG_SIZE;
 
-    const auto currentFPS = GetFPS();
+    const Rectangle debRect = {.x = debX, .y = debY, .width = debWidth, .height = debHeight};
 
-    DrawRectangleRec(debugRect, {.r = 245, .g = 181, .b = 39, .a = 230});
-    DrawRectangleLinesEx(debugRect, 2, {.r = 150, .g = 50, .b = 50, .a = 255});
+    const auto elementX = debRect.x + H_PAD.first;
+    const auto elementWidth = uiRect.width + H_PAD.second;
 
-    // Below is the actual debug information, Constant spacing seems better for
-    // this so the offsets are in pixels.
+    auto accumulator = debRect.y;
+    auto elementY = [&](int type) {
+        int current = accumulator;
+        accumulator += type;
+        return current;
+    };
 
-    DrawCustomText("DEBUG INFO", static_cast<int>(debugRect.x) + 10,
-                   static_cast<int>(debugRect.y) + 10, DEBUG_TEXT_TITLE_SIZE,
-                   BLACK);
+    // The begginning of the debug panel
 
-    DrawCustomText(std::format("FPS: {}", currentFPS).c_str(),
-                   static_cast<int>(debugRect.x) + 10,
-                   static_cast<int>(debugRect.y) + 50, DEBUG_ENTRY_TEXT_SIZE,
-                   BLACK);
+    GuiPanel(debRect, nullptr);
+    
+    elementY(padding);
+    DrawCustomText("DEBUG INFO", elementX, elementY(heading), HEADING_HEIGHT, BLACK);
+    DrawRectangle(elementX, elementY(padding), elementWidth, 1, GRAY);
 
-    DrawCustomText(
-        std::format("Rendered ways: {}", renderer.GetWayRenderCount()).c_str(),
-        static_cast<int>(debugRect.x) + 10, static_cast<int>(debugRect.y) + 70,
-        DEBUG_ENTRY_TEXT_SIZE, BLACK);
-
-    DrawCustomText(std::format("Total nodes: {}", graph.GetNodeCount()).c_str(),
-                   static_cast<int>(debugRect.x) + 10,
-                   static_cast<int>(debugRect.y) + 90, DEBUG_ENTRY_TEXT_SIZE,
-                   BLACK);
-
-    DrawCustomText(std::format("Total way: {}", graph.GetWayCount()).c_str(),
-                   static_cast<int>(debugRect.x) + 10,
-                   static_cast<int>(debugRect.y) + 110, DEBUG_ENTRY_TEXT_SIZE,
-                   BLACK);
-}
-
-// todo! add back positional ui info
-// DrawTextEx(
-//  GetFontDefault(),
-//  TextFormat("Selected Node: \n A:%i, B:%i", graph.selected_node_a,
-//  graph.selected_node_b), {10, 10}, 20, 2, BLACK
-//  );
-
-void DrawRouteInfo(const Rectangle &uiRect,
-                   const Vector2 &mPos,
-                   const OSMGraph &graph,
-                   UIState &state,
-                   bool &globalKeyIsLocked) {
-    // Height accumulator for UI elements
-    auto heightAccumulator = static_cast<int>(uiRect.y) + (2 * UI_PADDING_M);
-
-    // Origin TextBox
-    DrawCustomText("Origin", static_cast<int>(uiRect.x) + (UI_PADDING_M),
-                   heightAccumulator, TEXT_TITLE_SIZE, BLACK);
-    heightAccumulator += UI_PADDING_L;
-
-    const Rectangle fromRect = {.x = uiRect.x + UI_PADDING_M,
-                                .y = static_cast<float>(heightAccumulator),
-                                .width = uiRect.width - (2 * UI_PADDING_M),
-                                .height = TEXT_FIELD_HEIGHT};
-
-    heightAccumulator += (UI_PADDING_M * 2) + TEXT_FIELD_HEIGHT;
-
-    textBoxFrom.Update(fromRect, mPos, globalKeyIsLocked);
-
-    // Destination TextBox
-
-    DrawCustomText("Destination", static_cast<int>(uiRect.x) + (UI_PADDING_M),
-                   heightAccumulator, TEXT_TITLE_SIZE, BLACK);
-
-    heightAccumulator += UI_PADDING_L;
-
-    const Rectangle toRect = {.x = uiRect.x + UI_PADDING_M,
-                              .y = static_cast<float>(heightAccumulator),
-                              .width = uiRect.width - (UI_PADDING_M * 2),
-                              .height = TEXT_FIELD_HEIGHT};
-
-    textBoxTo.Update(toRect, mPos, globalKeyIsLocked);
-    // Model selection dropdown
-    // DrawCustomText("Model/Algorithm", static_cast<int>(toRect.x) + 5,
-    //               static_cast<int>(uiRect.y));
-
-    heightAccumulator += (UI_PADDING_M * 2) + TEXT_FIELD_HEIGHT;
-
-    DrawCustomText("Algorithm", static_cast<int>(uiRect.x) + (UI_PADDING_M),
-                   heightAccumulator, TEXT_TITLE_SIZE, BLACK);
-
-    heightAccumulator += UI_PADDING_L;
-
-    int modelSelectionIndex = static_cast<int>(state.modelSelection);
-    if (GuiDropdownBox(Rectangle{.x = uiRect.x + UI_PADDING_M,
-                                 .y = static_cast<float>(heightAccumulator),
-                                 .width = uiRect.width - 20,
-                                 .height = TEXT_FIELD_HEIGHT},
-                       "Dijkstra;A Star", &modelSelectionIndex,
-                       state.modelDropdownEdit) != 0) {
-        state.modelDropdownEdit = !state.modelDropdownEdit;
-        state.modelSelection =
-            static_cast<PathfindingModel>(modelSelectionIndex);
-    }
+    DrawCustomText(std::format("FPS: {}", GetFPS()).c_str(), elementX, elementY(text), TEXT_HEIGHT, BLACK);
+    DrawCustomText(std::format("Rendered ways: {}", renderer.GetWayRenderCount()).c_str(), elementX, elementY(text), TEXT_HEIGHT, BLACK);
+    DrawCustomText(std::format("Total nodes: {}", graph.GetNodeCount()).c_str(), elementX, elementY(text), TEXT_HEIGHT, BLACK);
+    DrawCustomText(std::format("Total ways: {}", graph.GetWayCount()).c_str(), elementX, elementY(text), TEXT_HEIGHT, BLACK);
 }
