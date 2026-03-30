@@ -92,6 +92,10 @@ std::expected<file_format_t, std::string> ReadFromCache(std::string filePath, co
         attrMap[nodeId] = attribute;
     }
 
+    if (!file.good()) {
+        return std::unexpected("Error while reading attributes from cache file.");
+    }
+
     return attrMap;
 }
 
