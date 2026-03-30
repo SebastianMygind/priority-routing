@@ -3,6 +3,7 @@ build/
 .vs/
 .idea/
 data/
+cache/
 
 .DS_Store
 

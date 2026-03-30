@@ -22,7 +22,9 @@ int main() {
 
     OSMGraph graph;
     graph.load("../data/copenhagen.osm.pbf");
-    graph.BuildAdjList();
+    if (!graph.BuildAdjList()) {
+        return -1;
+    }
 
     OSMRenderer renderer(&graph); 
     renderer.BuildQuadTree();
@@ -66,7 +68,7 @@ int main() {
             if (IsKeyPressed(KEY_V)) { ui.ToggleQuad();  }
         }
 
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && !ui.MouseInUI()) 
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && !ui.MouseInUI())
         {
             Vector2 delta = GetMouseDelta();
             delta = Vector2Scale(delta, -1.0F / camera.zoom);
@@ -126,7 +128,7 @@ int main() {
 
         EndMode2D();
 
-        auto [lat, lon] = InverseMercatorProjection(mouseWorldPos.x, mouseWorldPos.y);
+        auto [lat, lon, _] = InverseMercatorProjection(mouseWorldPos.x, mouseWorldPos.y);
         ui.DrawUserInterface(
             window,
             { .x=static_cast<float>(lon), .y=static_cast<float>(lat) },

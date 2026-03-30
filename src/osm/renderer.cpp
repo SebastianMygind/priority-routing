@@ -247,6 +247,18 @@ void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
         }
     }
 
+    for (const auto& node : m_pGraph->nodesWithTourism) {
+        auto current_node = m_pGraph->GetNode(node);
+
+        Vector2 p1 = MercatorProjection(current_node.lat, current_node.lon);
+
+        DrawCircleV(
+            p1,
+            10.F * (1.F / camera.zoom),
+            GREEN
+            );
+    }
+
     if (settings.drawQuadBounds)
     {
         std::vector<AABB> quadBounds;
