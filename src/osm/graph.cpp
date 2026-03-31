@@ -284,7 +284,7 @@ file_format_t OSMGraph::GetNodeAttributes() {
     const auto attrHash = GetAttrHash(attributeMap);
 
     // Check if cache has valid info
-    const auto* const filepath = "../cache/tourism.cache";
+    const auto* const filepath = "../cache/attributes.cache";
 
     if (cacheIsValid(filepath, attrHash)) {
         spdlog::info(
@@ -298,9 +298,6 @@ file_format_t OSMGraph::GetNodeAttributes() {
         }
         return nodeAttributes;
     }
-
-    spdlog::info(
-            "cached tourism file does not exist, generating");
 
     nodeAttributes = GenerateNodeAttributes(attributeMap);
 

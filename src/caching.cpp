@@ -15,7 +15,13 @@ std::expected<void, std::string>  WriteToCache(
     file_format_t& attrMap,
     size_t hash,
     size_t attrCount) {
+    if (!std::filesystem::is_directory("../cache")) {
+        spdlog::info("Cache directory does not exist. Creating...");
+        std::filesystem::create_directory("../cache");
+    }
+
     std::ofstream file(filePath, std::ios::binary);
+
     if (!file.is_open()) {
         return std::unexpected("Could not open cache file");
     }
@@ -102,8 +108,13 @@ std::expected<file_format_t, std::string> ReadFromCache(std::string filePath, co
 bool cacheIsValid(const std::string& filepath, const size_t hash) {
     std::ifstream file(filepath, std::ios::binary);
 
+    if (!std::filesystem::is_directory("../cache")) {
+        spdlog::info("Cache directory does not exist. No valid cache");
+        return false;
+    }
+
     if (!file.is_open()) {
-        spdlog::warn(
+        spdlog::info(
             "Could not open cache file for reading at path: {}", filepath);
         return false;
     }
@@ -117,5 +128,9 @@ bool cacheIsValid(const std::string& filepath, const size_t hash) {
 
     file.read(reinterpret_cast<char*>(&fileHash), sizeof(fileHash)); //NOLINT
 
-    return fileHash == hash;
+    if (fileHash != hash) {
+        spdlog::info("Cache file hash does not match with expected.");
+        return false;
+    }
+    return true;
 }
