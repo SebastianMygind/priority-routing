@@ -21,7 +21,7 @@ int main() {
     UserInterface ui;
 
     OSMGraph graph;
-    graph.load("../data/copenhagen.osm.pbf");
+    graph.load(graph.pathForOSM);
     if (!graph.BuildAdjList()) {
         return -1;
     }

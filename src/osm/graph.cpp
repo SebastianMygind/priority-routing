@@ -286,7 +286,10 @@ file_format_t OSMGraph::GetNodeAttributes() {
     // Check if cache has valid info
     const auto* const filepath = "../cache/attributes.cache";
 
-    if (cacheIsValid(filepath, attrHash)) {
+    const auto dataSetHash = DataSetHash(pathForOSM);
+    const auto combinedHash = CombineHash(attrHash, dataSetHash);
+
+    if (cacheIsValid(filepath, combinedHash)) {
         spdlog::info(
             "cached tourism file exists, loading from storage");
 
@@ -302,7 +305,7 @@ file_format_t OSMGraph::GetNodeAttributes() {
     nodeAttributes = GenerateNodeAttributes(attributeMap);
 
     const auto writeRes =
-        WriteToCache(filepath, nodeAttributes, attrHash, attrCount);
+        WriteToCache(filepath, nodeAttributes, combinedHash, attrCount);
 
     if (!writeRes.has_value()) {
         spdlog::critical(writeRes.error());

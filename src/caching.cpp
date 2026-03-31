@@ -20,8 +20,7 @@ std::expected<void, std::string>  WriteToCache(
         std::filesystem::create_directory("../cache");
     }
 
-    std::ofstream file(filePath, std::ios::binary);
-
+    std::ofstream file(filePath, std::ios::binary | std::ios::trunc);
     if (!file.is_open()) {
         return std::unexpected("Could not open cache file");
     }
@@ -43,7 +42,7 @@ std::expected<void, std::string>  WriteToCache(
         }
     }
     if (!file.good()) {
-        std::unexpected("Error while writing to cache file");
+        return std::unexpected("Error while writing to cache file");
     }
 
     return {};

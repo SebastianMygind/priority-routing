@@ -22,6 +22,8 @@ using attrValue = std::tuple<attrFunc, Goal, std::vector<OSMNodeID>>;
 using attr_map_t = std::map<std::string, attrValue>;
 
 size_t GetAttrHash(attr_map_t map);
+size_t DataSetHash(const std::string& filepath);
+size_t CombineHash(size_t a, size_t b);
 
 // This is the function that should be made for each attribute,
 // where you change the values on the optimalPair on finding a better result.

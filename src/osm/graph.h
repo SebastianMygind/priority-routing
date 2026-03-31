@@ -37,6 +37,8 @@ public:
     size_t GetNodeCount() const { return nodes.size(); }
     size_t GetWayCount() const { return ways.size(); }
 
+    std::string pathForOSM = "../data/copenhagen.osm.pbf";
+
     // Tags
     std::vector<OSMNodeID> nodesWithTourism;
 private:
