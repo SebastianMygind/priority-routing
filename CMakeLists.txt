@@ -69,6 +69,16 @@ set(CORE_SOURCES
         src/widgets/text.h
         src/osm/osm_handler.cpp
         src/osm/osm_handler.h
+        src/models/weighted_sum_dijkstra.cpp
+        src/models/weighted_sum_dijkstra.h
+        src/caching.cpp
+        src/caching.h
+        src/node_attributes.cpp
+        src/node_attributes.h
+        src/attribute_utils.cpp
+        src/attribute_utils.h
+        src/osm_types.cpp
+        src/osm_types.h
 )
 
 if (MSVC)

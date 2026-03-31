@@ -11,7 +11,16 @@ void OSMHandler::node(const osmium::Node& node)
     if (!node.location())
         return;
 
-    graph.nodes.emplace(node.id(), OSMNode{.lat=node.location().lat(), .lon=node.location().lon()});
+    OSMNode osmNode;
+
+    osmNode.lat = node.location().lat();
+    osmNode.lon = node.location().lon();
+
+    for (const auto& tag : node.tags()) {
+        osmNode.tags.emplace(tag.key(), tag.value());
+    }
+
+    graph.nodes.emplace(node.id(), std::move(osmNode));
 }
 
 void OSMHandler::way(const osmium::Way& way)

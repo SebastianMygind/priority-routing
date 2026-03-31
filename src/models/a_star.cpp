@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <queue>
 
-const double H_WEIGHT = 2.0;
+const double H_WEIGHT = 1.0;
 
 bool AStar::FindPath(OSMGraph& graph)
 {
@@ -43,20 +43,23 @@ bool AStar::FindPath(OSMGraph& graph)
         }
 
         // Update distances to neighbors
-        for (uint64_t neighbor : adj_list[current]) 
+        for (std::pair<uint64_t, double> neighbor : adj_list[current])
         {
-            double alt = dist[current] + Haversine(graph.GetNode(current), graph.GetNode(neighbor));
+            OSMNodeID neighborID = neighbor.first;
+            double neighborCost = neighbor.second;
+
+            double alt = dist[current] + neighborCost;
             
-            if (alt < dist[neighbor]) 
+            if (alt < dist[neighborID])
             {
-                dist[neighbor] = alt;
-                prev[neighbor] = current;
+                dist[neighborID] = alt;
+                prev[neighborID] = current;
 
                 // Calculate the heuristic value
-                double h = H_WEIGHT * Haversine(graph.GetNode(neighbor), graph.GetNode(destination));
+                double h = H_WEIGHT * Haversine(graph.GetNode(neighborID), graph.GetNode(destination));
 
                 // Push the neighbor onto the priority queue with cost + heuristic
-                p_queue.push({alt + h, neighbor});
+                p_queue.push({alt + h, neighborID });
             }
         }
     }

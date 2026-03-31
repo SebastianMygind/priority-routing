@@ -16,7 +16,4 @@ enum class PathfindingModel {
     AStar = 1
 };
 
-double Haversine(const OSMNode& a, const OSMNode& b);
-std::optional<double> ParseMaxSpeed(const std::string& value);
-double EuclideanDistance(const OSMNode& a, const OSMNode& b);
 void PathFinder(OSMGraph& graph, PathfindingModel model);
