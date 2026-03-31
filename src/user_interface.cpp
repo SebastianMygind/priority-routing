@@ -50,6 +50,8 @@ void UserInterface::SetupFontConfig(const char* file)
     fontHeading = LoadFontEx(file, HEADING_HEIGHT, nullptr, 0);
     GuiSetFont(fontText);
     GuiSetStyle(DEFAULT, TEXT_SIZE, TEXT_HEIGHT);
+    GuiSetStyle(DEFAULT, BORDER_WIDTH, 1);
+    GuiSetStyle(TEXTBOX, BORDER_WIDTH, 0);
 }
 
 void UserInterface::DrawUserInterface(const Window &window) 
@@ -106,25 +108,38 @@ void UserInterface::DrawRouteInfo()
     DrawRectangle(elementX, elementY(padding), elementWidth, 1, GRAY);
     
     DrawTextEx(fontText, "Origin", { .x = elementX, .y = static_cast<float>(elementY(text)) }, TEXT_HEIGHT, 1.2, BLACK);
+    auto const originTextboxY = elementY(box);
     if (GuiTextBox(Rectangle{.x = elementX,
-                       .y = static_cast<float>(elementY(box)),
-                       .width = elementWidth,
+                       .y = static_cast<float>(originTextboxY),
+                       .width = elementWidth - BOX_HEIGHT,
                        .height = BOX_HEIGHT},
                         originTextboxText, sizeof(originTextboxText), originTextboxEdit) != 0)
     {
         originTextboxEdit = !originTextboxEdit;
     }
+    DrawRectangleLinesEx({elementX, static_cast<float>(originTextboxY), elementWidth, BOX_HEIGHT}, 1, GRAY);
+    if (GuiButton(Rectangle{.x = elementWidth - BOX_HEIGHT - H_PAD.second, .y = static_cast<float>(originTextboxY), .width = BOX_HEIGHT, .height = BOX_HEIGHT}, "#113#"))
+    {
+        originTextboxText[0] = '\0';
+        wasPreviouslyEditing = true; // forces an update
+    }
 
     DrawTextEx(fontText, "Destination", { .x = elementX, .y = static_cast<float>(elementY(text)) }, TEXT_HEIGHT, 1.2, BLACK);
+    auto const destinationTextboxY = elementY(box);
     if (GuiTextBox(Rectangle{.x = elementX,
-                       .y = static_cast<float>(elementY(box)),
-                       .width = elementWidth,
+                       .y = static_cast<float>(destinationTextboxY),
+                       .width = elementWidth - BOX_HEIGHT,
                        .height = BOX_HEIGHT},
                         destinationTextboxText, sizeof(destinationTextboxText), destinationTextboxEdit) != 0)
     {
         destinationTextboxEdit = !destinationTextboxEdit;
     }
-
+    DrawRectangleLinesEx({elementX, static_cast<float>(destinationTextboxY), elementWidth, BOX_HEIGHT}, 1, GRAY);
+    if (GuiButton(Rectangle{.x = elementWidth - BOX_HEIGHT - H_PAD.second, .y = static_cast<float>(destinationTextboxY), .width = BOX_HEIGHT, .height = BOX_HEIGHT}, "#113#"))
+    {
+        destinationTextboxText[0] = '\0';
+        wasPreviouslyEditing = true; // forces an update
+     }
 
     // "Algorithm" elements - heading text, dropdown for model selection and sliders for the different weights
 
@@ -133,7 +148,7 @@ void UserInterface::DrawRouteInfo()
     DrawRectangle(elementX, elementY(padding), elementWidth, 1, GRAY);
 
     DrawTextEx(fontText, "Model", { .x = elementX, .y = static_cast<float>(elementY(text)) }, TEXT_HEIGHT, 1.2, BLACK);
-    auto modelSelectionY = elementY(box); // Save the y pos, draw later
+    auto const modelSelectionY = elementY(box); // Save the y pos, draw later
 
     DrawTextEx(fontText, "Distance", { .x = elementX, .y = static_cast<float>(elementY(text)) }, TEXT_HEIGHT, 1.2, BLACK);
     GuiSliderBar(Rectangle{.x = elementX,
@@ -253,6 +268,10 @@ void UserInterface::UpdateLockState()
     }
 }
 
+/* 
+    A function that triggers only once after modifying values in the UI.
+    Meant to be used in the main loop.
+*/
 bool UserInterface::IsUpdated()
 {
     const bool isCurrentlyEditing = (originTextboxEdit || destinationTextboxEdit || modelDropdownEdit);

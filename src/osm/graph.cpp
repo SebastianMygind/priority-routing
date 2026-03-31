@@ -191,7 +191,6 @@ OSMNodeID OSMGraph::StringToNode(const std::string& input) {
     } 
     catch (const std::exception& e) 
     {
-        spdlog::warn("Could not convert to NodeID: {}", e.what());
         return 0xFFFFFFFF;
     }
 }
