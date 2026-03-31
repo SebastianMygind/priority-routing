@@ -179,6 +179,24 @@ bool OSMGraph::BuildAdjList() {
     return true;
 }
 
+OSMNodeID OSMGraph::StringToNode(const std::string& input) {
+    try 
+    {
+        OSMNodeID node = std::stoull(input);
+        if (nodes.find(node) == nodes.end()) 
+        {
+            throw std::runtime_error("Node not found");
+        }
+        return node;
+    } 
+    catch (const std::exception& e) 
+    {
+        spdlog::warn("Could not convert to NodeID: {}", e.what());
+        return 0xFFFFFFFF;
+    }
+}
+
+
 std::vector<OSMNodeID> OSMGraph::getNodesWithTourism() const {
     std::vector<OSMNodeID> nodesWithTourism;
 

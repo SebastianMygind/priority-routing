@@ -101,20 +101,30 @@ int main() {
                 OSMNode node = graph.GetNode(obj.id);
                 if (Vector2Distance(MercatorProjection(node.lat, node.lon), mouseWorldPos) < 0.2F)
                 {
-                    if (graph.GetNodeA() == 0xFFFFFFFF) {              // Click one, A
+                    if (graph.GetNodeA() == 0xFFFFFFFF)                  // Click one, A
+                    {
                         graph.SetNodeA(obj.id);
                         ui.SetOrigin(std::format("{}", obj.id));
-                    } else if (graph.GetNodeB() == 0xFFFFFFFF) {       // Click two, B, calculate path
+                    } 
+                    else if (graph.GetNodeB() == 0xFFFFFFFF)            // Click two, B
+                    {
                         graph.SetNodeB(obj.id);
                         ui.SetDestination(std::format("{}", obj.id));
-                        PathFinder(graph, ui);
-                    } else {                                           // Click three, reset
+                    } 
+                    else                                                // Click three, reset
+                    {                                           
                         graph.SetNodeA(0xFFFFFFFF);
                         graph.SetNodeB(0xFFFFFFFF);
                         graph.ClearPath();
                         ui.SetOrigin("");
                         ui.SetDestination("");
                     }
+
+                    if (graph.GetNodeA() != 0xFFFFFFFF && graph.GetNodeB() != 0xFFFFFFFF) 
+                    {
+                        PathFinder(graph, ui);
+                    }
+                    
                     break;
                 }
             }
@@ -123,14 +133,13 @@ int main() {
         if (ui.IsUpdated())
         {
             graph.ClearPath();
-            try {
-                graph.SetNodeA(std::stoull(ui.GetOrigin()));
-                graph.SetNodeB(std::stoull(ui.GetDestination()));
-            } catch (const std::exception& e) {
-                spdlog::error("In {}. Enter valid IDs bozo", e.what());
-                continue;
+            graph.SetNodeA(graph.StringToNode(ui.GetOrigin()));
+            graph.SetNodeB(graph.StringToNode(ui.GetDestination()));
+            
+            if (graph.GetNodeA() != 0xFFFFFFFF && graph.GetNodeB() != 0xFFFFFFFF) 
+            {
+                PathFinder(graph, ui);
             }
-            PathFinder(graph, ui);
         }
 
         if (const float wheel = GetMouseWheelMove(); wheel != 0) 

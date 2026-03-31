@@ -28,7 +28,7 @@ constexpr int       V_PAD = 5;
 
 // Used to scale the UI accordingly
 
-constexpr std::pair UI_MIN_SIZE   = {200.F, 600.F};
+constexpr std::pair UI_MIN_SIZE   = {200.F, 620.F};
 constexpr float     UI_MULTIPLIER = 0.20;
 constexpr float     UI_DEBUG_HEIGHT = 250.F;
 
