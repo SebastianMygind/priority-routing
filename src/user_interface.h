@@ -21,14 +21,14 @@ public:
 
     // Textbox getters/setters
 
-    void SetOrigin(std::string text)      { strncpy(originTextboxText, text.c_str(), sizeof(originTextboxText));           }
-    void SetDestination(std::string text) { strncpy(destinationTextboxText, text.c_str(), sizeof(destinationTextboxText)); }
+    void SetOrigin(std::string text)      { strncpy(originTextboxText, text.c_str(), textboxSize);      }
+    void SetDestination(std::string text) { strncpy(destinationTextboxText, text.c_str(), textboxSize); }
     std::string GetOrigin()         const { return std::string(originTextboxText);      }
     std::string GetDestination()    const { return std::string(destinationTextboxText); }
 
     // Model getters
 
-    auto GetModel()    const { return modelSelection; }
+    auto GetModel()    const { return modelSelectionIndex; }
     auto GetDistance() const { return objDistance;    }
     auto GetTime()     const { return objTime;        }
     auto GetScenery()  const { return objScenery;     }
@@ -40,7 +40,7 @@ public:
     auto SetDebugModelTime(auto duration) { debugModelTime = duration; }
     auto SetDebugTotalNodes(auto nodes)   { debugTotalNodes = nodes;   }
     auto SetDebugTotalWays(auto ways)     { debugTotalWays = ways;     }
-    auto SetDebugRenderNodes(auto nodes)  { debugRenderNodes = nodes; }
+    auto SetDebugRenderNodes(auto nodes)  { debugRenderNodes = nodes;  }
     auto SetDebugRenderedWays(auto ways)  { debugRenderedWays = ways;  }
     auto SetDebugMouseCoords(auto lat, auto lon)  { debugMouseWorldPos = {lat, lon}; }
 
@@ -56,7 +56,7 @@ private:
     Font fontText, fontHeading;
     
     // Should match the PathfindingModel enum in path_finder.h
-    int modelSelection = 1;
+    int modelSelectionIndex = 1;
 
     float objDistance = 0.5;
     float objTime     = 0.5;
@@ -74,14 +74,26 @@ private:
     bool showDebug = true;
     bool showUI    = true;
     
-    bool modelDropdownEdit = false;
+    bool modelSelectionEdit = false;
     bool originTextboxEdit = false;
     bool destinationTextboxEdit = false;
     bool wasPreviouslyEditing = false;
 
-    char originTextboxText[128] = "";
-    char destinationTextboxText[128] = "";
+    static const int textboxSize = 128;
+    char originTextboxText[textboxSize] = "";
+    char destinationTextboxText[textboxSize] = "";
+
+    float elementX;
+    float elementY(int type);
+    float elementWidth;
+    float accumulator;
 
     void DrawRouteInfo();
     void DrawDebugInfo();
+
+    void DrawCustomHeading(const char* text);
+    void DrawCustomText(const char* text);
+    void DrawCustomTextbox(char* text, bool& edit);
+    void DrawCustomSelection(const char* text, float posY, int* selection, bool& edit);
+    void DrawCustomSlider(float* value);
 };
