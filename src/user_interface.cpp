@@ -7,12 +7,7 @@
 #include "raymath.h"
 #include "Window.h"
 
-#include "widgets/text_box.h"
-#include "widgets/text.h"
 #include "spdlog/spdlog.h"
-
-static TextBox textBoxFrom;
-static TextBox textBoxTo;
 
 // Height of elements, effectively their size
 
