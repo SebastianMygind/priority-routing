@@ -1,70 +1,62 @@
 #pragma once
-#include "osm/graph.h"
-#include "osm/renderer.h"
 #include "raylib.h"
+#include "../vendor/raygui.h"
 #include "Window.h"
-#include "path_finder.h"
+#include <cstring>
+#include <chrono>
 
-// Height of elements, effectively their size
-
-constexpr int HEADING_HEIGHT = 30;
-constexpr int TEXT_HEIGHT    = 20;
-constexpr int BOX_HEIGHT     = 40;
-constexpr int SLIDER_HEIGHT  = 20;
-
-// Padding between elements, horizontal and vertical
-
-constexpr std::pair H_PAD = {10, -20};
-constexpr int       V_PAD = 5;
-
-// Used to scale the UI accordingly
-
-constexpr std::pair UI_MIN_SIZE   = {200.F, 600.F};
-constexpr float     UI_MULTIPLIER = 0.20;
-constexpr float     UI_DEBUG_SIZE = 200.F;
-
-// Accumulator types are used with elementY to determine the y position of the next element
-// Use the type of the element you're drawing or call elementY(padding) to add spacing between elements
-
-enum AccumulatorTypes 
-{
-    heading = HEADING_HEIGHT + V_PAD, 
-    text = TEXT_HEIGHT + V_PAD,
-    box = BOX_HEIGHT + V_PAD,
-    slider = SLIDER_HEIGHT + V_PAD,
-    padding = 4 * V_PAD
-};
-
+typedef std::chrono::duration<double, std::milli> ms_duration;
 
 class UserInterface 
 {
 public:
 
-    void DrawUserInterface(const Window &window, const Vector2 &mouseWorldPos, const OSMGraph &graph,
-                           const OSMRenderer &renderer);
+    void DrawUserInterface(const Window &window);
+    void SetupFontConfig(const char* file);
+    void UpdateLockState();
 
-    auto MouseInUI()    const { return CheckCollisionPointRec(mousePos, uiRect) && showUI; }
-    auto KeyboardInUI() const { return textboxEdit; }
+    bool KeyboardInUI() const { return originTextboxEdit || destinationTextboxEdit; }
+    bool MouseInUI()    const { return !GuiIsLocked(); }
+    bool IsUpdated();
 
-    auto GetModel()    const { return modelSelection; }
+    // Textbox getters/setters
+
+    void SetOrigin(std::string text)      { strncpy(originTextboxText, text.c_str(), textboxSize);      }
+    void SetDestination(std::string text) { strncpy(destinationTextboxText, text.c_str(), textboxSize); }
+    std::string GetOrigin()         const { return std::string(originTextboxText);      }
+    std::string GetDestination()    const { return std::string(destinationTextboxText); }
+
+    // Model getters
+
+    auto GetModel()    const { return modelSelectionIndex; }
     auto GetDistance() const { return objDistance;    }
     auto GetTime()     const { return objTime;        }
     auto GetScenery()  const { return objScenery;     }
     auto GetTourism()  const { return objTourism;     }
     auto GetComfort()  const { return objComfort;     }
 
-    void ToggleDebug() { showDebug = !showDebug; }
-    void ToggleQuad()  { showQuad  = !showQuad;  }
-    void ToggleUI()    { showUI    = !showUI;    }
+    // Debug setters
 
-    auto GetQuad() const { return showQuad; }
+    auto SetDebugModelTime(auto duration) { debugModelTime = duration; }
+    auto SetDebugTotalNodes(auto nodes)   { debugTotalNodes = nodes;   }
+    auto SetDebugTotalWays(auto ways)     { debugTotalWays = ways;     }
+    auto SetDebugRenderNodes(auto nodes)  { debugRenderNodes = nodes;  }
+    auto SetDebugRenderedWays(auto ways)  { debugRenderedWays = ways;  }
+    auto SetDebugMouseCoords(auto lat, auto lon)  { debugMouseWorldPos = {lat, lon}; }
+
+    // Visibility toggles
+
+    void ToggleUI()    { showUI    = !showUI;    }
+    void ToggleDebug() { showDebug = !showDebug; }
 
 private:
 
-    PathfindingModel modelSelection = PathfindingModel::AStar;
-
     Rectangle uiRect;
     Vector2 mousePos;
+    Font fontText, fontHeading;
+    
+    // Should match the PathfindingModel enum in path_finder.h
+    int modelSelectionIndex = 1;
 
     float objDistance = 0.5;
     float objTime     = 0.5;
@@ -72,15 +64,36 @@ private:
     float objTourism  = 0.5;
     float objComfort  = 0.5;
 
-    bool showDebug = false;
-    bool showQuad  = false;
+    ms_duration debugModelTime{0};
+    size_t debugTotalNodes = 0;
+    size_t debugTotalWays = 0;
+    size_t debugRenderNodes = 0;
+    size_t debugRenderedWays = 0;
+    Vector2 debugMouseWorldPos{0, 0};
+
+    bool showDebug = true;
     bool showUI    = true;
     
-    bool modelDropdownEdit = false;
-    bool textboxEdit = false;
-    bool sliderEdit  = false;
+    bool modelSelectionEdit = false;
+    bool originTextboxEdit = false;
+    bool destinationTextboxEdit = false;
+    bool wasPreviouslyEditing = false;
+
+    static const int textboxSize = 128;
+    char originTextboxText[textboxSize] = "";
+    char destinationTextboxText[textboxSize] = "";
+
+    float elementX;
+    float elementY(int type);
+    float elementWidth;
+    float accumulator;
 
     void DrawRouteInfo();
-    void DrawCursor(const Vector2 &mouseWorldPos);
-    void DrawDebugInfo(const OSMGraph &graph, const OSMRenderer &renderer);
+    void DrawDebugInfo();
+
+    void DrawCustomHeading(const char* text);
+    void DrawCustomText(const char* text);
+    void DrawCustomTextbox(char* text, bool& edit);
+    void DrawCustomSelection(const char* text, float posY, int* selection, bool& edit);
+    void DrawCustomSlider(float* value);
 };

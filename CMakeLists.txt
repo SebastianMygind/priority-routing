@@ -63,10 +63,6 @@ set(CORE_SOURCES
         src/osm/renderer.cpp
         src/osm/renderer.h
         vendor/raygui.h
-        src/widgets/text_box.cpp
-        src/widgets/text_box.h
-        src/widgets/text.cpp
-        src/widgets/text.h
         src/osm/osm_handler.cpp
         src/osm/osm_handler.h
         src/models/weighted_sum_dijkstra.cpp

@@ -5,27 +5,166 @@
 #include <format>
 
 #include "raymath.h"
-#include "../vendor/raygui.h"
 #include "Window.h"
 
-#include "widgets/text_box.h"
-#include "widgets/text.h"
 #include "spdlog/spdlog.h"
 
-static TextBox textBoxFrom;
-static TextBox textBoxTo;
+// Height of elements, effectively their size
 
-void UserInterface::DrawUserInterface(const Window &window,
-                       const Vector2 &mouseWorldPos,
-                       const OSMGraph &graph,
-                       const OSMRenderer &renderer) 
+constexpr int HEADING_HEIGHT = 30;
+constexpr int TEXT_HEIGHT    = 20;
+constexpr int BOX_HEIGHT     = 40;
+constexpr int SLIDER_HEIGHT  = 20;
+
+// Padding between elements, horizontal and vertical
+
+constexpr std::pair H_PAD = {10, -20};
+constexpr int       V_PAD = 5;
+
+// Used to scale the UI accordingly
+
+constexpr std::pair UI_MIN_SIZE   = {200.F, 620.F};
+constexpr float     UI_MULTIPLIER = 0.20;
+constexpr float     UI_DEBUG_HEIGHT = 250.F;
+
+/*
+    Accumulator types are used with elementY to determine the y position of the next element.
+    Use the type of the element you're drawing or call elementY(padding) to add spacing between elements.
+*/
+enum AccumulatorTypes 
+{
+    headingType = HEADING_HEIGHT + V_PAD, 
+    textType = TEXT_HEIGHT + V_PAD,
+    boxType = BOX_HEIGHT + V_PAD,
+    sliderType = SLIDER_HEIGHT + V_PAD,
+    paddingType = 4 * V_PAD
+};
+
+/*
+    Keeps track of and increses the y position of the elements based on their type.
+*/
+float UserInterface::elementY(int type) {
+    auto current = accumulator;
+    accumulator += type;
+    return current;
+};
+
+/*
+    The following functions are shortened "presets" for custom styled raygui elements.
+*/
+void UserInterface::DrawCustomHeading(const char* heading)
+{
+    elementY(paddingType);
+
+    Vector2 headingPos{
+        .x = elementX,
+        .y = elementY(headingType)
+    };
+
+    DrawTextEx(fontHeading, heading, headingPos, HEADING_HEIGHT, 1.2, BLACK);
+    DrawRectangle(elementX, elementY(paddingType), elementWidth, 1, GRAY);
+}
+
+void UserInterface::DrawCustomText(const char* text)
+{
+    Vector2 textPos{
+        .x = elementX,
+        .y = elementY(textType)
+    };
+
+    DrawTextEx(fontText, text, textPos, TEXT_HEIGHT, 1.2, BLACK);
+
+}
+
+void UserInterface::DrawCustomTextbox(char* text, bool& edit)
+{
+    auto const yPos = elementY(boxType);
+
+    Rectangle textboxPos{
+        .x = elementX,
+        .y = yPos,
+        .width = elementWidth - BOX_HEIGHT,
+        .height = BOX_HEIGHT
+    };
+
+    Rectangle outlinePos{
+        .x = elementX,
+        .y = yPos,
+        .width = elementWidth,
+        .height = BOX_HEIGHT
+    };
+
+    Rectangle buttonPos{
+        .x = elementWidth - BOX_HEIGHT - H_PAD.second,
+        .y = yPos,
+        .width = BOX_HEIGHT,
+        .height = BOX_HEIGHT
+    };
+
+    if (GuiTextBox(textboxPos, text, textboxSize, edit) != 0)
+    {
+        edit = !edit;
+    }
+    DrawRectangleLinesEx(outlinePos, 1, GRAY);
+    if (GuiButton(buttonPos, "#113#"))
+    {
+        text[0] = '\0';
+        wasPreviouslyEditing = true;
+    }
+}
+
+void UserInterface::DrawCustomSelection(const char* text, float posY, int* selection, bool& edit)
+{
+    Rectangle selectionPos{
+        .x = elementX,
+        .y = posY,
+        .width = elementWidth,
+        .height = BOX_HEIGHT
+    };
+
+    if (GuiDropdownBox(selectionPos, text, selection, edit) != 0) 
+    {
+        edit = !edit;
+    }
+}
+
+void UserInterface::DrawCustomSlider(float* value)
+{
+    Rectangle sliderPos{
+        .x = elementX,
+        .y = elementY(sliderType),
+        .width = elementWidth,
+        .height = SLIDER_HEIGHT
+    };
+
+    GuiSliderBar(sliderPos, nullptr, nullptr, value, 0.F, 1.F);
+}
+
+/*
+    Sets the fonts needed for the UI and sets the proper raygui style.
+*/
+void UserInterface::SetupFontConfig(const char* file) 
+{ 
+    fontText = LoadFontEx(file, TEXT_HEIGHT, nullptr, 0);
+    fontHeading = LoadFontEx(file, HEADING_HEIGHT, nullptr, 0);
+    GuiSetFont(fontText);
+    GuiSetStyle(DEFAULT, TEXT_SIZE, TEXT_HEIGHT);
+    GuiSetStyle(DEFAULT, BORDER_WIDTH, 1);
+    GuiSetStyle(TEXTBOX, BORDER_WIDTH, 0);
+}
+
+/*
+    The main UI function, it creates a rectangle based on the screen size and then calls
+    the routes and debug functions that use the presets from above to draw the UI. 
+*/
+void UserInterface::DrawUserInterface(const Window &window) 
 {
     // Skip drawing if UI is hidden
 
     if (!showUI) {
         return;
     }
-
+    
     // Set up the UI box dimensions based on the window size
 
     const auto screenX = static_cast<float>(window.width);
@@ -43,122 +182,49 @@ void UserInterface::DrawUserInterface(const Window &window,
 
     // Draw the UI
 
-    DrawCursor(mouseWorldPos);
     DrawRouteInfo();
-    DrawDebugInfo(graph, renderer);
-}
-
-void UserInterface::DrawCursor(const Vector2 &mouseWorldPos) 
-{
-    if (CheckCollisionPointRec(mousePos, uiRect)) {
-        return;
-    }
-
-    DrawCircleV(mousePos, 4, DARKGRAY);
-
-    DrawTextEx(
-        GetFontDefault(), TextFormat("[%.2f, %.2f]", mouseWorldPos.x, mouseWorldPos.y),
-        Vector2Add(GetMousePosition(), {.x = -44, .y = -24}), 20, 2, BLACK);
+    DrawDebugInfo();
 }
 
 void UserInterface::DrawRouteInfo() 
 {
     // Define sizes and positions of UI elements
 
-    const auto elementX = uiRect.x + H_PAD.first;
-    const auto elementWidth = uiRect.width + H_PAD.second;
-
-    auto accumulator = uiRect.y;
-    auto elementY = [&](int type) {
-        int current = accumulator;
-        accumulator += type;
-        return current;
-    };
+    elementX = uiRect.x + H_PAD.first;
+    elementWidth = uiRect.width + H_PAD.second;
+    accumulator = uiRect.y;
 
     // The beginning of the ui panel
     
     GuiPanel(uiRect, nullptr);
 
-    // "Location" elements - heading text and two text boxes for origin and destination
+    DrawCustomHeading("Location");
+    DrawCustomText("Origin");
+    DrawCustomTextbox(originTextboxText, originTextboxEdit);
+    DrawCustomText("Destination");
+    DrawCustomTextbox(destinationTextboxText, destinationTextboxEdit);
 
-    elementY(padding);
-    DrawCustomText("Location", elementX, elementY(heading), HEADING_HEIGHT, BLACK);
-    DrawRectangle(elementX, elementY(padding), elementWidth, 1, GRAY);
-
-    DrawCustomText("Origin", elementX, elementY(text), TEXT_HEIGHT, BLACK);
-    textBoxFrom.Update(Rectangle{.x = elementX,
-                                 .y = static_cast<float>(elementY(box)),
-                                 .width = elementWidth,
-                                 .height = BOX_HEIGHT}, 
-                                 mousePos, textboxEdit);
-
-    DrawCustomText("Destination", elementX, elementY(text), TEXT_HEIGHT, BLACK);
-    textBoxTo.Update(Rectangle{.x = elementX,
-                               .y = static_cast<float>(elementY(box)),
-                               .width = elementWidth,
-                               .height = BOX_HEIGHT}, 
-                               mousePos, textboxEdit);
-
-    // "Algorithm" elements - heading text, dropdown for model selection and sliders for the different weights
-
-    elementY(padding);
-    DrawCustomText("Algorithm", elementX, elementY(heading), HEADING_HEIGHT, BLACK);
-    DrawRectangle(elementX, elementY(padding), elementWidth, 1, GRAY);
-
-    DrawCustomText("Model", elementX, elementY(text), TEXT_HEIGHT, BLACK);
-    auto modelSelectionY = elementY(box); // Save the y pos, draw later
-
-    DrawCustomText("Distance", elementX, elementY(text), TEXT_HEIGHT, BLACK);
-    GuiSliderBar(Rectangle{.x = elementX,
-                           .y = static_cast<float>(elementY(slider)),
-                           .width = elementWidth,
-                           .height = SLIDER_HEIGHT}, 
-                           nullptr, nullptr, &objDistance, 0.F, 1.F);
-
-    DrawCustomText("Time", elementX, elementY(text), TEXT_HEIGHT, BLACK);
-    GuiSliderBar(Rectangle{.x = elementX,
-                           .y = static_cast<float>(elementY(slider)),
-                           .width = elementWidth,
-                           .height = SLIDER_HEIGHT}, 
-                           nullptr, nullptr, &objTime, 0.F, 1.F);
-
-    DrawCustomText("Scenery", elementX, elementY(text), TEXT_HEIGHT, BLACK);
-    GuiSliderBar(Rectangle{.x = elementX,
-                           .y = static_cast<float>(elementY(slider)),
-                           .width = elementWidth,
-                           .height = SLIDER_HEIGHT}, 
-                           nullptr, nullptr, &objScenery, 0.F, 1.F);
-
-    DrawCustomText("Tourism", elementX, elementY(text), TEXT_HEIGHT, BLACK);
-    GuiSliderBar(Rectangle{.x = elementX,
-                           .y = static_cast<float>(elementY(slider)),
-                           .width = elementWidth,
-                           .height = SLIDER_HEIGHT}, 
-                           nullptr, nullptr, &objTourism, 0.F, 1.F);
-
-    DrawCustomText("Comfort", elementX, elementY(text), TEXT_HEIGHT, BLACK);
-    GuiSliderBar(Rectangle{.x = elementX,
-                           .y = static_cast<float>(elementY(slider)),
-                           .width = elementWidth,
-                           .height = SLIDER_HEIGHT}, 
-                           nullptr, nullptr, &objComfort, 0.F, 1.F);
+    DrawCustomHeading("Algorithm");
+    DrawCustomText("Model");
+    // Save the y pos, draw later
+    float modelY = elementY(boxType); 
+    DrawCustomText("Distance");
+    DrawCustomSlider(&objDistance);
+    DrawCustomText("Time");
+    DrawCustomSlider(&objTime);
+    DrawCustomText("Scenery");
+    DrawCustomSlider(&objScenery);
+    DrawCustomText("Tourism");
+    DrawCustomSlider(&objTourism);
+    DrawCustomText("Comfort");
+    DrawCustomSlider(&objComfort);
 
     // Draw the model dropdown last so it's drawn over the sliders if open
+    DrawCustomSelection("Dijkstra;A Star", modelY, &modelSelectionIndex, modelSelectionEdit);
 
-    int modelSelectionIndex = static_cast<int>(modelSelection);
-    if (GuiDropdownBox(Rectangle{.x = elementX,
-                                 .y = static_cast<float>(modelSelectionY),
-                                 .width = elementWidth,
-                                 .height = BOX_HEIGHT},
-                                 "Dijkstra;A Star", &modelSelectionIndex,
-                                 modelDropdownEdit) != 0) 
-    {
-        modelDropdownEdit = !modelDropdownEdit;
-        modelSelection = static_cast<PathfindingModel>(modelSelectionIndex);
-    }
 }
 
-void UserInterface::DrawDebugInfo(const OSMGraph &graph, const OSMRenderer &renderer) 
+void UserInterface::DrawDebugInfo() 
 {
     // Skip drawing if debug is hidden
 
@@ -169,32 +235,71 @@ void UserInterface::DrawDebugInfo(const OSMGraph &graph, const OSMRenderer &rend
     // Similar definition as the ones in DrawUserInterface() and DrawRouteInfo()
 
     const auto debX = uiRect.width - H_PAD.second;
-    const auto debY = uiRect.height - UI_DEBUG_SIZE + H_PAD.first;
+    const auto debY = uiRect.height - UI_DEBUG_HEIGHT + H_PAD.first;
     const auto debWidth  = uiRect.width;
-    const auto debHeight = UI_DEBUG_SIZE;
+    const auto debHeight = UI_DEBUG_HEIGHT;
 
     const Rectangle debRect = {.x = debX, .y = debY, .width = debWidth, .height = debHeight};
 
-    const auto elementX = debRect.x + H_PAD.first;
-    const auto elementWidth = uiRect.width + H_PAD.second;
-
-    auto accumulator = debRect.y;
-    auto elementY = [&](int type) {
-        int current = accumulator;
-        accumulator += type;
-        return current;
-    };
+    elementX = debRect.x + H_PAD.first;
+    elementWidth = uiRect.width + H_PAD.second;
+    accumulator = debRect.y;
 
     // The begginning of the debug panel
 
     GuiPanel(debRect, nullptr);
     
-    elementY(padding);
-    DrawCustomText("DEBUG INFO", elementX, elementY(heading), HEADING_HEIGHT, BLACK);
-    DrawRectangle(elementX, elementY(padding), elementWidth, 1, GRAY);
+    DrawCustomHeading("DEBUG");
+    DrawCustomText(std::format("FPS: {}", GetFPS()).c_str());
+    DrawCustomText(std::format("Coords: {:.3f}, {:.3f}", debugMouseWorldPos.x, debugMouseWorldPos.y).c_str());
+    DrawCustomText(std::format("Nodes: {}/{}", debugRenderNodes, debugTotalNodes).c_str());
+    DrawCustomText(std::format("Ways: {}/{}", debugRenderedWays, debugTotalWays).c_str());
+    DrawCustomText(std::format("Model Time: {:.3f} ms", debugModelTime.count()).c_str());
 
-    DrawCustomText(std::format("FPS: {}", GetFPS()).c_str(), elementX, elementY(text), TEXT_HEIGHT, BLACK);
-    DrawCustomText(std::format("Rendered ways: {}", renderer.GetWayRenderCount()).c_str(), elementX, elementY(text), TEXT_HEIGHT, BLACK);
-    DrawCustomText(std::format("Total nodes: {}", graph.GetNodeCount()).c_str(), elementX, elementY(text), TEXT_HEIGHT, BLACK);
-    DrawCustomText(std::format("Total ways: {}", graph.GetWayCount()).c_str(), elementX, elementY(text), TEXT_HEIGHT, BLACK);
+    // Mouse crosshair
+
+    DrawRectangle(mousePos.x-20, mousePos.y-1, 40, 2, DARKGRAY);
+    DrawRectangle(mousePos.x-1, mousePos.y-20, 2, 40, DARKGRAY);
+}
+
+
+/* 
+    A locked UI means that the mouse is interacting with the map, so the UI elements cannot be interacted with.
+    This function should be called before input handling and checks if the mouse is clicking inside the UI.
+    MouseInUI() would therefore signal if the mouse is focused on the UI (if it's left unlocked).
+*/
+void UserInterface::UpdateLockState() 
+{
+    // If the left mouse is pressed when the cursor is outside the visible UI box, lock it
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !(CheckCollisionPointRec(mousePos, uiRect) && showUI))
+    {
+        GuiLock();
+        originTextboxEdit = false;
+        destinationTextboxEdit = false;
+        modelSelectionEdit = false;
+    }
+    // If the left mouse is released, unlock it
+    if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
+    {
+        GuiUnlock();
+    }
+}
+
+/* 
+    A function that triggers only once after modifying values in the UI.
+    Can be manually triggered by setting wasPreviouslyEditing = true. 
+    Meant to be used in the main loop.
+*/
+bool UserInterface::IsUpdated()
+{
+    const bool isCurrentlyEditing = (originTextboxEdit || destinationTextboxEdit || modelSelectionEdit);
+    
+    if (!isCurrentlyEditing && wasPreviouslyEditing) 
+    {
+        wasPreviouslyEditing = false;
+        return true;
+    }
+    
+    wasPreviouslyEditing = isCurrentlyEditing;
+    return false;
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include "osm/graph.h"
+#include "user_interface.h"
 #include <sstream>
 #include <optional>
 
@@ -16,4 +17,4 @@ enum class PathfindingModel {
     AStar = 1
 };
 
-void PathFinder(OSMGraph& graph, PathfindingModel model);
+void PathFinder(OSMGraph& graph, UserInterface& ui);

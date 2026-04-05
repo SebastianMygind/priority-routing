@@ -19,6 +19,8 @@ public:
     bool ParsePBF(const std::string& path);
     bool ParseXML(std::string path);
     bool BuildAdjList();
+    
+    OSMNodeID StringToNode(const std::string& input);
 
     inline OSMNode GetNode(OSMNodeID id) const { return nodes.at(id); }
     inline OSMWay GetWay(OSMWayID id) const { return ways.at(id); }
