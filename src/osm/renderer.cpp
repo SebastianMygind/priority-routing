@@ -35,21 +35,23 @@ void OSMRenderer::BuildQuadTree()
 
         AABB box;
         OSMNode& node = m_pGraph->nodes[way.nodes[0]];
-        box.minX = box.maxX = node.lon;
-        box.minY = box.maxY = node.lat;
+        Coord& location = node.location;
+        box.minX = box.maxX = location.lon;
+        box.minY = box.maxY = location.lat;
         for (const uint64_t& nodeRef : way.nodes) 
         {
             OSMNode& node = m_pGraph->nodes[nodeRef];
-            box.minX = std::min(box.minX, node.lon);
-            box.maxX = std::max(box.maxX, node.lon);
-            box.minY = std::min(box.minY, node.lat);
-            box.maxY = std::max(box.maxY, node.lat);
+            Coord& location = node.location;
+            box.minX = std::min(box.minX, location.lon);
+            box.maxX = std::max(box.maxX, location.lon);
+            box.minY = std::min(box.minY, location.lat);
+            box.maxY = std::max(box.maxY, location.lat);
 
             if (isHighway)
             {
                 MapObject obj;
                 obj.id = nodeRef;
-                obj.bounds = { node.lon, node.lat, node.lon, node.lat };
+                obj.bounds = { location.lon, location.lat, location.lon, location.lat };
                 obj.layer = -1;
                 m_Tree.InsertNode(obj);
             }
@@ -179,8 +181,8 @@ void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
                     OSMNode& node1 = nodes[way.nodes[i]];
                     OSMNode& node2 = nodes[way.nodes[i + 1]];
 
-                    Vector2 p1 = MercatorProjection(node1.lat, node1.lon);
-                    Vector2 p2 = MercatorProjection(node2.lat, node2.lon);
+                    Vector2 p1 = MercatorProjection(node1.location);
+                    Vector2 p2 = MercatorProjection(node2.location);
 
                     DrawLineEx(
                         p1,
@@ -200,8 +202,8 @@ void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
             OSMNode& node1 = nodes[selected_path[i]];
             OSMNode& node2 = nodes[selected_path[i + 1]];
 
-            Vector2 p1 = MercatorProjection(node1.lat, node1.lon);
-            Vector2 p2 = MercatorProjection(node2.lat, node2.lon);
+            Vector2 p1 = MercatorProjection(node1.location);
+            Vector2 p2 = MercatorProjection(node2.location);
 
             float width = std::fmax(2.6F * (1.0 / camera.zoom), 0.2F);
 
@@ -229,7 +231,7 @@ void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
                 continue;
             }
 
-            Vector2 p1 = MercatorProjection(node.lat, node.lon);
+            Vector2 p1 = MercatorProjection(node.location);
 
             float distToCursor = Vector2Distance(p1, settings.cursorPos);
 
@@ -247,17 +249,17 @@ void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
         }
     }
 
-    for (const auto& node : m_pGraph->nodesWithTourism) {
-        auto current_node = m_pGraph->GetNode(node);
+    // for (const auto& node : m_pGraph->places) {
+    //     auto current_node = m_pGraph->GetNode(node);
 
-        Vector2 p1 = MercatorProjection(current_node.lat, current_node.lon);
+    //     Vector2 p1 = MercatorProjection(current_node.location);
 
-        DrawCircleV(
-            p1,
-            10.F * (1.F / camera.zoom),
-            GREEN
-            );
-    }
+    //     DrawCircleV(
+    //         p1,
+    //         10.F * (1.F / camera.zoom),
+    //         GREEN
+    //         );
+    // }
 
     if (settings.drawQuadBounds)
     {
@@ -287,7 +289,7 @@ Polygon& OSMRenderer::CachePolygonSingle(OSMWayID wayId, const OSMWay& way)
     for (size_t i = 0; i < way.nodes.size() - 1; i++)
     {
         OSMNode& n1 = m_pGraph->nodes[way.nodes[i]];
-        Vector2 p1 = MercatorProjection(n1.lat, n1.lon);
+        Vector2 p1 = MercatorProjection(n1.location);
         Point point = {p1.x, p1.y};
         polygon[0].push_back(point);
     }
@@ -309,8 +311,8 @@ Polygon& OSMRenderer::CachePolygonSingle(OSMWayID wayId, const OSMWay& way)
 
 void OSMRenderer::DrawBounds(const AABB& bounds, Camera2D camera)
 {
-    Vector2 p1 = MercatorProjection(bounds.minY, bounds.minX);
-    Vector2 p2 = MercatorProjection(bounds.maxY, bounds.maxX);
+    Vector2 p1 = MercatorProjection({bounds.minY, bounds.minX});
+    Vector2 p2 = MercatorProjection({bounds.maxY, bounds.maxX});
 
     // Ensure rectangle has positive width/height and correct origin
     float rx = std::min(p1.x, p2.x);
@@ -445,8 +447,8 @@ AABB GetScreenLocationBounds(Camera2D camera, float renderWidth, float renderHei
 {
     Vector2 topLeft           = GetScreenToWorld2D({ 0,0 }, camera);
     Vector2 bottomRight       = GetScreenToWorld2D({ renderWidth, renderHeight }, camera);
-    Coord   topLeftLatLon     = InverseMercatorProjection(topLeft.x, topLeft.y);
-    Coord   bottomRightLatLon = InverseMercatorProjection(bottomRight.x, bottomRight.y);
+    Coord   topLeftLatLon     = InverseMercatorProjection({topLeft.x, topLeft.y});
+    Coord   bottomRightLatLon = InverseMercatorProjection({bottomRight.x, bottomRight.y});
 
     double minLat = bottomRightLatLon.lat;
     double maxLat = topLeftLatLon.lat;

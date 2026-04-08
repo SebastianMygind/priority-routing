@@ -17,6 +17,7 @@ int main() {
 
     OSMGraph graph;
     graph.load(graph.pathForOSM);
+    graph.Build2DTree();
     if (!graph.BuildAdjList()) {
         return -1;
     }
@@ -94,7 +95,7 @@ int main() {
             for (MapObject& obj : visibleNodes) 
             {
                 OSMNode node = graph.GetNode(obj.id);
-                if (Vector2Distance(MercatorProjection(node.lat, node.lon), mouseWorldPos) < 0.2F)
+                if (Vector2Distance(MercatorProjection(node.location), mouseWorldPos) < 0.2F)
                 {
                     if (graph.GetNodeA() == 0xFFFFFFFF)                  // Click one, A
                     {

@@ -18,6 +18,7 @@ public:
     bool load(const std::string& path);
     bool ParsePBF(const std::string& path);
     bool ParseXML(std::string path);
+    bool Build2DTree();
     bool BuildAdjList();
     
     OSMNodeID StringToNode(const std::string& input);
@@ -62,14 +63,61 @@ private:
     file_format_t GetNodeAttributes();
     file_format_t GenerateNodeAttributes(attr_map_t attrInfo);
 
+    // Nodes that is not a part of a way
+    std::vector<OSMNodeID> places;
+
+    std::unique_ptr<Tree2D> tree2d;
+   
+
+public:
+
+
     friend class OSMRenderer;
     friend class OSMHandler;
 };
 
-Vector2 MercatorProjection(double lat, double lon);
-Coord InverseMercatorProjection(float worldX, float worldY);
+Vector2 MercatorProjection(Coord location);
+Coord InverseMercatorProjection(Vector2 world);
 
+double KmhToMS(double kmh);
+double MphToMS(double mph);
 double ParseMaxSpeed(const std::string& value);
 double GetDefaultSpeed(const std::string& highway);
-double Haversine(const OSMNode& a, const OSMNode& b);
-double EuclideanDistance(const OSMNode& a, const OSMNode& b);
+double Haversine(const Coord& a, const Coord& b);
+double Equirectangular(const Coord& a, const Coord& b);
+double EuclideanDistance(const Coord& a, const Coord& b);
+double DistanceSq(const Coord& a, const Coord& b);
+
+
+class Tree2D
+{
+public:
+    Tree2D() {}
+
+    void   BuildTree() { root_ = MakeTree(0, nodes_.size(), 0); }
+    void   AddNode(const OSMNodeID nodeId, const Coord location) { nodes_.emplace_back(nodeId, location); }
+    double Distance() const { return std::sqrt(best_dist_); }
+    double DistanceSq() const { return best_dist_; }
+
+    const OSMNodeID& Nearest(const Coord& pt);
+
+private:
+    struct node
+    {
+        OSMNodeID nodeId;
+        Coord location;
+        node* left_;
+        node* right_;
+
+        node(const OSMNodeID& nodeId, const Coord& pt) : nodeId(nodeId), location(pt), left_(nullptr), right_(nullptr) {}
+    };
+
+    node* root_ = nullptr;
+    node* best_ = nullptr;
+    double best_dist_ = 0;
+    std::size_t visited_ = 0;
+    std::vector<node> nodes_;
+
+    node* MakeTree(size_t begin, size_t end, size_t index);
+    void Nearest(node* root, const Coord& pt, std::size_t index);
+};

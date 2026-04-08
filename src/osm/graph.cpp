@@ -23,9 +23,10 @@
 
 #include "osm_handler.h"
 
-OSMGraph::OSMGraph()
-    : selectedNodeA(UINT32_MAX),
-      selectedNodeB(UINT32_MAX) {}
+OSMGraph::OSMGraph() : selectedNodeA(UINT32_MAX), selectedNodeB(UINT32_MAX)
+{
+    tree2d = std::make_unique<Tree2D>();
+}
 
 bool OSMGraph::ParsePBF(const std::string& path) {
     nodes.clear();
@@ -76,7 +77,7 @@ bool OSMGraph::ParseXML(std::string path) {
             double lat = std::stod(element->Attribute("lat"));
             double lon = std::stod(element->Attribute("lon"));
 
-            nodes.insert({id, OSMNode{lat, lon}});
+            nodes.insert({ id, OSMNode{{lat, lon}} });
 
             element = element->NextSiblingElement("node");
         }
@@ -125,55 +126,144 @@ bool OSMGraph::load(const std::string& path) {
     return false;
 }
 
+bool OSMGraph::Build2DTree()
+{
+    spdlog::info("Building 2D tree...");
+
+    for (const auto& [nodeId, node] : nodes) 
+    {
+        if ( !node.tags.empty() )
+        {
+            Coord location = node.location;
+            tree2d->AddNode(nodeId, location);
+            places.push_back(nodeId);
+        }
+    }
+
+    tree2d->BuildTree();
+}
+
+bool OSMGraph::Build2DTree()
+{
+    spdlog::info("Building 2D tree...");
+
+    for (const auto& [nodeId, node] : nodes) 
+    {
+        if ( !node.tags.empty() )
+        {
+            Coord location = node.location;
+            tree2d->AddNode(nodeId, location);
+            places.push_back(nodeId);
+        }
+    }
+
+    tree2d->BuildTree();
+}
+
 bool OSMGraph::BuildAdjList() {
     adj_list.clear();
 
-    spdlog::info("Getting node attributes...");
 
-    const auto cachedTourismFile = GetNodeAttributes();
+    // CACHE
+    std::unordered_map<OSMNodeID, double> cachedTourismDist;
 
     spdlog::info("Building adjacency list...");
 
     for (const auto& wayPair : ways) {
         const OSMWay& way = wayPair.second;
-
-        const std::vector<uint64_t>& nodes = way.nodes;
+        
+        const std::vector<uint64_t>& wayNodes = way.nodes;
 
         auto highwayTag = way.tags.find("highway");
         auto oneWayTag = way.tags.find("oneway");
         auto speedTag = way.tags.find("maxspeed");
 
-        if (highwayTag == way.tags.end()) continue;
-
-        if (kDrivableHighways.find(highwayTag->second) ==
-            kDrivableHighways.end())
+        if (highwayTag == way.tags.end())
             continue;
 
-        const bool oneWay =
-            (oneWayTag != way.tags.end()) && (oneWayTag->second == "yes");
+        if (kDrivableHighways.find(highwayTag->second) == kDrivableHighways.end())
+            continue;
+
+        const bool oneWay = (oneWayTag != way.tags.end()) && 
+                            (oneWayTag->second == "yes");
 
         const double speed = (speedTag != way.tags.end())
-                                 ? ParseMaxSpeed(speedTag->second)
-                                 : GetDefaultSpeed(highwayTag->second);
+            ? ParseMaxSpeed(speedTag->second)
+            : GetDefaultSpeed(highwayTag->second);
+        
+        for (size_t i = 0; i + 1 < wayNodes.size(); ++i)
+        {
+            OSMNodeID a = wayNodes[i];
+            OSMNodeID b = wayNodes[i + 1];
 
-        for (size_t i = 0; i + 1 < nodes.size(); ++i) {
-            uint64_t a = nodes[i];
-            uint64_t b = nodes[i + 1];
+            OSMNode nodeA = nodes[a];
+            OSMNode nodeB = nodes[b];
 
             adj_list_dist.insert({a, INFINITY});
             adj_list_dist.insert({b, INFINITY});
             adj_list_prev.insert({a, 0xFFFFFFFF});
             adj_list_prev.insert({b, 0xFFFFFFFF});
 
-            double tourismCostA = cachedTourismFile.at(a).attributes.at("tourism");
-            double tourismCostB = cachedTourismFile.at(b).attributes.at("tourism");
 
-            adj_list[a].push_back({b, tourismCostB});
+            double tourismCostA;
+            double tourismCostB;
 
-            if (!oneWay) {
-                adj_list[b].push_back({a, tourismCostA});
+            if (auto it = cachedTourismDist.find(a); it != cachedTourismDist.end())
+            {
+                tourismCostA = pow(it->second, 2);
+            }
+            else
+            {
+                OSMNodeID nearestNodeA = tree2d->Nearest(nodeA.location);
+                tourismCostA = pow(tree2d->DistanceSq(), 2);
+                cachedTourismDist[a] = tree2d->DistanceSq();
+            }
+
+            if (auto it = cachedTourismDist.find(b); it != cachedTourismDist.end())
+            {
+                tourismCostB = pow(it->second, 2);
+            }
+            else
+            {
+                OSMNodeID nearestNodeB = tree2d->Nearest(nodeB.location);
+                tourismCostB = pow(tree2d->DistanceSq(), 2);
+                cachedTourismDist[b] = tree2d->DistanceSq();
+            }
+
+            // OSMNodeID nearestNodeA = tree2d->Nearest(nodeA.location);
+            // tourismCostA = pow(tree2d->Distance(), 2);
+
+            // OSMNodeID nearestNodeB = tree2d->Nearest(nodeB.location);
+            // tourismCostB = pow(tree2d->Distance(), 2);
+
+            // if (auto it = cachedTourismDist.find(a); it != cachedTourismDist.end()) {
+            //     tourismCostA = it->second;
+            // } else {
+            //     tourismCostA = getNearestNode(nodesWithTourism, a).second;
+            //     tourismCostA = pow(tourismCostA, 2); // Your original code squares it
+            //     cachedTourismDist[a] = tourismCostA;
+            // }
+            // if (auto it = cachedTourismDist.find(b); it != cachedTourismDist.end()) {
+            //     tourismCostB = it->second;
+            // } else {
+            //     tourismCostB = getNearestNode(nodesWithTourism, b).second;
+            //     tourismCostB = pow(tourismCostB, 2); // Your original code squares it
+            //     cachedTourismDist[b] = tourismCostB;
+            // }
+
+            // double speedMS = KmhToMS(speed);
+            // double distance = Haversine(nodeA.location, nodeB.location);
+
+            // double timeToDrive = distance / speedMS;
+
+            adj_list[a].emplace_back(b, tourismCostB);
+
+            if (!oneWay)
+            {
+                adj_list[b].emplace_back(a, tourismCostA);
             }
         }
+        
     }
 
     return true;
@@ -332,7 +422,11 @@ file_format_t OSMGraph::GetNodeAttributes() {
     return nodeAttributes;
 }
 
-Vector2 MercatorProjection(double lat, double lon) {
+Vector2 MercatorProjection(Coord location)
+{
+    double& lat = location.lat;
+    double& lon = location.lon;
+
     double centerLatitude = 55.6539977;
     double centerLongitude = 12.5422305;
 
@@ -361,8 +455,9 @@ Vector2 MercatorProjection(double lat, double lon) {
     };
 }
 
-Coord InverseMercatorProjection(float worldX, float worldY) {
-    double centerLatitude = 55.6539977;
+Coord InverseMercatorProjection(Vector2 world)
+{
+    double centerLatitude  = 55.6539977;
     double centerLongitude = 12.5422305;
 
     constexpr double scale = 500000.0;
@@ -377,8 +472,8 @@ Coord InverseMercatorProjection(float worldX, float worldY) {
     double cy = std::log(std::tan(PI / 4.0 + centerLatRad / 2.0));
 
     // --- Invert screen transform ---
-    double x = (worldX / scale) + centerLonRad;
-    double y = cy - (worldY / scale);
+    double x = (world.x / scale) + centerLonRad;
+    double y = cy - (world.y / scale);
 
     // --- Invert Mercator ---
     double lonRad = x;
@@ -387,26 +482,32 @@ Coord InverseMercatorProjection(float worldX, float worldY) {
     return {latRad * 180.0 / PI, lonRad * 180.0 / PI};
 }
 
-const double EARTH_RADIUS = 6371000.0;  // in meters
+double KmhToMS(double kmh)
+{
+    return kmh * 1000.0 / 3600.0;
+}
 
-static double KmhToMS(double kmh) { return kmh * 1000.0 / 3600.0; }
+double MphToMS(double mph)
+{
+    return mph * 1609.34 / 3600.0;
+}
 
-static double MphToMS(double mph) { return mph * 1609.34 / 3600.0; }
-
-double ParseMaxSpeed(const std::string& speedStr) {
-    if (speedStr.empty()) return 50.0;  // fallback default
+double ParseMaxSpeed(const std::string& speedStr)
+{
+    if (speedStr.empty()) return 50.0; // fallback default
 
     std::stringstream ss(speedStr);
     double value;
     ss >> value;
 
     if (speedStr.find("mph") != std::string::npos)
-        return value * 1.60934;  // mph → km/h
+        return value * 1.60934; // mph → km/h
 
-    return value;  // assume km/h
+    return value; // assume km/h
 }
 
-double GetDefaultSpeed(const std::string& highway) {
+double GetDefaultSpeed(const std::string& highway)
+{
     if (highway == "motorway") return 130;
     if (highway == "trunk") return 110;
     if (highway == "primary") return 80;
@@ -418,26 +519,205 @@ double GetDefaultSpeed(const std::string& highway) {
     return 50;
 }
 
-static double DegToRad(double deg) { return deg * PI / 180.0; }
+static double DegToRad(double deg)
+{
+    return deg * PI / 180.0;
+}
 
-double Haversine(const OSMNode& a, const OSMNode& b) {
+double Haversine(const Coord& a, const Coord& b)
+{
+    const double EARTH_RADIUS = 6371000.0; // in meters
+
     double lat1 = DegToRad(a.lat);
     double lat2 = DegToRad(b.lat);
     double dLat = lat2 - lat1;
     double dLon = DegToRad(b.lon - a.lon);
 
     double h = std::sin(dLat / 2) * std::sin(dLat / 2) +
-               std::cos(lat1) * std::cos(lat2) * std::sin(dLon / 2) *
-                   std::sin(dLon / 2);
+        std::cos(lat1) * std::cos(lat2) *
+        std::sin(dLon / 2) * std::sin(dLon / 2);
 
     double c = 2 * std::atan2(std::sqrt(h), std::sqrt(1 - h));
 
     return EARTH_RADIUS * c;
 }
 
-double EuclideanDistance(const OSMNode& a, const OSMNode& b) {
+double EquirectangularSq(const Coord& a, const Coord& b) 
+{
+    const double R = 6371000.0; // in meters
+    double dLat = (b.lat - a.lat) * PI / 180;
+    double dLon = (b.lon - a.lon) * PI / 180;
+    double latM = (a.lat + b.lat) / 2 * PI / 180;
+    double x = dLon * cos(latM);
+    double y = dLat;
+    return (x*x + y*y) * R;
+}
+
+double EuclideanDistance(const Coord& a, const Coord& b)
+{
     double xDiff = (b.lon - a.lon) * cos((a.lat + b.lat) / 2);
     double yDiff = (b.lat - a.lat);
 
     return std::sqrt(pow(xDiff, 2) * pow(yDiff, 2));
+}
+
+
+
+double KmhToMS(double kmh)
+{
+    return kmh * 1000.0 / 3600.0;
+}
+
+double MphToMS(double mph)
+{
+    return mph * 1609.34 / 3600.0;
+}
+
+double ParseMaxSpeed(const std::string& speedStr)
+{
+    if (speedStr.empty()) return 50.0; // fallback default
+
+    std::stringstream ss(speedStr);
+    double value;
+    ss >> value;
+
+    if (speedStr.find("mph") != std::string::npos)
+        return value * 1.60934; // mph → km/h
+
+    return value; // assume km/h
+}
+
+double GetDefaultSpeed(const std::string& highway)
+{
+    if (highway == "motorway") return 130;
+    if (highway == "trunk") return 110;
+    if (highway == "primary") return 80;
+    if (highway == "secondary") return 70;
+    if (highway == "tertiary") return 60;
+    if (highway == "residential") return 50;
+    if (highway == "service") return 30;
+
+    return 50;
+}
+
+static double DegToRad(double deg)
+{
+    return deg * PI / 180.0;
+}
+
+double Haversine(const Coord& a, const Coord& b)
+{
+    const double EARTH_RADIUS = 6371000.0; // in meters
+
+    double lat1 = DegToRad(a.lat);
+    double lat2 = DegToRad(b.lat);
+    double dLat = lat2 - lat1;
+    double dLon = DegToRad(b.lon - a.lon);
+
+    double h = std::sin(dLat / 2) * std::sin(dLat / 2) +
+        std::cos(lat1) * std::cos(lat2) *
+        std::sin(dLon / 2) * std::sin(dLon / 2);
+
+    double c = 2 * std::atan2(std::sqrt(h), std::sqrt(1 - h));
+
+    return EARTH_RADIUS * c;
+}
+
+double EquirectangularSq(const Coord& a, const Coord& b) 
+{
+    const double R = 6371000.0; // in meters
+    double dLat = (b.lat - a.lat) * PI / 180;
+    double dLon = (b.lon - a.lon) * PI / 180;
+    double latM = (a.lat + b.lat) / 2 * PI / 180;
+    double x = dLon * cos(latM);
+    double y = dLat;
+    return (x*x + y*y) * R;
+}
+
+double EuclideanDistance(const Coord& a, const Coord& b)
+{
+    double xDiff = (b.lon - a.lon) * cos((a.lat + b.lat) / 2);
+    double yDiff = (b.lat - a.lat);
+
+    return std::sqrt(pow(xDiff, 2) * pow(yDiff, 2));
+}
+
+double DistanceSq(const Coord& a, const Coord& b)
+{
+    double xDiff = (b.lon - a.lon);
+    double yDiff = (b.lat - a.lat);
+
+    return xDiff*xDiff + yDiff*yDiff;
+}
+
+
+Tree2D::node* Tree2D::MakeTree(size_t begin, size_t end, size_t index) 
+{
+    struct node_cmp 
+    {
+        size_t index_;
+        node_cmp(size_t index) : index_(index) {}
+
+        bool operator()(const node& a, const node& b) const {
+            return index_ == 0 ? 
+                a.location.lat < b.location.lat :
+                a.location.lon < b.location.lon;
+        }
+    };
+
+    if (end <= begin) return nullptr;
+
+    size_t mid = begin + (end - begin) / 2;
+    auto it = nodes_.begin();
+
+    std::nth_element(it + begin, it + mid, it + end, node_cmp(index));
+
+    index = (index + 1) % 2;
+
+    nodes_[mid].left_ = MakeTree(begin, mid, index);
+    nodes_[mid].right_ = MakeTree(mid + 1, end, index);
+
+    return &nodes_[mid];
+}
+
+void Tree2D::Nearest(node* root, const Coord& pt, std::size_t index) 
+{
+    if (!root) return;
+
+    ++visited_;
+
+    double d = EquirectangularSq(root->location, pt);
+    if (!best_ || d < best_dist_) 
+    {
+        best_ = root;
+        best_dist_ = d;
+    }
+
+    if (best_dist_ == 0) return;
+
+    double dx = index == 0 ?
+        root->location.lat - pt.lat :
+        root->location.lon - pt.lon;
+
+    index = (index + 1) % 2;
+
+    node* near_branch = dx > 0 ? root->left_ : root->right_;
+    node* far_branch  = dx > 0 ? root->right_ : root->left_;
+
+    Nearest(near_branch, pt, index);
+
+    if (dx * dx < best_dist_) {
+        Nearest(far_branch, pt, index);
+    }
+}
+
+const OSMNodeID& Tree2D::Nearest(const Coord& pt) {
+    if (!root_) throw std::logic_error("tree is empty");
+
+    best_ = nullptr;
+    best_dist_ = 0;
+    visited_ = 0;
+
+    Nearest(root_, pt, 0);
+    return best_->nodeId;
 }

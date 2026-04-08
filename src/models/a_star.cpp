@@ -56,7 +56,7 @@ bool AStar::FindPath(OSMGraph& graph)
                 prev[neighborID] = current;
 
                 // Calculate the heuristic value
-                double h = H_WEIGHT * Haversine(graph.GetNode(neighborID), graph.GetNode(destination));
+                double h = H_WEIGHT * Haversine(graph.GetNode(neighborID).location, graph.GetNode(destination).location);
 
                 // Push the neighbor onto the priority queue with cost + heuristic
                 p_queue.push({alt + h, neighborID });
