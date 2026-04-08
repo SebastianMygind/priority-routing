@@ -11,6 +11,8 @@
 #include <set>
 #include <utility>
 
+class Tree2D;
+
 class OSMGraph {
 public:
     OSMGraph();

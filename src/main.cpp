@@ -157,7 +157,7 @@ int main() {
 
         EndMode2D();
 
-        Coord coord = InverseMercatorProjection(mouseWorldPos.x, mouseWorldPos.y);
+        Coord coord = InverseMercatorProjection(mouseWorldPos);
         ui.SetDebugMouseCoords(static_cast<float>(coord.lat), static_cast<float>(coord.lon));
         ui.SetDebugRenderedWays(renderer.GetWayRenderCount());
         ui.SetDebugRenderNodes(renderer.GetNodeRenderCount());

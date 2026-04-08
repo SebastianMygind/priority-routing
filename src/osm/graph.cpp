@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <cmath>
 #include <array>
+#include <ranges>
 #include <osmium/io/any_input.hpp>
 #include <osmium/visitor.hpp>
 
@@ -124,23 +125,6 @@ bool OSMGraph::load(const std::string& path) {
         return ParseXML(path);
     }
     return false;
-}
-
-bool OSMGraph::Build2DTree()
-{
-    spdlog::info("Building 2D tree...");
-
-    for (const auto& [nodeId, node] : nodes) 
-    {
-        if ( !node.tags.empty() )
-        {
-            Coord location = node.location;
-            tree2d->AddNode(nodeId, location);
-            places.push_back(nodeId);
-        }
-    }
-
-    tree2d->BuildTree();
 }
 
 bool OSMGraph::Build2DTree()
@@ -305,7 +289,7 @@ std::pair<OSMNodeID, double> OSMGraph::getNearestNode(
     const auto centerNode = GetNode(center);
 
     for (const auto& node : nodeGroup) {
-        auto distance = Haversine(centerNode, GetNode(node));
+        auto distance = Haversine(centerNode.location, GetNode(node).location);
 
         if (distance < closestNode.second) {
             closestNode = {node, distance};
@@ -481,87 +465,6 @@ Coord InverseMercatorProjection(Vector2 world)
 
     return {latRad * 180.0 / PI, lonRad * 180.0 / PI};
 }
-
-double KmhToMS(double kmh)
-{
-    return kmh * 1000.0 / 3600.0;
-}
-
-double MphToMS(double mph)
-{
-    return mph * 1609.34 / 3600.0;
-}
-
-double ParseMaxSpeed(const std::string& speedStr)
-{
-    if (speedStr.empty()) return 50.0; // fallback default
-
-    std::stringstream ss(speedStr);
-    double value;
-    ss >> value;
-
-    if (speedStr.find("mph") != std::string::npos)
-        return value * 1.60934; // mph → km/h
-
-    return value; // assume km/h
-}
-
-double GetDefaultSpeed(const std::string& highway)
-{
-    if (highway == "motorway") return 130;
-    if (highway == "trunk") return 110;
-    if (highway == "primary") return 80;
-    if (highway == "secondary") return 70;
-    if (highway == "tertiary") return 60;
-    if (highway == "residential") return 50;
-    if (highway == "service") return 30;
-
-    return 50;
-}
-
-static double DegToRad(double deg)
-{
-    return deg * PI / 180.0;
-}
-
-double Haversine(const Coord& a, const Coord& b)
-{
-    const double EARTH_RADIUS = 6371000.0; // in meters
-
-    double lat1 = DegToRad(a.lat);
-    double lat2 = DegToRad(b.lat);
-    double dLat = lat2 - lat1;
-    double dLon = DegToRad(b.lon - a.lon);
-
-    double h = std::sin(dLat / 2) * std::sin(dLat / 2) +
-        std::cos(lat1) * std::cos(lat2) *
-        std::sin(dLon / 2) * std::sin(dLon / 2);
-
-    double c = 2 * std::atan2(std::sqrt(h), std::sqrt(1 - h));
-
-    return EARTH_RADIUS * c;
-}
-
-double EquirectangularSq(const Coord& a, const Coord& b) 
-{
-    const double R = 6371000.0; // in meters
-    double dLat = (b.lat - a.lat) * PI / 180;
-    double dLon = (b.lon - a.lon) * PI / 180;
-    double latM = (a.lat + b.lat) / 2 * PI / 180;
-    double x = dLon * cos(latM);
-    double y = dLat;
-    return (x*x + y*y) * R;
-}
-
-double EuclideanDistance(const Coord& a, const Coord& b)
-{
-    double xDiff = (b.lon - a.lon) * cos((a.lat + b.lat) / 2);
-    double yDiff = (b.lat - a.lat);
-
-    return std::sqrt(pow(xDiff, 2) * pow(yDiff, 2));
-}
-
-
 
 double KmhToMS(double kmh)
 {
