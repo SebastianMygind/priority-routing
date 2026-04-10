@@ -24,6 +24,8 @@ std::expected<void, std::string>  WriteToCache(
     if (!file.is_open()) {
         return std::unexpected("Could not open cache file");
     }
+    spdlog::info("Writing to cache file at path: {}", filePath);
+
     file.write(reinterpret_cast<const char*>(&hash), sizeof(hash)); //NOLINT
 
     const auto nodeCount = attrMap.size();
@@ -128,7 +130,7 @@ bool cacheIsValid(const std::string& filepath, const size_t hash) {
     file.read(reinterpret_cast<char*>(&fileHash), sizeof(fileHash)); //NOLINT
 
     if (fileHash != hash) {
-        spdlog::info("Cache file hash does not match with expected.");
+        spdlog::info("Cache file hash does not match with expected hash.");
         return false;
     }
     return true;

@@ -250,6 +250,7 @@ file_format_t OSMGraph::GetNodeAttributes() {
         return nodeAttributes;
     }
 
+    spdlog::info("Generating node attributes, this may take a while...");
     nodeAttributes = GenerateNodeAttributes(attributeMap);
 
     const auto writeRes =
