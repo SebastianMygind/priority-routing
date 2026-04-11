@@ -16,8 +16,7 @@ public:
     OSMGraph();
 
     bool load(const std::string& path);
-    bool ParsePBF(const std::string& path);
-    bool ParseXML(std::string path);
+    bool ParseOSMFile(const std::string& path);
     bool BuildAdjList();
     
     OSMNodeID StringToNode(const std::string& input);
