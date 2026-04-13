@@ -36,6 +36,7 @@ bool OSMGraph::ParseOSMFile(const std::string& path) {
     nodes.reserve(10'000'000);
     ways.reserve(1'000'000);
 
+    spdlog::info("Loading OSM file from path: {}", path);
 
     osmium::io::Reader reader(path);
 
