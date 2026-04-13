@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <queue>
 
-bool Dijkstra::FindPath(OSMGraph& graph)
+bool Dijkstra::FindPath(OSMGraph& graph, UserInterface& ui)
 {
 
     using PQNode = std::pair<double, OSMNodeID>;
@@ -54,20 +54,19 @@ bool Dijkstra::FindPath(OSMGraph& graph)
             auto speedTag = way.tags.find("maxspeed");
             auto highwayTag = way.tags.find("highway");
 
-            //double speed = (speedTag != way.tags.end())
-            //    ? ParseMaxSpeed(speedTag->second)
-            //    : GetDefaultSpeed(highwayTag->second);
+            double speed = (speedTag != way.tags.end())
+               ? ParseMaxSpeed(speedTag->second)
+               : GetDefaultSpeed(highwayTag->second);
 
-            //double speedMS = KmhToMS(speed);
+            double speedMS = KmhToMS(speed);
             double distance = Haversine(nodeA.location, nodeB.location);
 
-            //double timeToDrive = distance / speedMS;
-
+            double timeToDrive = distance / speedMS;
 
             // OSMNodeID nearest = graph.GetNearestNode(nodeB.location);
             // double nearestDist = graph.GetNearestNodeDist();
 
-            double alt = cost[current] + distance;
+            double alt = cost[current] + (ui.GetDistance() * distance + ui.GetTime() * timeToDrive);
             
             if (alt < cost[neighborID])
             {

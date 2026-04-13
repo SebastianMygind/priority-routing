@@ -24,7 +24,7 @@ void PathFinder(OSMGraph& graph, UserInterface& ui)
     }
 
     auto time_start = std::chrono::high_resolution_clock::now();
-    pathfinder->FindPath(graph);
+    pathfinder->FindPath(graph, ui);
     auto time_end = std::chrono::high_resolution_clock::now();
 
     ui.SetDebugModelTime(time_end - time_start);    

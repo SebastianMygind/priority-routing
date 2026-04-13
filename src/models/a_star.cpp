@@ -10,7 +10,7 @@
 
 const double H_WEIGHT = 1.0;
 
-bool AStar::FindPath(OSMGraph& graph)
+bool AStar::FindPath(OSMGraph& graph, UserInterface& ui)
 {
     using PQNode = std::pair<double, uint64_t>;
     std::priority_queue<PQNode, std::vector<PQNode>, std::greater<>> p_queue;

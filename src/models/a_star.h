@@ -5,5 +5,5 @@
 class AStar : public IPathFinder
 {
 public:
-    bool FindPath(OSMGraph& graph) override;
+    bool FindPath(OSMGraph& graph, UserInterface& ui) override;
 };
