@@ -1,5 +1,6 @@
 #include "dijkstra.h"
 #include "../osm/tags.h"
+#include "spdlog/spdlog.h"
 
 #include <cmath>
 #include <cstdint>
@@ -10,6 +11,7 @@
 
 bool Dijkstra::FindPath(OSMGraph& graph, UserInterface& ui)
 {
+    spdlog::info("Dist: {}   Time: {}", ui.GetDistance(), ui.GetTime());
 
     using PQNode = std::pair<double, OSMNodeID>;
     std::priority_queue<PQNode, std::vector<PQNode>, std::greater<>> p_queue;
@@ -63,10 +65,12 @@ bool Dijkstra::FindPath(OSMGraph& graph, UserInterface& ui)
 
             double timeToDrive = distance / speedMS;
 
-            // OSMNodeID nearest = graph.GetNearestNode(nodeB.location);
-            // double nearestDist = graph.GetNearestNodeDist();
+            OSMNodeID nearest = graph.GetNearestNode(nodeB.location);
+            double nearestDist = graph.GetNearestNodeDist();
 
-            double alt = cost[current] + (ui.GetDistance() * distance + ui.GetTime() * timeToDrive);
+            // double alt = cost[current] + (ui.GetDistance() * distance + ui.GetTime() * timeToDrive);
+
+             double alt = cost[current] + (nearestDist * distance);
             
             if (alt < cost[neighborID])
             {

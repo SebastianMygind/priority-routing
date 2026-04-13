@@ -28,12 +28,14 @@ public:
 
     // Model getters
 
+
     auto GetModel()    const { return modelSelectionIndex; }
-    auto GetDistance() const { return objDistance;    }
-    auto GetTime()     const { return objTime;        }
-    auto GetScenery()  const { return objScenery;     }
-    auto GetTourism()  const { return objTourism;     }
-    auto GetComfort()  const { return objComfort;     }
+    auto GetDistance() const { return objDistance / GetSum();    }
+    auto GetTime()     const { return objTime / GetSum();        }
+    auto GetScenery()  const { return objScenery / GetSum();     }
+    auto GetTourism()  const { return objTourism / GetSum();     }
+    auto GetComfort()  const { return objComfort / GetSum();     }
+    float GetSum()     const { return objDistance + objTime;     }
 
     // Debug setters
 

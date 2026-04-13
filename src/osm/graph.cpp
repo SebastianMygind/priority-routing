@@ -64,7 +64,7 @@ bool OSMGraph::Build2DTree()
 
     for (const auto& [nodeId, node] : nodes) 
     {
-        if (auto tag = node.tags.find("tourism"); tag != node.tags.end())
+        if (auto tag = node.tags.find("amenity"); tag != node.tags.end() && tag->second == "fuel")
         {
             Coord location = node.location;
             tree2d->AddNode(nodeId, location);
@@ -102,6 +102,10 @@ bool OSMGraph::BuildAdjList()
         const bool oneWay = (oneWayTag != way.tags.end()) && 
                             (oneWayTag->second == "yes");
 
+        const bool oneWayReverse = (oneWayTag != way.tags.end()) && 
+                            (oneWayTag->second == "-1");
+          
+
         //const double speed = (speedTag != way.tags.end())
         //    ? ParseMaxSpeed(speedTag->second)
         //    : GetDefaultSpeed(highwayTag->second);
@@ -119,14 +123,13 @@ bool OSMGraph::BuildAdjList()
             adj_list_prev.insert({a, 0xFFFFFFFF});
             adj_list_prev.insert({b, 0xFFFFFFFF});
 
-            adj_list[a].emplace_back(b, wayId);
+            if (!oneWayReverse)
+                adj_list[a].emplace_back(b, wayId);
 
-            if (!oneWay)
-            {
+            if (!oneWay || oneWayReverse)
                 adj_list[b].emplace_back(a, wayId);
-            }
-        }
-        
+
+        }    
     }
 
     return true;
