@@ -10,7 +10,7 @@
 
 const double H_WEIGHT = 1.0;
 
-bool AStar::FindPath(OSMGraph& graph)
+bool AStar::FindPath(OSMGraph& graph, UserInterface& ui)
 {
     using PQNode = std::pair<double, uint64_t>;
     std::priority_queue<PQNode, std::vector<PQNode>, std::greater<>> p_queue;
@@ -43,12 +43,18 @@ bool AStar::FindPath(OSMGraph& graph)
         }
 
         // Update distances to neighbors
-        for (std::pair<uint64_t, double> neighbor : adj_list[current])
+        for (std::pair<OSMNodeID, OSMWayID> neighbor : adj_list[current])
         {
             OSMNodeID neighborID = neighbor.first;
-            double neighborCost = neighbor.second;
+            OSMWayID edgeWay = neighbor.second;
 
-            double alt = dist[current] + neighborCost;
+            const OSMNode& nodeA = graph.GetNode(current);
+            const OSMNode& nodeB = graph.GetNode(neighborID);
+            const OSMWay& way = graph.GetWay(edgeWay);
+
+            double distance = Haversine(nodeA.location, nodeB.location);
+
+            double alt = dist[current] + distance;
             
             if (alt < dist[neighborID])
             {
@@ -56,7 +62,7 @@ bool AStar::FindPath(OSMGraph& graph)
                 prev[neighborID] = current;
 
                 // Calculate the heuristic value
-                double h = H_WEIGHT * Haversine(graph.GetNode(neighborID), graph.GetNode(destination));
+                double h = H_WEIGHT * Haversine(graph.GetNode(neighborID).location, graph.GetNode(destination).location);
 
                 // Push the neighbor onto the priority queue with cost + heuristic
                 p_queue.push({alt + h, neighborID });

@@ -38,7 +38,7 @@ void TourismFunc(const std::unordered_map<OSMNodeID, OSMNode> &nodes,
                  const OSMNodeID currentNode,
                  std::pair<OSMNodeID, double> &optimalPair) {
     for (OSMNodeID nodeID : searchSpace) {
-        const auto distance = Haversine(nodes.at(currentNode), nodes.at(nodeID));
+        const auto distance = Haversine(nodes.at(currentNode).location, nodes.at(nodeID).location);
 
         if (distance < optimalPair.second) {
             optimalPair = {nodeID, distance};

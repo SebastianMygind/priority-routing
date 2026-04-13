@@ -65,8 +65,6 @@ set(CORE_SOURCES
         vendor/raygui.h
         src/osm/osm_handler.cpp
         src/osm/osm_handler.h
-        src/models/weighted_sum_dijkstra.cpp
-        src/models/weighted_sum_dijkstra.h
         src/caching.cpp
         src/caching.h
         src/node_attributes.cpp

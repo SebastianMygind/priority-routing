@@ -13,8 +13,10 @@ void OSMHandler::node(const osmium::Node& node)
 
     OSMNode osmNode;
 
-    osmNode.lat = node.location().lat();
-    osmNode.lon = node.location().lon();
+    osmNode.location = { 
+        node.location().lat(),
+        node.location().lon()
+    };
 
     for (const auto& tag : node.tags()) {
         osmNode.tags.emplace(tag.key(), tag.value());
