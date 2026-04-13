@@ -47,7 +47,6 @@ bool Dijkstra::FindPath(OSMGraph& graph)
             OSMNodeID neighborID = neighbor.first;
             OSMWayID edgeWay = neighbor.second;
 
-
             const OSMNode& nodeA = graph.GetNode(current);
             const OSMNode& nodeB = graph.GetNode(neighborID);
             const OSMWay& way = graph.GetWay(edgeWay);
@@ -65,8 +64,8 @@ bool Dijkstra::FindPath(OSMGraph& graph)
             //double timeToDrive = distance / speedMS;
 
 
-            //OSMNodeID nearest = graph.GetNearestNode(nodeB.location);
-            //double nearestDist = graph.GetNearestNodeDistSq();
+            // OSMNodeID nearest = graph.GetNearestNode(nodeB.location);
+            // double nearestDist = graph.GetNearestNodeDist();
 
             double alt = cost[current] + distance;
             
