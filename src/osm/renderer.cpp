@@ -249,17 +249,17 @@ void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
         }
     }
 
-    // for (const auto& node : m_pGraph->places) {
-    //     auto current_node = m_pGraph->GetNode(node);
+     for (const auto& node : m_pGraph->places) {
+         auto current_node = m_pGraph->GetNode(node);
 
-    //     Vector2 p1 = MercatorProjection(current_node.location);
+         Vector2 p1 = MercatorProjection(current_node.location);
 
-    //     DrawCircleV(
-    //         p1,
-    //         10.F * (1.F / camera.zoom),
-    //         GREEN
-    //         );
-    // }
+         DrawCircleV(
+             p1,
+             10.F * (1.F / camera.zoom),
+             GREEN
+             );
+     }
 
     if (settings.drawQuadBounds)
     {

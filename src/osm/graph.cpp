@@ -133,7 +133,7 @@ bool OSMGraph::Build2DTree()
 
     for (const auto& [nodeId, node] : nodes) 
     {
-        if ( !node.tags.empty() )
+        if (auto tag = node.tags.find("tourism"); tag != node.tags.end())
         {
             Coord location = node.location;
             tree2d->AddNode(nodeId, location);
@@ -142,21 +142,21 @@ bool OSMGraph::Build2DTree()
     }
 
     tree2d->BuildTree();
+
+    return true;
 }
 
-bool OSMGraph::BuildAdjList() {
-    adj_list.clear();
-
-
-    // CACHE
-    std::unordered_map<OSMNodeID, double> cachedTourismDist;
-
+bool OSMGraph::BuildAdjList() 
+{
     spdlog::info("Building adjacency list...");
 
+    adj_list.clear();
+
     for (const auto& wayPair : ways) {
+        const OSMWayID& wayId = wayPair.first;
         const OSMWay& way = wayPair.second;
         
-        const std::vector<uint64_t>& wayNodes = way.nodes;
+        const std::vector<OSMNodeID>& wayNodes = way.nodes;
 
         auto highwayTag = way.tags.find("highway");
         auto oneWayTag = way.tags.find("oneway");
@@ -171,9 +171,9 @@ bool OSMGraph::BuildAdjList() {
         const bool oneWay = (oneWayTag != way.tags.end()) && 
                             (oneWayTag->second == "yes");
 
-        const double speed = (speedTag != way.tags.end())
-            ? ParseMaxSpeed(speedTag->second)
-            : GetDefaultSpeed(highwayTag->second);
+        //const double speed = (speedTag != way.tags.end())
+        //    ? ParseMaxSpeed(speedTag->second)
+        //    : GetDefaultSpeed(highwayTag->second);
         
         for (size_t i = 0; i + 1 < wayNodes.size(); ++i)
         {
@@ -188,63 +188,11 @@ bool OSMGraph::BuildAdjList() {
             adj_list_prev.insert({a, 0xFFFFFFFF});
             adj_list_prev.insert({b, 0xFFFFFFFF});
 
-
-            double tourismCostA;
-            double tourismCostB;
-
-            if (auto it = cachedTourismDist.find(a); it != cachedTourismDist.end())
-            {
-                tourismCostA = pow(it->second, 2);
-            }
-            else
-            {
-                OSMNodeID nearestNodeA = tree2d->Nearest(nodeA.location);
-                tourismCostA = pow(tree2d->DistanceSq(), 2);
-                cachedTourismDist[a] = tree2d->DistanceSq();
-            }
-
-            if (auto it = cachedTourismDist.find(b); it != cachedTourismDist.end())
-            {
-                tourismCostB = pow(it->second, 2);
-            }
-            else
-            {
-                OSMNodeID nearestNodeB = tree2d->Nearest(nodeB.location);
-                tourismCostB = pow(tree2d->DistanceSq(), 2);
-                cachedTourismDist[b] = tree2d->DistanceSq();
-            }
-
-            // OSMNodeID nearestNodeA = tree2d->Nearest(nodeA.location);
-            // tourismCostA = pow(tree2d->Distance(), 2);
-
-            // OSMNodeID nearestNodeB = tree2d->Nearest(nodeB.location);
-            // tourismCostB = pow(tree2d->Distance(), 2);
-
-            // if (auto it = cachedTourismDist.find(a); it != cachedTourismDist.end()) {
-            //     tourismCostA = it->second;
-            // } else {
-            //     tourismCostA = getNearestNode(nodesWithTourism, a).second;
-            //     tourismCostA = pow(tourismCostA, 2); // Your original code squares it
-            //     cachedTourismDist[a] = tourismCostA;
-            // }
-            // if (auto it = cachedTourismDist.find(b); it != cachedTourismDist.end()) {
-            //     tourismCostB = it->second;
-            // } else {
-            //     tourismCostB = getNearestNode(nodesWithTourism, b).second;
-            //     tourismCostB = pow(tourismCostB, 2); // Your original code squares it
-            //     cachedTourismDist[b] = tourismCostB;
-            // }
-
-            // double speedMS = KmhToMS(speed);
-            // double distance = Haversine(nodeA.location, nodeB.location);
-
-            // double timeToDrive = distance / speedMS;
-
-            adj_list[a].emplace_back(b, tourismCostB);
+            adj_list[a].emplace_back(b, wayId);
 
             if (!oneWay)
             {
-                adj_list[b].emplace_back(a, tourismCostA);
+                adj_list[b].emplace_back(a, wayId);
             }
         }
         
@@ -280,23 +228,6 @@ std::vector<OSMNodeID> OSMGraph::getNodesWithTourism() const {
     }
 
     return nodesWithTourism;
-}
-
-std::pair<OSMNodeID, double> OSMGraph::getNearestNode(
-    const std::vector<OSMNodeID>& nodeGroup, const OSMNodeID center) const {
-    std::pair<OSMNodeID, double> closestNode = {0, INFINITY};
-
-    const auto centerNode = GetNode(center);
-
-    for (const auto& node : nodeGroup) {
-        auto distance = Haversine(centerNode.location, GetNode(node).location);
-
-        if (distance < closestNode.second) {
-            closestNode = {node, distance};
-        }
-    }
-
-    return closestNode;
 }
 
 std::unordered_map<std::string, std::pair<OSMNodeID, double>> GenerateAttrMap (attr_map_t& attrInfo) {

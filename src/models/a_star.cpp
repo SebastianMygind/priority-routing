@@ -43,12 +43,18 @@ bool AStar::FindPath(OSMGraph& graph)
         }
 
         // Update distances to neighbors
-        for (std::pair<uint64_t, double> neighbor : adj_list[current])
+        for (std::pair<OSMNodeID, OSMWayID> neighbor : adj_list[current])
         {
             OSMNodeID neighborID = neighbor.first;
-            double neighborCost = neighbor.second;
+            OSMWayID edgeWay = neighbor.second;
 
-            double alt = dist[current] + neighborCost;
+            const OSMNode& nodeA = graph.GetNode(current);
+            const OSMNode& nodeB = graph.GetNode(neighborID);
+            const OSMWay& way = graph.GetWay(edgeWay);
+
+            double distance = Haversine(nodeA.location, nodeB.location);
+
+            double alt = dist[current] + distance;
             
             if (alt < dist[neighborID])
             {
