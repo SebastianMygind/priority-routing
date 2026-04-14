@@ -7,6 +7,9 @@
 
 #include <array>
 
+constexpr int TEX_PADDING = 200;
+constexpr float TEX_DELAY = 0.2F;
+
 OSMRenderer::OSMRenderer(OSMGraph* graph) : m_pGraph(graph), m_Tree({ 4.4, 53.3, 16.2, 58.7 }, 8),
 m_Tree1({ 4.4, 53.3, 16.2, 58.7 }, 8)
 {
@@ -67,6 +70,88 @@ void OSMRenderer::BuildQuadTree()
             m_Tree1.InsertWay(wayobj);
 
     }
+}
+
+/*
+    Initializes the render texture based on the window size and dpi.
+    Padding is added on both sides to allow for some rendering outside the view.
+*/
+void OSMRenderer::SetupMapTexture(Window& window)
+{
+    textureWidth = window.width * window.dpi.x + TEX_PADDING * 2;
+    textureHeight = window.height * window.dpi.y + TEX_PADDING * 2;
+    texture = LoadRenderTexture(textureWidth, textureHeight);
+    textureReady = false;
+}
+
+/*
+    Entry point for updating the texture. 
+    It checks if the camera has moved since the last render
+    and if so, it triggers a re-render after a short delay. 
+*/
+void OSMRenderer::UpdateTexture(Camera2D& camera, OSMRendererSettings& settings)
+{
+    cameraChanged = (camera.target.x != renderedCamera.target.x ||
+                     camera.target.y != renderedCamera.target.y ||
+                     camera.zoom     != renderedCamera.zoom);
+
+    // TODO remove this shit
+    OSMRendererSettings texSettings = settings;
+    texSettings.screenWidth  = (float)textureWidth;
+    texSettings.screenHeight = (float)textureHeight;
+
+    // If the camera changes and a timer is running
+    if (cameraDirty)
+    {
+        // Count up until the delay is reached
+        cameraMoveTime += GetFrameTime();
+        if (cameraMoveTime >= TEX_DELAY)
+        {
+            // Render the texture
+            BeginTextureMode(texture);
+                ClearBackground(RAYWHITE);
+                BeginMode2D(camera);
+                    DrawGraph(camera, texSettings);
+                EndMode2D();
+            EndTextureMode();
+
+            // Reset variables
+            renderedCamera = camera;
+            cameraDirty = false;
+            textureReady = true;
+        }
+    } 
+    // If the camera changes, start a timer
+    else if (cameraChanged)
+    {
+        cameraMoveTime = 0.0f;
+        cameraDirty = true;
+    }
+}
+
+/*
+    Draw call for the map texture. 
+    It calculates the position to draw the texture based on the camera's 
+    target and offset, and then draws the texture using DrawTexturePro.
+*/
+void OSMRenderer::DrawMapTexture(Camera2D& camera)
+{
+    if (!textureReady) {
+        return;
+    }
+
+    // Get the difference between the rendered camera and the current camera to determine where to draw the texture
+    Vector2 difference = GetWorldToScreen2D(renderedCamera.target, camera);
+
+    // Determine the coordinates to draw the texture at with also padding
+    float dx = difference.x - renderedCamera.offset.x - TEX_PADDING;
+    float dy = difference.y - renderedCamera.offset.y - TEX_PADDING;
+
+    // Source rectangle (the whole texture) and destination rectangle (where to draw on the screen)
+    Rectangle src = { 0, 0, (float)textureWidth, -(float)textureHeight };
+    Rectangle dst = { dx, dy, (float)(textureWidth), (float)(textureHeight) };
+
+    DrawTexturePro(texture.texture, src, dst, { 0, 0 }, 0.0f, WHITE);
 }
 
 void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
