@@ -7,9 +7,6 @@
 
 #include <array>
 
-constexpr int TEX_PADDING = 200;
-constexpr float TEX_DELAY = 0.4F;
-
 OSMRenderer::OSMRenderer(OSMGraph* graph) : m_pGraph(graph), m_Tree({ 4.4, 53.3, 16.2, 58.7 }, 8),
 m_Tree1({ 4.4, 53.3, 16.2, 58.7 }, 8)
 {
@@ -72,13 +69,7 @@ void OSMRenderer::BuildQuadTree()
     }
 }
 
-
-/*
-    Entry point for updating the texture. 
-    It checks if the camera has moved since the last render
-    and if so, it triggers a re-render after a short delay. 
-*/
-void OSMRenderer::UpdateTexture(Camera2D& camera, OSMRendererSettings& settings)
+void OSMRenderer::UpdateGraph(Camera2D& camera, OSMRendererSettings& settings)
 {
     if (threadDone.load())
     {

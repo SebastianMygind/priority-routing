@@ -43,8 +43,6 @@ int main() {
     Camera2D camera = {};
     camera.zoom = 1.0F;
 
-    renderer.SetRenderedCamera(camera);
-
 #ifndef __APPLE__
     window.dpi = GetWindowScaleDPI();
 #endif
@@ -148,7 +146,7 @@ int main() {
         }
 
         // Prepare renderer
-        renderer.UpdateTexture(camera, osmsettings);
+        renderer.UpdateGraph(camera, osmsettings);
 
         // Prepare UI
         Coord coord = InverseMercatorProjection(mouseWorldPos);

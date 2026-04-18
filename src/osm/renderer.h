@@ -96,8 +96,6 @@ struct RenderPacket {
     std::vector<RoadSegment> roads;
     std::vector<RoadSegment> pathSegs;   // selected path
     std::vector<NodeCircle>  nodes;
-    std::vector<AABB>        quadBounds; // debug
-    bool                     ready = false;
 };
 
 struct OSMRendererSettings
@@ -116,10 +114,9 @@ public:
     OSMRenderer(OSMGraph* graph);
 
     void BuildQuadTree();
+    void PrepareGraph(Camera2D& camera, OSMRendererSettings& settings);
+    void UpdateGraph(Camera2D& camera, OSMRendererSettings& settings);
     void DrawGraph();
-
-    void UpdateTexture(Camera2D& camera, OSMRendererSettings& settings);
-    void SetRenderedCamera(const Camera2D& camera) { renderedCamera = camera; }
 
     // Rendering stats (call after DrawGraph)
     inline size_t GetNodeRenderCount() const { return m_NodesToRender.size(); }
@@ -135,22 +132,10 @@ private:
     void RenderTexture(Camera2D& camera, OSMRendererSettings& settings);
     void DrawBounds(const AABB& bounds, Camera2D camera);
 
-    void PrepareGraph(Camera2D& camera, OSMRendererSettings& settings);
-
     std::thread renderThread;
     std::atomic<bool> threadDone { false };
     RenderPacket bufferedPacket;
     RenderPacket nextPacket;
-
-    RenderTexture2D texture = {};
-    bool textureReady = false;
-    int textureWidth  = 0;
-    int textureHeight = 0;
-
-    Camera2D renderedCamera = {};
-    float cameraMoveTime = 10.0F;
-    bool cameraDirty     = true;
-    bool cameraChanged   = true;
 
 public:
     OSMGraph* m_pGraph;
