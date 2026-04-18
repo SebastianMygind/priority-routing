@@ -8,7 +8,7 @@
 #include <array>
 
 constexpr int TEX_PADDING = 200;
-constexpr float TEX_DELAY = 0.2F;
+constexpr float TEX_DELAY = 0.4F;
 
 OSMRenderer::OSMRenderer(OSMGraph* graph) : m_pGraph(graph), m_Tree({ 4.4, 53.3, 16.2, 58.7 }, 8),
 m_Tree1({ 4.4, 53.3, 16.2, 58.7 }, 8)
@@ -72,17 +72,6 @@ void OSMRenderer::BuildQuadTree()
     }
 }
 
-/*
-    Initializes the render texture based on the window size and dpi.
-    Padding is added on both sides to allow for some rendering outside the view.
-*/
-void OSMRenderer::SetupMapTexture(Window& window)
-{
-    textureWidth = window.width * window.dpi.x + TEX_PADDING * 2;
-    textureHeight = window.height * window.dpi.y + TEX_PADDING * 2;
-    texture = LoadRenderTexture(textureWidth, textureHeight);
-    textureReady = false;
-}
 
 /*
     Entry point for updating the texture. 
@@ -91,70 +80,25 @@ void OSMRenderer::SetupMapTexture(Window& window)
 */
 void OSMRenderer::UpdateTexture(Camera2D& camera, OSMRendererSettings& settings)
 {
-    cameraChanged = (camera.target.x != renderedCamera.target.x ||
-                     camera.target.y != renderedCamera.target.y ||
-                     camera.zoom     != renderedCamera.zoom);
-
-    // TODO remove this shit
-    OSMRendererSettings texSettings = settings;
-    texSettings.screenWidth  = (float)textureWidth;
-    texSettings.screenHeight = (float)textureHeight;
-
-    // If the camera changes and a timer is running
-    if (cameraDirty)
+    if (threadDone.load())
     {
-        // Count up until the delay is reached
-        cameraMoveTime += GetFrameTime();
-        if (cameraMoveTime >= TEX_DELAY)
-        {
-            // Render the texture
-            BeginTextureMode(texture);
-                ClearBackground(RAYWHITE);
-                BeginMode2D(camera);
-                    DrawGraph(camera, texSettings);
-                EndMode2D();
-            EndTextureMode();
+        bufferedPacket = std::move(nextPacket);
+        threadDone.store(false);
 
-            // Reset variables
-            renderedCamera = camera;
-            cameraDirty = false;
-            textureReady = true;
-        }
-    } 
-    // If the camera changes, start a timer
-    else if (cameraChanged)
+        if (renderThread.joinable())
+            renderThread.join();
+    }
+    if (!renderThread.joinable())
     {
-        cameraMoveTime = 0.0f;
-        cameraDirty = true;
+        threadDone.store(false);
+        renderThread = std::thread([this, &camera, &settings]() {
+            PrepareGraph(camera, settings);
+            threadDone.store(true);
+        });
     }
 }
 
-/*
-    Draw call for the map texture. 
-    It calculates the position to draw the texture based on the camera's 
-    target and offset, and then draws the texture using DrawTexturePro.
-*/
-void OSMRenderer::DrawMapTexture(Camera2D& camera)
-{
-    if (!textureReady) {
-        return;
-    }
-
-    // Get the difference between the rendered camera and the current camera to determine where to draw the texture
-    Vector2 difference = GetWorldToScreen2D(renderedCamera.target, camera);
-
-    // Determine the coordinates to draw the texture at with also padding
-    float dx = difference.x - renderedCamera.offset.x - TEX_PADDING;
-    float dy = difference.y - renderedCamera.offset.y - TEX_PADDING;
-
-    // Source rectangle (the whole texture) and destination rectangle (where to draw on the screen)
-    Rectangle src = { 0, 0, (float)textureWidth, -(float)textureHeight };
-    Rectangle dst = { dx, dy, (float)(textureWidth), (float)(textureHeight) };
-
-    DrawTexturePro(texture.texture, src, dst, { 0, 0 }, 0.0f, WHITE);
-}
-
-void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
+void OSMRenderer::PrepareGraph(Camera2D& camera, OSMRendererSettings& settings)
 {
     std::unordered_map<OSMNodeID, OSMNode>& nodes = m_pGraph->nodes;
     std::unordered_map<OSMWayID, OSMWay>&  ways = m_pGraph->ways;
@@ -191,41 +135,18 @@ void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
 
             if (auto tag = way.tags.find("building"); tag != way.tags.end())
             {
-                Polygon& building = CachePolygonSingle(id, way);
-
-                rlDisableBackfaceCulling();
-                rlBegin(RL_TRIANGLES);
-                rlColor4ub(200, 200, 200, 255);
-
-                for (const Vector2& point : building)
-                {
-                    rlVertex2f(point.x, point.y);
-                }
-
-                rlEnd();
+                Polygon& builtings = CachePolygonSingle(id, way);
+                nextPacket.polys.push_back({ std::vector<Vector2>(builtings.begin(), builtings.end()),
+                                         { 200, 200, 200, 255 } });
             }
             else if (auto tag = way.tags.find("landuse"); tag != way.tags.end())
             {
                 Polygon& landuse = CachePolygonSingle(id, way);
-
-                rlDisableBackfaceCulling();
-                rlBegin(RL_TRIANGLES);
-
-                if (tag->second == "residential")
-                    rlColor4ub(230, 230, 230, 235);
-                else if (tag->second == "forest")
-                    rlColor4ub(201, 207, 167, 255);
-                else if (tag->second == "cemetery")
-                    rlColor4ub(201, 207, 167, 255);
-                else
-                    rlColor4ub(240, 240, 240, 255);
-
-                for (const Vector2& point : landuse)
-                {
-                    rlVertex2f(point.x, point.y);
-                }
-
-                rlEnd();
+                Color c = { 240, 240, 240, 255 };
+                if      (tag->second == "residential") c = { 230, 230, 230, 235 };
+                else if (tag->second == "forest")      c = { 201, 207, 167, 255 };
+                else if (tag->second == "cemetery")    c = { 201, 207, 167, 255 };
+                nextPacket.polys.push_back({ std::vector<Vector2>(landuse.begin(), landuse.end()), c });
             }
             else if (auto tag = way.tags.find("highway"); tag != way.tags.end())
             {
@@ -269,12 +190,7 @@ void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
                     Vector2 p1 = MercatorProjection(node1.location);
                     Vector2 p2 = MercatorProjection(node2.location);
 
-                    DrawLineEx(
-                        p1,
-                        p2,
-                        width,
-                        lineColor
-                    );
+                    nextPacket.roads.push_back({ p1, p2, width, lineColor });
                 }
             }
         }
@@ -292,12 +208,7 @@ void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
 
             float width = std::fmax(2.6F * (1.0 / camera.zoom), 0.2F);
 
-            DrawLineEx(
-                p1,
-                p2,
-                width,
-                SKYBLUE
-            );
+            nextPacket.pathSegs.push_back({ p1, p2, width, SKYBLUE });
         }
     }
 
@@ -324,13 +235,12 @@ void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
                 continue;
 
             bool isSelected = (id == m_pGraph->GetNodeA() || id == m_pGraph->GetNodeB());
-            bool isHovering = distToCursor < 0.2F;
 
-            DrawCircleV(
-                p1,
-                isHovering ? 0.5F * (1.F / camera.zoom) * 25.F : (2.F / (distToCursor + 6.F)) * (1.F / camera.zoom) * 25.F,
-                isSelected ? SKYBLUE : MAROON
-            );
+            float r = (distToCursor < 0.2f)
+                ? 0.5f  * (1.f / camera.zoom) * 25.f
+                : (2.f / (distToCursor + 6.f)) * (1.f / camera.zoom) * 25.f;
+
+            nextPacket.nodes.push_back({ p1, r, isSelected ? SKYBLUE : MAROON });
         }
     }
 
@@ -355,6 +265,32 @@ void OSMRenderer::DrawGraph(Camera2D& camera, OSMRendererSettings& settings)
             DrawBounds(bounds, camera);
         }
     }
+}
+
+void OSMRenderer::DrawGraph()
+{        
+    // Polygons (buildings, landuse)
+    rlDisableBackfaceCulling();
+    rlBegin(RL_TRIANGLES);
+    for (const FilledPoly& poly : bufferedPacket.polys)
+    {
+        rlColor4ub(poly.color.r, poly.color.g, poly.color.b, poly.color.a);
+        for (const Vector2& v : poly.triangles)
+            rlVertex2f(v.x, v.y);
+    }
+    rlEnd();
+
+    // Roads
+    for (const RoadSegment& seg : bufferedPacket.roads)
+        DrawLineEx(seg.p1, seg.p2, seg.width, seg.color);
+
+    // Selected path
+    for (const RoadSegment& seg : bufferedPacket.pathSegs)
+        DrawLineEx(seg.p1, seg.p2, seg.width, seg.color);
+
+    // Node circles
+    for (const NodeCircle& n : bufferedPacket.nodes)
+        DrawCircleV(n.center, n.radius, n.color);
 }
 
 Polygon& OSMRenderer::CachePolygonSingle(OSMWayID wayId, const OSMWay& way)

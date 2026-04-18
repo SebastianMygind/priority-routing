@@ -38,7 +38,6 @@ int main() {
     auto window = Window("Routing Simulation");
 
     InitWindow(window.width, window.height, window.title.c_str());
-    renderer.SetupMapTexture(window);
     ui.SetupFontConfig("../fonts/JetBrainsMono-Regular.ttf");
 
     Camera2D camera = {};
@@ -159,18 +158,12 @@ int main() {
 
         BeginDrawing();
 
-            ClearBackground(GRAY);
+            ClearBackground(RAYWHITE);
 
-            // Draw the grid which looks cool when outside the texture
             BeginMode2D(camera);
-                rlPushMatrix();
-                    rlTranslatef(250*50, 250*50, 0);
-                    rlRotatef(90, 1, 0, 0);
-                    DrawGrid(1000, 50);
-                rlPopMatrix();
+                renderer.DrawGraph();
             EndMode2D();
 
-            renderer.DrawMapTexture(camera);
             ui.DrawUserInterface(window);
 
         EndDrawing();

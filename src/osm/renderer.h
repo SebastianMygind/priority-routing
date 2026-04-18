@@ -7,6 +7,8 @@
 #include <vector>
 #include <unordered_map>
 #include <memory>
+#include <thread>
+
 
 typedef std::vector<Vector2> Polygon;
 
@@ -72,6 +74,32 @@ private:
     void Subdivide();
 };
 
+struct RoadSegment {
+    Vector2 p1, p2;
+    float   width;
+    Color   color;
+};
+
+struct FilledPoly {
+    std::vector<Vector2> triangles; // already-triangulated verts
+    Color                color;
+};
+
+struct NodeCircle {
+    Vector2 center;
+    float   radius;
+    Color   color;
+};
+
+struct RenderPacket {
+    std::vector<FilledPoly>  polys;      // buildings, landuse
+    std::vector<RoadSegment> roads;
+    std::vector<RoadSegment> pathSegs;   // selected path
+    std::vector<NodeCircle>  nodes;
+    std::vector<AABB>        quadBounds; // debug
+    bool                     ready = false;
+};
+
 struct OSMRendererSettings
 {
     float   screenWidth;
@@ -81,14 +109,15 @@ struct OSMRendererSettings
     bool    drawQuadBounds = false;
 };
 
+
 class OSMRenderer
 {
 public:
     OSMRenderer(OSMGraph* graph);
 
     void BuildQuadTree();
-    void SetupMapTexture(Window& window);
-    void DrawMapTexture(Camera2D& camera);
+    void DrawGraph();
+
     void UpdateTexture(Camera2D& camera, OSMRendererSettings& settings);
     void SetRenderedCamera(const Camera2D& camera) { renderedCamera = camera; }
 
@@ -103,8 +132,15 @@ public:
 
 private:
     Polygon& CachePolygonSingle(OSMWayID wayId, const OSMWay& way);
-    void DrawGraph(Camera2D& camera, OSMRendererSettings& settings);
+    void RenderTexture(Camera2D& camera, OSMRendererSettings& settings);
     void DrawBounds(const AABB& bounds, Camera2D camera);
+
+    void PrepareGraph(Camera2D& camera, OSMRendererSettings& settings);
+
+    std::thread renderThread;
+    std::atomic<bool> threadDone { false };
+    RenderPacket bufferedPacket;
+    RenderPacket nextPacket;
 
     RenderTexture2D texture = {};
     bool textureReady = false;
