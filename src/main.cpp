@@ -24,8 +24,6 @@ int main() {
     }
 
     OSMRenderer renderer(&graph);
-    OSMRendererSettings osmsettings;
-    // TODO: use renderer class to store settings instead of a global struct -K  
     renderer.BuildQuadTree();
 
     UserInterface ui;
@@ -59,21 +57,14 @@ int main() {
             window.width = static_cast<int>(static_cast<float>(GetScreenWidth()) / window.dpi.x);
             window.height = static_cast<int>(static_cast<float>(GetScreenHeight()) / window.dpi.y);
         }
-
-        osmsettings.screenWidth = (float)window.width * window.dpi.x;
-        osmsettings.screenHeight = (float)window.height * window.dpi.y;
-        osmsettings.cursorPos = mouseWorldPos;
         
         ui.UpdateLockState();
  
         if (!ui.KeyboardInUI())
         {
-            if (IsKeyPressed(KEY_U)) { ui.ToggleUI();    }
-            if (IsKeyPressed(KEY_D)) { ui.ToggleDebug(); }
-            if (IsKeyPressed(KEY_V)) 
-            { 
-                osmsettings.drawQuadBounds = !osmsettings.drawQuadBounds;  
-            }
+            if (IsKeyPressed(KEY_U)) { ui.ToggleUI();         }
+            if (IsKeyPressed(KEY_D)) { ui.ToggleDebug();      }
+            if (IsKeyPressed(KEY_V)) { renderer.ToggleQuad(); }
         }
 
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && !ui.MouseInUI())
@@ -146,7 +137,7 @@ int main() {
         }
 
         // Prepare renderer
-        renderer.UpdateGraph(camera, osmsettings);
+        renderer.UpdateGraph(camera, window, mouseWorldPos);
 
         // Prepare UI
         Coord coord = InverseMercatorProjection(mouseWorldPos);

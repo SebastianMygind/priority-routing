@@ -7,6 +7,10 @@
 
 #include <array>
 
+// Render extension adds a margin so that some elements are drawn outside the camera
+// Increasing this value decreases pop in for the cost of performance
+constexpr int RNDR_EXT = 25;
+
 OSMRenderer::OSMRenderer(OSMGraph* graph) : m_pGraph(graph), m_Tree({ 4.4, 53.3, 16.2, 58.7 }, 8),
 m_Tree1({ 4.4, 53.3, 16.2, 58.7 }, 8)
 {
@@ -26,12 +30,12 @@ void OSMRenderer::BuildQuadTree()
         auto landuseTag = way.tags.find("landuse");
         bool isHighway = highwayTag != way.tags.end();
 
-        bool isZoomLevel = isHighway && (kMotorways.find(highwayTag->second) != kMotorways.end() ||
+        bool isZoomLevel = (isHighway && (kMotorways.find(highwayTag->second) != kMotorways.end() ||
                                          kPrimary.find(highwayTag->second) != kPrimary.end() ||
                                          kSecondary.find(highwayTag->second) != kSecondary.end() ||
-                                         kTertiary.find(highwayTag->second) != kTertiary.end()) || 
-                                         landuseTag != way.tags.end();
- 
+                                         kTertiary.find(highwayTag->second) != kTertiary.end())) || 
+                                         (landuseTag != way.tags.end());
+
 
         AABB box;
         OSMNode& node = m_pGraph->nodes[way.nodes[0]];
@@ -69,33 +73,44 @@ void OSMRenderer::BuildQuadTree()
     }
 }
 
-void OSMRenderer::UpdateGraph(Camera2D& camera, OSMRendererSettings& settings)
+/*
+    Runs every frame to start a thread if none is running.
+    Updates the buffered packet when the thread finishes.
+*/
+void OSMRenderer::UpdateGraph(Camera2D& camera, Window window, Vector2 mouseWorldPos)
 {
+    // if thread is finished, update buffered packet
     if (threadDone.load())
     {
         bufferedPacket = std::move(nextPacket);
         threadDone.store(false);
 
+        // join the thread to clean up resources
         if (renderThread.joinable())
             renderThread.join();
     }
+    // if no thread is running, start one
     if (!renderThread.joinable())
     {
         threadDone.store(false);
-        renderThread = std::thread([this, &camera, &settings]() {
-            PrepareGraph(camera, settings);
+        renderThread = std::thread([this, &camera, window, mouseWorldPos]() {
+            PrepareGraph(camera, window, mouseWorldPos);
             threadDone.store(true);
         });
     }
 }
 
-void OSMRenderer::PrepareGraph(Camera2D& camera, OSMRendererSettings& settings)
+/*
+    Calculates the properties of the graph based on the current camera and mouse.
+    Controls what is rendered and how it looks. Runs on a separate thread.
+*/
+void OSMRenderer::PrepareGraph(Camera2D& camera, Window window, Vector2 mouseWorldPos)
 {
     std::unordered_map<OSMNodeID, OSMNode>& nodes = m_pGraph->nodes;
     std::unordered_map<OSMWayID, OSMWay>&  ways = m_pGraph->ways;
     std::vector<OSMNodeID>&  selected_path = m_pGraph->selectedPath;
 
-    AABB screenBounds = GetScreenLocationBounds(camera, settings.screenWidth, settings.screenHeight);
+    AABB screenBounds = GetScreenLocationBounds(camera, window.width * window.dpi.x, window.height * window.dpi.y);
 
     m_NodesToRender.clear();
     m_WaysToRender[0].clear();
@@ -121,47 +136,47 @@ void OSMRenderer::PrepareGraph(Camera2D& camera, OSMRendererSettings& settings)
                 continue;
             }
 
-            if (settings.drawObjBounds)
-                DrawBounds(bounds, camera);
-
             if (auto tag = way.tags.find("building"); tag != way.tags.end())
             {
-                Polygon& builtings = CachePolygonSingle(id, way);
-                nextPacket.polys.push_back({ std::vector<Vector2>(builtings.begin(), builtings.end()),
-                                         { 200, 200, 200, 255 } });
+                Polygon& poly = CachePolygonSingle(id, way);
+                Color    color = { 200, 200, 200, 255 };
+
+                nextPacket.polys.push_back({ poly, color });
             }
             else if (auto tag = way.tags.find("landuse"); tag != way.tags.end())
             {
-                Polygon& landuse = CachePolygonSingle(id, way);
-                Color c = { 240, 240, 240, 255 };
-                if      (tag->second == "residential") c = { 230, 230, 230, 235 };
-                else if (tag->second == "forest")      c = { 201, 207, 167, 255 };
-                else if (tag->second == "cemetery")    c = { 201, 207, 167, 255 };
-                nextPacket.polys.push_back({ std::vector<Vector2>(landuse.begin(), landuse.end()), c });
+                Polygon& poly = CachePolygonSingle(id, way);
+                Color    color = { 240, 240, 240, 255 };
+
+                if      (tag->second == "residential") color = { 230, 230, 230, 235 };
+                else if (tag->second == "forest")      color = { 201, 207, 167, 255 };
+                else if (tag->second == "cemetery")    color = { 201, 207, 167, 255 };
+
+                nextPacket.polys.push_back({ poly, color });
             }
             else if (auto tag = way.tags.find("highway"); tag != way.tags.end())
             {
-                Color lineColor = { 0,0,0,255 };
+                Color color = { 0,0,0,255 };
                 float width = 0.2F;
 
                 if (kMotorways.find(tag->second) != kMotorways.end())
                 {
-                    lineColor = { 233,144,160,255 };
+                    color = { 233,144,160,255 };
                     width = std::fmax(2.5F * (1.0 / camera.zoom), width);
                 }
                 else if (kPrimary.find(tag->second) != kPrimary.end())
                 {
-                    lineColor = { 191, 117, 36,255 };
+                    color = { 191, 117, 36,255 };
                     width = std::fmax(2.0F * (1.0 / camera.zoom), width);
                 }
                 else if (kSecondary.find(tag->second) != kSecondary.end())
                 {
-                    lineColor = { 0,0,0,255 };
+                    color = { 0,0,0,255 };
                     width = std::fmax(1.0F * (1.0 / camera.zoom), width);
                 }
                 else if (kTertiary.find(tag->second) != kTertiary.end())
                 {
-                    lineColor = { 0,0,0,255 };
+                    color = { 0,0,0,255 };
                     width = std::fmax(1.0F * (1.0 / camera.zoom), width);
                 }
 
@@ -169,7 +184,8 @@ void OSMRenderer::PrepareGraph(Camera2D& camera, OSMRendererSettings& settings)
                 {
                     if (camera.zoom < 7.F)
                         continue;
-                    lineColor = { 100,100,100,255 };
+
+                    color = { 100,100,100,255 };
                     width = 0.05F;
                 }
 
@@ -181,7 +197,7 @@ void OSMRenderer::PrepareGraph(Camera2D& camera, OSMRendererSettings& settings)
                     Vector2 p1 = MercatorProjection(node1.location);
                     Vector2 p2 = MercatorProjection(node2.location);
 
-                    nextPacket.roads.push_back({ p1, p2, width, lineColor });
+                    nextPacket.roads.push_back({ p1, p2, width, color });
                 }
             }
         }
@@ -199,7 +215,7 @@ void OSMRenderer::PrepareGraph(Camera2D& camera, OSMRendererSettings& settings)
 
             float width = std::fmax(2.6F * (1.0 / camera.zoom), 0.2F);
 
-            nextPacket.pathSegs.push_back({ p1, p2, width, SKYBLUE });
+            nextPacket.path.push_back({ p1, p2, width, SKYBLUE });
         }
     }
 
@@ -220,68 +236,75 @@ void OSMRenderer::PrepareGraph(Camera2D& camera, OSMRendererSettings& settings)
 
             Vector2 p1 = MercatorProjection(node.location);
 
-            float distToCursor = Vector2Distance(p1, settings.cursorPos);
+            float distToCursor = Vector2Distance(p1, mouseWorldPos);
 
             if (distToCursor > 30.0F)
                 continue;
 
             bool isSelected = (id == m_pGraph->GetNodeA() || id == m_pGraph->GetNodeB());
 
-            float r = (distToCursor < 0.2f)
+            float radius = (distToCursor < 0.2f)
                 ? 0.5f  * (1.f / camera.zoom) * 25.f
                 : (2.f / (distToCursor + 6.f)) * (1.f / camera.zoom) * 25.f;
 
-            nextPacket.nodes.push_back({ p1, r, isSelected ? SKYBLUE : MAROON });
+            nextPacket.nodes.push_back({ p1, radius, isSelected ? SKYBLUE : MAROON });
         }
     }
 
-    //  for (const auto& node : m_pGraph->places) {
-    //      auto current_node = m_pGraph->GetNode(node);
-
-    //      Vector2 p1 = MercatorProjection(current_node.location);
-
-    //      DrawCircleV(
-    //          p1,
-    //          10.F * (1.F / camera.zoom),
-    //          GREEN
-    //          );
-    //  }
-
-    if (settings.drawQuadBounds)
+    if (showQuad)
     {
         std::vector<AABB> quadBounds;
         m_Tree.QueryQuads(screenBounds, &quadBounds, 20);
         for (const AABB& bounds : quadBounds)
         {
-            DrawBounds(bounds, camera);
-        }
+            Vector2 p1 = MercatorProjection({bounds.minY, bounds.minX});
+            Vector2 p2 = MercatorProjection({bounds.maxY, bounds.maxX});
+
+            // Ensure rectangle has positive width/height and correct origin
+            float rx = std::min(p1.x, p2.x);
+            float ry = std::min(p1.y, p2.y);
+            float rw = std::fabs(p2.x - p1.x);
+            float rh = std::fabs(p2.y - p1.y);
+
+            float width = 1.F * (1.F / camera.zoom);
+
+            nextPacket.quads.push_back({ { rx, ry, rw, rh }, width, RED });
+        }   
     }
 }
 
+/*
+    Draws the graph based on the buffered packet. 
+    Should be called every frame in the drawing loop.
+*/
 void OSMRenderer::DrawGraph()
 {        
-    // Polygons (buildings, landuse)
+    // Polygons
     rlDisableBackfaceCulling();
     rlBegin(RL_TRIANGLES);
-    for (const FilledPoly& poly : bufferedPacket.polys)
+    for (const Poly& p : bufferedPacket.polys)
     {
-        rlColor4ub(poly.color.r, poly.color.g, poly.color.b, poly.color.a);
-        for (const Vector2& v : poly.triangles)
-            rlVertex2f(v.x, v.y);
+       rlColor4ub(p.color.r, p.color.g, p.color.b, p.color.a);
+       for (const Vector2& v : p.shape)
+           rlVertex2f(v.x, v.y);
     }
     rlEnd();
 
     // Roads
-    for (const RoadSegment& seg : bufferedPacket.roads)
-        DrawLineEx(seg.p1, seg.p2, seg.width, seg.color);
+    for (const Road& r : bufferedPacket.roads)
+        DrawLineEx(r.p1, r.p2, r.width, r.color);
 
     // Selected path
-    for (const RoadSegment& seg : bufferedPacket.pathSegs)
-        DrawLineEx(seg.p1, seg.p2, seg.width, seg.color);
+    for (const Road& r : bufferedPacket.path)
+        DrawLineEx(r.p1, r.p2, r.width, r.color);
 
     // Node circles
-    for (const NodeCircle& n : bufferedPacket.nodes)
+    for (const Node& n : bufferedPacket.nodes)
         DrawCircleV(n.center, n.radius, n.color);
+    
+    // Quad bounds
+    for (const Quad& q : bufferedPacket.quads)
+        DrawRectangleLinesEx(q.rect, q.width, q.color);
 }
 
 Polygon& OSMRenderer::CachePolygonSingle(OSMWayID wayId, const OSMWay& way)
@@ -320,25 +343,6 @@ Polygon& OSMRenderer::CachePolygonSingle(OSMWayID wayId, const OSMWay& way)
 
     return polygonIt2->second;
 }
-
-void OSMRenderer::DrawBounds(const AABB& bounds, Camera2D camera)
-{
-    Vector2 p1 = MercatorProjection({bounds.minY, bounds.minX});
-    Vector2 p2 = MercatorProjection({bounds.maxY, bounds.maxX});
-
-    // Ensure rectangle has positive width/height and correct origin
-    float rx = std::min(p1.x, p2.x);
-    float ry = std::min(p1.y, p2.y);
-    float rw = std::fabs(p2.x - p1.x);
-    float rh = std::fabs(p2.y - p1.y);
-
-    DrawRectangleLinesEx(
-        { rx, ry, rw, rh },
-        1.F * (1.F / camera.zoom),
-        RED
-    );
-}
-
 
 void QuadNode::Subdivide() 
 {
@@ -455,10 +459,10 @@ void QuadNode::QueryQuads(const AABB& range, std::vector<AABB>* foundBounds, int
     se->QueryQuads(range, foundBounds, depth - 1);
 }
 
-AABB GetScreenLocationBounds(Camera2D camera, float renderWidth, float renderHeight)
+AABB GetScreenLocationBounds(Camera2D camera, float w, float h)
 {
-    Vector2 topLeft           = GetScreenToWorld2D({ 0,0 }, camera);
-    Vector2 bottomRight       = GetScreenToWorld2D({ renderWidth, renderHeight }, camera);
+    Vector2 topLeft           = GetScreenToWorld2D({ 0 - RNDR_EXT, 0 - RNDR_EXT }, camera);
+    Vector2 bottomRight       = GetScreenToWorld2D({ w + RNDR_EXT, h + RNDR_EXT }, camera);
     Coord   topLeftLatLon     = InverseMercatorProjection({topLeft.x, topLeft.y});
     Coord   bottomRightLatLon = InverseMercatorProjection({bottomRight.x, bottomRight.y});
 
