@@ -160,5 +160,7 @@ int main() {
 
     CloseWindow();
 
+    renderer.FinishThread();
+
     return 0;
 }
