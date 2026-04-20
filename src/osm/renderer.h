@@ -2,10 +2,13 @@
 #include "graph.h"
 #include "raylib.h"
 #include "raymath.h"
+#include "../Window.h"
 
 #include <vector>
 #include <unordered_map>
 #include <memory>
+#include <thread>
+
 
 typedef std::vector<Vector2> Polygon;
 
@@ -71,13 +74,37 @@ private:
     void Subdivide();
 };
 
-struct OSMRendererSettings
+// Packet structs
+struct Road 
 {
-    float   screenWidth;
-    float   screenHeight;
-    Vector2 cursorPos;
-    bool    drawObjBounds = false;
-    bool    drawQuadBounds = false;
+    Vector2 p1, p2;
+    float   width;
+    Color   color;
+};
+struct Poly 
+{
+    Polygon shape;
+    Color   color;
+};
+struct Node 
+{
+    Vector2 center;
+    float   radius;
+    Color   color;
+};
+struct Quad 
+{
+    Rectangle rect;
+    float   width;
+    Color   color;
+};
+struct RenderPacket 
+{
+    std::vector<Poly> polys;
+    std::vector<Road> roads;
+    std::vector<Road> path;
+    std::vector<Node> nodes;
+    std::vector<Quad> quads;
 };
 
 class OSMRenderer
@@ -86,7 +113,12 @@ public:
     OSMRenderer(OSMGraph* graph);
 
     void BuildQuadTree();
-    void DrawGraph(Camera2D& camera, OSMRendererSettings& settings);
+    void PrepareGraph(Camera2D& camera, Window window, Vector2 mouseWorldPos);
+    void UpdateGraph(Camera2D& camera, Window window, Vector2 mouseWorldPos);
+    void DrawGraph();
+    void FinishThread() { if (renderThread.joinable()) renderThread.join(); }
+
+    void ToggleQuad() { showQuad = !showQuad; }
 
     // Rendering stats (call after DrawGraph)
     inline size_t GetNodeRenderCount() const { return m_NodesToRender.size(); }
@@ -99,7 +131,13 @@ public:
 
 private:
     Polygon& CachePolygonSingle(OSMWayID wayId, const OSMWay& way);
-    void     DrawBounds(const AABB& bounds, Camera2D camera);
+
+    std::thread renderThread;
+    std::atomic<bool> threadDone { false };
+    RenderPacket bufferedPacket;
+    RenderPacket nextPacket;
+
+    bool showQuad = false;
 
 public:
     OSMGraph* m_pGraph;
@@ -112,4 +150,4 @@ public:
     LayeredMapObjects m_WaysToRender;
 };
 
-AABB GetScreenLocationBounds(Camera2D camera, float renderWidth, float renderHeight);
+AABB GetScreenLocationBounds(Camera2D camera, float w, float h);
