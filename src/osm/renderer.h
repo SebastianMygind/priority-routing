@@ -116,7 +116,7 @@ public:
     void PrepareGraph(Camera2D& camera, Window window, Vector2 mouseWorldPos);
     void UpdateGraph(Camera2D& camera, Window window, Vector2 mouseWorldPos);
     void DrawGraph();
-    void FinishThread() { renderThread.join(); }
+    void FinishThread() { if (renderThread.joinable()) renderThread.join(); }
 
     void ToggleQuad() { showQuad = !showQuad; }
 
