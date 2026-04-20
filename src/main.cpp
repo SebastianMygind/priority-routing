@@ -7,6 +7,7 @@
 #include "osm/renderer.h"
 #include "path_finder.h"
 #include "raylib.h"
+#include "rlgl.h"
 #include "Window.h"
 #include "raymath.h"
 #include "spdlog/spdlog.h"
@@ -23,8 +24,6 @@ int main() {
     }
 
     OSMRenderer renderer(&graph);
-    OSMRendererSettings osmsettings;
-    // TODO: use renderer class to store settings instead of a global struct -K  
     renderer.BuildQuadTree();
 
     UserInterface ui;
@@ -34,7 +33,6 @@ int main() {
     SetTraceLogCallback(SPDLogger);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI | FLAG_VSYNC_HINT);
 
-
     auto window = Window("Routing Simulation");
 
     InitWindow(window.width, window.height, window.title.c_str());
@@ -43,39 +41,30 @@ int main() {
     Camera2D camera = {};
     camera.zoom = 1.0F;
 
-#ifdef __APPLE__
-    Vector2 dpi = {1.0, 1.0};
-#else
-    Vector2 dpi = GetWindowScaleDPI();
+#ifndef __APPLE__
+    window.dpi = GetWindowScaleDPI();
 #endif
 
     while (!WindowShouldClose())
     {
         // Get the world point that is under the mouse
-        const Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition() * dpi, camera);
+        const Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition() * window.dpi, camera);
 
         // Update
         if (IsWindowResized()) 
         {
             // We divide here because some OS (Linux) return physical size on GetScreenWidth(). On others the dpi is 1.F
-            window.width = static_cast<int>(static_cast<float>(GetScreenWidth()) / dpi.x);
-            window.height = static_cast<int>(static_cast<float>(GetScreenHeight()) / dpi.y);
+            window.width = static_cast<int>(static_cast<float>(GetScreenWidth()) / window.dpi.x);
+            window.height = static_cast<int>(static_cast<float>(GetScreenHeight()) / window.dpi.y);
         }
-
-        osmsettings.screenWidth = (float)window.width * dpi.x;
-        osmsettings.screenHeight = (float)window.height * dpi.y;
-        osmsettings.cursorPos = mouseWorldPos;
         
         ui.UpdateLockState();
  
         if (!ui.KeyboardInUI())
         {
-            if (IsKeyPressed(KEY_U)) { ui.ToggleUI();    }
-            if (IsKeyPressed(KEY_D)) { ui.ToggleDebug(); }
-            if (IsKeyPressed(KEY_V)) 
-            { 
-                osmsettings.drawQuadBounds = !osmsettings.drawQuadBounds;  
-            }
+            if (IsKeyPressed(KEY_U)) { ui.ToggleUI();         }
+            if (IsKeyPressed(KEY_D)) { ui.ToggleDebug();      }
+            if (IsKeyPressed(KEY_V)) { renderer.ToggleQuad(); }
         }
 
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && !ui.MouseInUI())
@@ -87,7 +76,7 @@ int main() {
 
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !ui.MouseInUI() && camera.zoom > 7.F)
         {
-            AABB bounds = GetScreenLocationBounds(camera, (float)window.width * dpi.x, (float)window.height * dpi.y);
+            AABB bounds = GetScreenLocationBounds(camera, (float)window.width * window.dpi.x, (float)window.height * window.dpi.y);
 
             std::vector<MapObject> visibleNodes;
             renderer.m_Tree.Query(bounds, &visibleNodes, nullptr, 20);
@@ -140,33 +129,38 @@ int main() {
 
         if (const float wheel = GetMouseWheelMove(); wheel != 0) 
         {
-            camera.offset = GetMousePosition() * dpi;
+            camera.offset = GetMousePosition() * window.dpi;
             camera.target = mouseWorldPos;
 
             const float scale = 0.2F * wheel;
             camera.zoom = Clamp(expf(logf(camera.zoom) + scale), 0.125F, 64.0F);
         }
 
-        BeginDrawing();
+        // Prepare renderer
+        renderer.UpdateGraph(camera, window, mouseWorldPos);
 
-        ClearBackground(RAYWHITE);
-
-        BeginMode2D(camera);
-
-        renderer.DrawGraph(camera, osmsettings);
-
-        EndMode2D();
-
+        // Prepare UI
         Coord coord = InverseMercatorProjection(mouseWorldPos);
         ui.SetDebugMouseCoords(static_cast<float>(coord.lat), static_cast<float>(coord.lon));
         ui.SetDebugRenderedWays(renderer.GetWayRenderCount());
         ui.SetDebugRenderNodes(renderer.GetNodeRenderCount());
-        ui.DrawUserInterface(window);
+
+        BeginDrawing();
+
+            ClearBackground(RAYWHITE);
+
+            BeginMode2D(camera);
+                renderer.DrawGraph();
+            EndMode2D();
+
+            ui.DrawUserInterface(window);
 
         EndDrawing();
     }
 
     CloseWindow();
+
+    renderer.FinishThread();
 
     return 0;
 }
