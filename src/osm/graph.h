@@ -18,12 +18,10 @@ class Tree2D
 public:
     Tree2D() {}
 
-    void   BuildTree() { root_ = MakeTree(0, nodes_.size(), 0); }
-    void   AddNode(const OSMNodeID nodeId, const Coord location) { nodes_.emplace_back(nodeId, location); }
-    double Distance() const { return std::sqrt(best_dist_); }
-    double DistanceSq() const { return best_dist_; }
+    void BuildTree() { root_ = MakeTree(0, nodes_.size(), 0); }
+    void AddNode(const OSMNodeID nodeId, const Coord location) { nodes_.emplace_back(nodeId, location); }
 
-    const OSMNodeID& Nearest(const Coord& pt);
+    std::pair<OSMNodeID, double> Nearest(const Coord& pt);
 
 private:
     struct node
@@ -66,9 +64,7 @@ public:
 
     inline auto& GetWays() const { return ways; }
 
-    inline OSMNodeID GetNearestNode(const Coord& location) const { return tree2d->Nearest(location); }
-    inline double GetNearestNodeDist() const { return tree2d->Distance(); }
-    inline double GetNearestNodeDistSq() const { return tree2d->DistanceSq(); }
+    inline std::pair<OSMNodeID, double> GetNearestNode(std::string tag, Coord location) { return tree2d.at(tag).Nearest(location); }
 
     OSMNodeID GetNodeA() const { return selectedNodeA; }
     OSMNodeID GetNodeB() const { return selectedNodeB; }
@@ -86,8 +82,6 @@ public:
 
     std::string pathForOSM = "../data/copenhagen.osm.pbf";
 
-    // Tags
-    std::vector<OSMNodeID> nodesWithTourism;
 
 private:
     std::unordered_map<OSMNodeID, OSMNode> nodes;
@@ -108,7 +102,7 @@ private:
     // Nodes that is not a part of a way
     std::vector<OSMNodeID> places;
 
-    std::unique_ptr<Tree2D> tree2d;
+    std::unordered_map<std::string, Tree2D> tree2d;
    
 public:
 

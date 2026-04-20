@@ -26,7 +26,6 @@
 
 OSMGraph::OSMGraph() : selectedNodeA(UINT32_MAX), selectedNodeB(UINT32_MAX)
 {
-    tree2d = std::make_unique<Tree2D>();
 }
 
 bool OSMGraph::ParseOSMFile(const std::string& path) {
@@ -64,15 +63,27 @@ bool OSMGraph::Build2DTree()
 
     for (const auto& [nodeId, node] : nodes) 
     {
-        if (auto tag = node.tags.find("amenity"); tag != node.tags.end() && tag->second == "fuel")
+        if (auto tag = node.tags.find("amenity"); tag != node.tags.end())
         {
             Coord location = node.location;
-            tree2d->AddNode(nodeId, location);
-            places.push_back(nodeId);
+
+            if (tag->second == "fuel")
+                tree2d["amenity=fuel"].AddNode(nodeId, location);
+
+            if (tag->second == "cafe")
+            {
+                tree2d["amenity=cafe"].AddNode(nodeId, location);
+                places.push_back(nodeId);
+            }
+
         }
     }
 
-    tree2d->BuildTree();
+    for (auto& tree : tree2d)
+    {
+        spdlog::info("Building {}", tree.first);
+        tree.second.BuildTree();
+    }
 
     return true;
 }
@@ -480,7 +491,8 @@ void Tree2D::Nearest(node* root, const Coord& pt, std::size_t index)
     }
 }
 
-const OSMNodeID& Tree2D::Nearest(const Coord& pt) {
+ std::pair<OSMNodeID, double> Tree2D::Nearest(const Coord& pt) 
+ {
     if (!root_) throw std::logic_error("tree is empty");
 
     best_ = nullptr;
@@ -488,5 +500,6 @@ const OSMNodeID& Tree2D::Nearest(const Coord& pt) {
     visited_ = 0;
 
     Nearest(root_, pt, 0);
-    return best_->nodeId;
+
+    return { best_->nodeId, best_dist_ };
 }

@@ -35,7 +35,7 @@ public:
     auto GetScenery()  const { return objScenery / GetSum();     }
     auto GetTourism()  const { return objTourism / GetSum();     }
     auto GetComfort()  const { return objComfort / GetSum();     }
-    float GetSum()     const { return objDistance + objTime + objScenery;     }
+    float GetSum()     const { return objDistance + objTime + objScenery + objTourism;     }
 
     // Debug setters
 

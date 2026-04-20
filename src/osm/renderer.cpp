@@ -251,17 +251,20 @@ void OSMRenderer::PrepareGraph(Camera2D& camera, Window window, Vector2 mouseWor
         }
     }
 
-    //  for (const auto& node : m_pGraph->places) {
-    //      auto current_node = m_pGraph->GetNode(node);
+     for (const auto& node : m_pGraph->places) {
+         auto current_node = m_pGraph->GetNode(node);
 
-    //      Vector2 p1 = MercatorProjection(current_node.location);
+         Vector2 p1 = MercatorProjection(current_node.location);
+         float radius = 10.F * (1.F / camera.zoom);
 
-    //      DrawCircleV(
-    //          p1,
-    //          10.F * (1.F / camera.zoom),
-    //          GREEN
-    //          );
-    //  }
+         nextPacket.nodes.emplace_back(p1, radius, GREEN);
+
+        //  DrawCircleV(
+        //      p1,
+        //      10.F * (1.F / camera.zoom),
+        //      GREEN
+        //      );
+     }
 
     if (showQuad)
     {

@@ -69,12 +69,13 @@ bool Dijkstra::FindPath(OSMGraph& graph, UserInterface& ui)
 
             double timeToDrive = distance / speedMS;
 
-            OSMNodeID nearest = graph.GetNearestNode(nodeB.location);
-            double nearestDist = graph.GetNearestNodeDistSq();
+            std::pair<OSMNodeID, double> nearest = graph.GetNearestNode("amenity=fuel", nodeB.location);
+            std::pair<OSMNodeID, double> nearest1 = graph.GetNearestNode("amenity=cafe", nodeB.location);
 
             double alt = cost[current] + (ui.GetDistance() * distance) + 
                                          (ui.GetTime() * timeToDrive) + 
-                                         (ui.GetScenery() * pow(nearestDist * distance, 2));
+                                         (ui.GetScenery() * pow(nearest.second * distance, 2)) +
+                                         (ui.GetTourism() * pow(nearest1.second * distance, 2));
 
             //double alt = cost[current] + (nearestDist * distance);
             

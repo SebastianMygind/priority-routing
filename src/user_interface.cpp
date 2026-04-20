@@ -214,7 +214,7 @@ void UserInterface::DrawRouteInfo()
     DrawCustomSlider(&objTime);
     DrawCustomText("Gas Station");
     DrawCustomSlider(&objScenery);
-    DrawCustomText("Lit Roads");
+    DrawCustomText("Cafe");
     DrawCustomSlider(&objTourism);
     DrawCustomText("Comfort");
     DrawCustomSlider(&objComfort);
