@@ -263,7 +263,7 @@ void OSMRenderer::PrepareGraph(Camera2D& camera, Window window, Vector2 mouseWor
     //          );
     //  }
 
-    if (settings.drawQuadBounds)
+    if (showQuad)
     {
         std::vector<AABB> quadBounds;
         m_Tree.QueryQuads(screenBounds, &quadBounds, 20);

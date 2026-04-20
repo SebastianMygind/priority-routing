@@ -55,6 +55,7 @@ bool Dijkstra::FindPath(OSMGraph& graph, UserInterface& ui)
 
             auto speedTag = way.tags.find("maxspeed");
             auto highwayTag = way.tags.find("highway");
+            auto litTag = way.tags.find("lit");
 
             double speed = (speedTag != way.tags.end())
                ? ParseMaxSpeed(speedTag->second)
@@ -63,14 +64,19 @@ bool Dijkstra::FindPath(OSMGraph& graph, UserInterface& ui)
             double speedMS = KmhToMS(speed);
             double distance = Haversine(nodeA.location, nodeB.location);
 
+            bool isLit = (litTag != way.tags.end() && litTag->second == "yes");
+
+
             double timeToDrive = distance / speedMS;
 
             OSMNodeID nearest = graph.GetNearestNode(nodeB.location);
-            double nearestDist = graph.GetNearestNodeDist();
+            double nearestDist = graph.GetNearestNodeDistSq();
 
-            // double alt = cost[current] + (ui.GetDistance() * distance + ui.GetTime() * timeToDrive);
+            double alt = cost[current] + (ui.GetDistance() * distance) + 
+                                         (ui.GetTime() * timeToDrive) + 
+                                         (ui.GetScenery() * pow(nearestDist * distance, 2));
 
-             double alt = cost[current] + (nearestDist * distance);
+            //double alt = cost[current] + (nearestDist * distance);
             
             if (alt < cost[neighborID])
             {

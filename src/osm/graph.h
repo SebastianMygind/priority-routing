@@ -68,6 +68,7 @@ public:
 
     inline OSMNodeID GetNearestNode(const Coord& location) const { return tree2d->Nearest(location); }
     inline double GetNearestNodeDist() const { return tree2d->Distance(); }
+    inline double GetNearestNodeDistSq() const { return tree2d->DistanceSq(); }
 
     OSMNodeID GetNodeA() const { return selectedNodeA; }
     OSMNodeID GetNodeB() const { return selectedNodeB; }
