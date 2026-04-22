@@ -212,12 +212,17 @@ void UserInterface::DrawRouteInfo()
     DrawCustomSlider(&objDistance);
     DrawCustomText("Time");
     DrawCustomSlider(&objTime);
+    DrawCustomText("Lit Roads");
+    DrawCustomSlider(&objLitRoads);
+    DrawCustomText("Smoothness");
+    DrawCustomSlider(&objSmoothness);
     DrawCustomText("Gas Station");
-    DrawCustomSlider(&objScenery);
+    DrawCustomSlider(&objGasStation);
     DrawCustomText("Cafe");
+    DrawCustomSlider(&objCafe);
+    DrawCustomText("Tourism");
     DrawCustomSlider(&objTourism);
-    DrawCustomText("Comfort");
-    DrawCustomSlider(&objComfort);
+    
 
     // Draw the model dropdown last so it's drawn over the sliders if open
     DrawCustomSelection("Dijkstra;A Star", modelY, &modelSelectionIndex, modelSelectionEdit);

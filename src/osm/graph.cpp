@@ -63,10 +63,10 @@ bool OSMGraph::Build2DTree()
 
     for (const auto& [nodeId, node] : nodes) 
     {
+        Coord location = node.location;
+
         if (auto tag = node.tags.find("amenity"); tag != node.tags.end())
         {
-            Coord location = node.location;
-
             if (tag->second == "fuel")
                 tree2d["amenity=fuel"].AddNode(nodeId, location);
 
@@ -75,7 +75,11 @@ bool OSMGraph::Build2DTree()
                 tree2d["amenity=cafe"].AddNode(nodeId, location);
                 places.push_back(nodeId);
             }
+        }
 
+        if (auto tag = node.tags.find("tourism"); tag != node.tags.end())
+        {
+            tree2d["tourism"].AddNode(nodeId, location);
         }
     }
 
@@ -380,6 +384,20 @@ double GetDefaultSpeed(const std::string& highway)
     return 50;
 }
 
+double GetRoadSmoothness(std::string value)
+{
+    if (value == "excellent")      return 1.0;
+    if (value == "good")           return 2.0;
+    if (value == "intermediate")   return 3.0;
+    if (value == "bad")            return 4.0;
+    if (value == "very_bad")       return 5.0;
+    if (value == "horrible")       return 6.0;
+    if (value == "very_horrible")  return 7.0;
+    if (value == "impassable")     return INFINITY;
+
+    return 4.0;
+}
+
 static double DegToRad(double deg)
 {
     return deg * PI / 180.0;
@@ -403,7 +421,7 @@ double Haversine(const Coord& a, const Coord& b)
     return EARTH_RADIUS * c;
 }
 
-double EquirectangularSq(const Coord& a, const Coord& b) 
+double Equirectangular(const Coord& a, const Coord& b) 
 {
     const double R = 6371000.0; // in meters
     double dLat = (b.lat - a.lat) * PI / 180;
@@ -411,7 +429,7 @@ double EquirectangularSq(const Coord& a, const Coord& b)
     double latM = (a.lat + b.lat) / 2 * PI / 180;
     double x = dLon * cos(latM);
     double y = dLat;
-    return (x*x + y*y) * R;
+    return std::sqrt(x*x + y*y) * R;
 }
 
 double EuclideanDistance(const Coord& a, const Coord& b)
@@ -466,7 +484,7 @@ void Tree2D::Nearest(node* root, const Coord& pt, std::size_t index)
 
     ++visited_;
 
-    double d = EquirectangularSq(root->location, pt);
+    double d = Equirectangular(root->location, pt);
     if (!best_ || d < best_dist_) 
     {
         best_ = root;

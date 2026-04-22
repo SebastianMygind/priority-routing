@@ -55,7 +55,7 @@ public:
 
     bool InsertNode(const MapObject& obj);
     bool InsertWay(const MapObject& obj);
-    void Query(const AABB& range, MapObjects* foundNodes, LayeredMapObjects* foundWays, int depth) const;
+    void Query(const AABB& range, LayeredMapObjects* foundNodes, LayeredMapObjects* foundWays, int depth) const;
     void QueryQuads(const AABB& range, std::vector<AABB>* foundBounds, int depth) const;
 
 private:
@@ -121,7 +121,12 @@ public:
     void ToggleQuad() { showQuad = !showQuad; }
 
     // Rendering stats (call after DrawGraph)
-    inline size_t GetNodeRenderCount() const { return m_NodesToRender.size(); }
+    inline size_t GetNodeRenderCount() const 
+    { 
+        size_t a = 0; 
+        for (const MapObjects& layer : m_NodesToRender) { a += layer.size(); }
+        return a; 
+    }
     inline size_t GetWayRenderCount() const 
     { 
         size_t a = 0; 
@@ -146,7 +151,7 @@ public:
     std::unordered_map<OSMWayID, Polygon> m_CachedPolygons; // WayID, Polygon data
 
     // Temporary buffers for rendering
-    MapObjects        m_NodesToRender;
+    LayeredMapObjects m_NodesToRender;
     LayeredMapObjects m_WaysToRender;
 };
 

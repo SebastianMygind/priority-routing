@@ -78,10 +78,10 @@ int main() {
         {
             AABB bounds = GetScreenLocationBounds(camera, (float)window.width * window.dpi.x, (float)window.height * window.dpi.y);
 
-            std::vector<MapObject> visibleNodes;
+            LayeredMapObjects visibleNodes(4);
             renderer.m_Tree.Query(bounds, &visibleNodes, nullptr, 20);
 
-            for (MapObject& obj : visibleNodes) 
+            for (MapObject& obj : visibleNodes[0]) 
             {
                 OSMNode node = graph.GetNode(obj.id);
                 if (Vector2Distance(MercatorProjection(node.location), mouseWorldPos) < 0.2F)

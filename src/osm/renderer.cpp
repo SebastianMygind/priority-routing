@@ -14,12 +14,47 @@ constexpr int RNDR_EXT = 25;
 OSMRenderer::OSMRenderer(OSMGraph* graph) : m_pGraph(graph), m_Tree({ 4.4, 53.3, 16.2, 58.7 }, 8),
 m_Tree1({ 4.4, 53.3, 16.2, 58.7 }, 8)
 {
+    m_NodesToRender.resize(4); // We have two layers: 0 for Selectable nodes, 1 for other displayable nodes
     m_WaysToRender.resize(2); // We have two layers: 0 for landuse, 1 for highways
 }
 
 void OSMRenderer::BuildQuadTree()
 {
     spdlog::info("Building QuadTree..");
+
+    for (const auto& [nodeId, node] : m_pGraph->nodes) 
+    {
+        const Coord& location = node.location;
+
+        MapObject obj;
+        obj.id = nodeId;
+        obj.bounds = { location.lon, location.lat, location.lon, location.lat };
+
+        if (auto tag = node.tags.find("amenity"); tag != node.tags.end())
+        {
+            if (tag->second == "fuel")
+            {
+                obj.layer = 1;
+                m_Tree.InsertNode(obj);
+                m_Tree1.InsertNode(obj);
+            }
+
+            if (tag->second == "cafe")
+            {
+                obj.layer = 2;
+                m_Tree.InsertNode(obj);
+                m_Tree1.InsertNode(obj);
+            }
+        }
+
+        if (auto tag = node.tags.find("tourism"); tag != node.tags.end())
+        {
+            obj.layer = 3;
+            m_Tree.InsertNode(obj);
+            m_Tree1.InsertNode(obj);
+        }
+    }
+
 
     for (const auto& wayPair : m_pGraph->ways)
     {
@@ -56,7 +91,7 @@ void OSMRenderer::BuildQuadTree()
                 MapObject obj;
                 obj.id = nodeRef;
                 obj.bounds = { location.lon, location.lat, location.lon, location.lat };
-                obj.layer = -1;
+                obj.layer = 0;
                 m_Tree.InsertNode(obj);
             }
         }
@@ -112,7 +147,10 @@ void OSMRenderer::PrepareGraph(Camera2D& camera, Window window, Vector2 mouseWor
 
     AABB screenBounds = GetScreenLocationBounds(camera, window.width * window.dpi.x, window.height * window.dpi.y);
 
-    m_NodesToRender.clear();
+    m_NodesToRender[0].clear();
+    m_NodesToRender[1].clear();
+    m_NodesToRender[2].clear();
+    m_NodesToRender[3].clear();
     m_WaysToRender[0].clear();
     m_WaysToRender[1].clear();
 
@@ -221,7 +259,7 @@ void OSMRenderer::PrepareGraph(Camera2D& camera, Window window, Vector2 mouseWor
 
     if (camera.zoom > 7.F)
     {
-        for (MapObject& nodeObj : m_NodesToRender)
+        for (MapObject& nodeObj : m_NodesToRender[0])
         {
             OSMNodeID& id = nodeObj.id;
             OSMNode& node = nodes[id];
@@ -251,20 +289,54 @@ void OSMRenderer::PrepareGraph(Camera2D& camera, Window window, Vector2 mouseWor
         }
     }
 
-     for (const auto& node : m_pGraph->places) {
-         auto current_node = m_pGraph->GetNode(node);
+    for (const MapObject& wayObj : m_NodesToRender[1])
+    {
+        const OSMNode& current_node = m_pGraph->GetNode(wayObj.id);
 
-         Vector2 p1 = MercatorProjection(current_node.location);
-         float radius = 10.F * (1.F / camera.zoom);
+        Vector2 p1 = MercatorProjection(current_node.location);
+        float radius = 5.F * (1.F / camera.zoom);
 
-         nextPacket.nodes.emplace_back(p1, radius, GREEN);
+        nextPacket.nodes.emplace_back(p1, radius, GREEN);
+    }
 
-        //  DrawCircleV(
-        //      p1,
-        //      10.F * (1.F / camera.zoom),
-        //      GREEN
-        //      );
-     }
+    for (const MapObject& wayObj : m_NodesToRender[2])
+    {
+        const OSMNode& current_node = m_pGraph->GetNode(wayObj.id);
+
+        Vector2 p1 = MercatorProjection(current_node.location);
+        float radius = 5.F * (1.F / camera.zoom);
+
+        nextPacket.nodes.emplace_back(p1, radius, VIOLET);
+    }
+
+    for (const MapObject& wayObj : m_NodesToRender[3])
+    {
+        const OSMNode& current_node = m_pGraph->GetNode(wayObj.id);
+
+        Vector2 p1 = MercatorProjection(current_node.location);
+        float radius = 5.F * (1.F / camera.zoom);
+
+        nextPacket.nodes.emplace_back(p1, radius, BLACK);
+    }
+
+
+
+
+
+    //  for (const auto& node : m_pGraph->places) {
+    //      auto current_node = m_pGraph->GetNode(node);
+
+    //      Vector2 p1 = MercatorProjection(current_node.location);
+    //      float radius = 5.F * (1.F / camera.zoom);
+
+    //      nextPacket.nodes.emplace_back(p1, radius, GREEN);
+
+    //     //  DrawCircleV(
+    //     //      p1,
+    //     //      10.F * (1.F / camera.zoom),
+    //     //      GREEN
+    //     //      );
+    //  }
 
     if (showQuad)
     {
@@ -429,7 +501,7 @@ bool QuadNode::InsertWay(const MapObject& obj)
     return true;
 }
 
-void QuadNode::Query(const AABB& range, MapObjects* foundNodes, LayeredMapObjects* foundWays, int depth) const
+void QuadNode::Query(const AABB& range, LayeredMapObjects* foundNodes, LayeredMapObjects* foundWays, int depth) const
 {
     if (!boundary.intersects(range))
         return;
@@ -438,7 +510,7 @@ void QuadNode::Query(const AABB& range, MapObjects* foundNodes, LayeredMapObject
     {
         for (const auto& obj : nodes) {
             if (range.intersects(obj.bounds))
-                foundNodes->push_back(obj);
+                foundNodes->at(obj.layer).push_back(obj);
         }
     }
 

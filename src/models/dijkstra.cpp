@@ -35,7 +35,7 @@ bool Dijkstra::FindPath(OSMGraph& graph, UserInterface& ui)
         // If we reached the end node, reconstruct the path
         if (current == destination) 
         {
-            while (current != 0xFFFFFFFF) 
+            while (current != 0xFFFFFFFF)
             {
                 graph.InsertPath(current);
                 current = prev[current];
@@ -56,26 +56,33 @@ bool Dijkstra::FindPath(OSMGraph& graph, UserInterface& ui)
             auto speedTag = way.tags.find("maxspeed");
             auto highwayTag = way.tags.find("highway");
             auto litTag = way.tags.find("lit");
+            auto smoothnessTag = way.tags.find("smoothness");
 
             double speed = (speedTag != way.tags.end())
                ? ParseMaxSpeed(speedTag->second)
                : GetDefaultSpeed(highwayTag->second);
 
             double speedMS = KmhToMS(speed);
-            double distance = Haversine(nodeA.location, nodeB.location);
+            double distance = Equirectangular(nodeA.location, nodeB.location);
 
-            bool isLit = (litTag != way.tags.end() && litTag->second == "yes");
-
+            double lit = (litTag != way.tags.end() && litTag->second == "yes") ? 1.0 : 10.0;
+            double smoothness = (smoothnessTag != way.tags.end() ? GetRoadSmoothness(smoothnessTag->second) : 5.0);
 
             double timeToDrive = distance / speedMS;
 
-            std::pair<OSMNodeID, double> nearest = graph.GetNearestNode("amenity=fuel", nodeB.location);
-            std::pair<OSMNodeID, double> nearest1 = graph.GetNearestNode("amenity=cafe", nodeB.location);
+            std::pair<OSMNodeID, double> null = {0, 0.0};
 
-            double alt = cost[current] + (ui.GetDistance() * distance) + 
-                                         (ui.GetTime() * timeToDrive) + 
-                                         (ui.GetScenery() * pow(nearest.second * distance, 2)) +
-                                         (ui.GetTourism() * pow(nearest1.second * distance, 2));
+            std::pair<OSMNodeID, double> nearestFuel = (ui.GetGasStation() != 0.0) ?    graph.GetNearestNode("amenity=fuel", nodeB.location) : null;
+            std::pair<OSMNodeID, double> nearestCafe = (ui.GetCafe() != 0.0) ?          graph.GetNearestNode("amenity=cafe", nodeB.location) : null;
+            std::pair<OSMNodeID, double> nearestTourism = (ui.GetTourism() != 0.0) ?    graph.GetNearestNode("tourism", nodeB.location) : null;
+
+            double alt = cost[current] + (ui.GetDistance()      * distance) + 
+                                         (ui.GetTime()          * timeToDrive) + 
+                                         (ui.GetLitRoads()      * lit * distance) +
+                                         (ui.GetSmoothness()    * smoothness * distance) +
+                                         (ui.GetGasStation()    * pow(nearestFuel.second * distance, 2)) +
+                                         (ui.GetCafe()          * pow(nearestCafe.second * distance, 2)) +
+                                         (ui.GetTourism()       * pow(nearestTourism.second * distance, 2));
 
             //double alt = cost[current] + (nearestDist * distance);
             

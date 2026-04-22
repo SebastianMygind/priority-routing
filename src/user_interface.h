@@ -32,10 +32,12 @@ public:
     auto GetModel()    const { return modelSelectionIndex; }
     auto GetDistance() const { return objDistance / GetSum();    }
     auto GetTime()     const { return objTime / GetSum();        }
-    auto GetScenery()  const { return objScenery / GetSum();     }
+    auto GetLitRoads()  const { return objLitRoads / GetSum();     }
+    auto GetSmoothness()  const { return objSmoothness / GetSum();     }
+    auto GetGasStation()  const { return objGasStation / GetSum();     }
+    auto GetCafe()  const { return objCafe / GetSum();     }
     auto GetTourism()  const { return objTourism / GetSum();     }
-    auto GetComfort()  const { return objComfort / GetSum();     }
-    float GetSum()     const { return objDistance + objTime + objScenery + objTourism;     }
+    float GetSum()     const { return objDistance + objTime + objLitRoads + objSmoothness + objGasStation + objCafe + objTourism; }
 
     // Debug setters
 
@@ -62,9 +64,11 @@ private:
 
     float objDistance = 0.5;
     float objTime     = 0.5;
-    float objScenery  = 0.5;
+    float objLitRoads  = 0.5;
+    float objSmoothness  = 0.5;
+    float objGasStation  = 0.5;
+    float objCafe  = 0.5;
     float objTourism  = 0.5;
-    float objComfort  = 0.5;
 
     ms_duration debugModelTime{0};
     size_t debugTotalNodes = 0;

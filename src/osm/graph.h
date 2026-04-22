@@ -117,8 +117,9 @@ double KmhToMS(double kmh);
 double MphToMS(double mph);
 double ParseMaxSpeed(const std::string& value);
 double GetDefaultSpeed(const std::string& highway);
+double GetRoadSmoothness(std::string value);
 double Haversine(const Coord& a, const Coord& b);
-double EquirectangularSq(const Coord& a, const Coord& b);
+double Equirectangular(const Coord& a, const Coord& b);
 double EuclideanDistance(const Coord& a, const Coord& b);
 double DistanceSq(const Coord& a, const Coord& b);
 
