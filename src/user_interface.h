@@ -47,6 +47,7 @@ public:
     auto SetDebugRenderNodes(auto nodes)  { debugRenderNodes = nodes;  }
     auto SetDebugRenderedWays(auto ways)  { debugRenderedWays = ways;  }
     auto SetDebugMouseCoords(auto lat, auto lon)  { debugMouseWorldPos = {lat, lon}; }
+    auto SetPOIText(std::string text)     { poiText = text; }
 
     // Visibility toggles
 
@@ -76,6 +77,7 @@ private:
     size_t debugRenderNodes = 0;
     size_t debugRenderedWays = 0;
     Vector2 debugMouseWorldPos{0, 0};
+    std::string poiText = "";
 
     bool showDebug = true;
     bool showUI    = true;

@@ -22,6 +22,11 @@ void OSMRenderer::BuildQuadTree()
 {
     spdlog::info("Building QuadTree..");
 
+    poiText.emplace_back("-");
+    poiText.emplace_back("Fuel");
+    poiText.emplace_back("Cafe");
+    poiText.emplace_back("Tourism");
+
     for (const auto& [nodeId, node] : m_pGraph->nodes) 
     {
         const Coord& location = node.location;
@@ -288,35 +293,17 @@ void OSMRenderer::PrepareGraph(Camera2D& camera, Window window, Vector2 mouseWor
             nextPacket.nodes.push_back({ p1, radius, isSelected ? SKYBLUE : MAROON });
         }
     }
-
-    for (const MapObject& wayObj : m_NodesToRender[1])
+    if (showPoi > 0)
     {
-        const OSMNode& current_node = m_pGraph->GetNode(wayObj.id);
+        for (const MapObject& wayObj : m_NodesToRender[showPoi])
+        {
+            const OSMNode& current_node = m_pGraph->GetNode(wayObj.id);
 
-        Vector2 p1 = MercatorProjection(current_node.location);
-        float radius = 5.F * (1.F / camera.zoom);
+            Vector2 p1 = MercatorProjection(current_node.location);
+            float radius = 5.F * (1.F / camera.zoom);
 
-        nextPacket.nodes.emplace_back(p1, radius, GREEN);
-    }
-
-    for (const MapObject& wayObj : m_NodesToRender[2])
-    {
-        const OSMNode& current_node = m_pGraph->GetNode(wayObj.id);
-
-        Vector2 p1 = MercatorProjection(current_node.location);
-        float radius = 5.F * (1.F / camera.zoom);
-
-        nextPacket.nodes.emplace_back(p1, radius, VIOLET);
-    }
-
-    for (const MapObject& wayObj : m_NodesToRender[3])
-    {
-        const OSMNode& current_node = m_pGraph->GetNode(wayObj.id);
-
-        Vector2 p1 = MercatorProjection(current_node.location);
-        float radius = 5.F * (1.F / camera.zoom);
-
-        nextPacket.nodes.emplace_back(p1, radius, BLACK);
+            nextPacket.nodes.emplace_back(p1, radius, VIOLET);
+        }
     }
 
 

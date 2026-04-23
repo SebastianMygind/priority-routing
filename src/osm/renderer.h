@@ -119,6 +119,9 @@ public:
     void FinishThread() { if (renderThread.joinable()) renderThread.join(); }
 
     void ToggleQuad() { showQuad = !showQuad; }
+    void CyclePOI() { showPoi = (showPoi + 1) % 4; }
+
+    std::string GetPOIText() { return poiText[showPoi]; }
 
     // Rendering stats (call after DrawGraph)
     inline size_t GetNodeRenderCount() const 
@@ -143,6 +146,9 @@ private:
     RenderPacket nextPacket;
 
     bool showQuad = false;
+    int  showPoi = 0;
+
+    std::vector<std::string> poiText;
 
 public:
     OSMGraph* m_pGraph;

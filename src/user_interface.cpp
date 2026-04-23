@@ -260,6 +260,7 @@ void UserInterface::DrawDebugInfo()
     DrawCustomText(std::format("Nodes: {}/{}", debugRenderNodes, debugTotalNodes).c_str());
     DrawCustomText(std::format("Ways: {}/{}", debugRenderedWays, debugTotalWays).c_str());
     DrawCustomText(std::format("Model Time: {:.3f} ms", debugModelTime.count()).c_str());
+    DrawCustomText(std::format("POI: {}", poiText).c_str());
 
     // Mouse crosshair
 
