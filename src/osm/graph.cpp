@@ -26,7 +26,6 @@
 
 OSMGraph::OSMGraph() : selectedNodeA(UINT32_MAX), selectedNodeB(UINT32_MAX)
 {
-    tree2d = std::make_unique<Tree2D>();
 }
 
 bool OSMGraph::ParseOSMFile(const std::string& path) {
@@ -64,15 +63,31 @@ bool OSMGraph::Build2DTree()
 
     for (const auto& [nodeId, node] : nodes) 
     {
+        Coord location = node.location;
+
+        if (auto tag = node.tags.find("amenity"); tag != node.tags.end())
+        {
+            if (tag->second == "fuel")
+                tree2d["amenity=fuel"].AddNode(nodeId, location);
+
+            if (tag->second == "cafe")
+            {
+                tree2d["amenity=cafe"].AddNode(nodeId, location);
+                places.push_back(nodeId);
+            }
+        }
+
         if (auto tag = node.tags.find("tourism"); tag != node.tags.end())
         {
-            Coord location = node.location;
-            tree2d->AddNode(nodeId, location);
-            places.push_back(nodeId);
+            tree2d["tourism"].AddNode(nodeId, location);
         }
     }
 
-    tree2d->BuildTree();
+    for (auto& tree : tree2d)
+    {
+        spdlog::info("Building {}", tree.first);
+        tree.second.BuildTree();
+    }
 
     return true;
 }
@@ -102,6 +117,10 @@ bool OSMGraph::BuildAdjList()
         const bool oneWay = (oneWayTag != way.tags.end()) && 
                             (oneWayTag->second == "yes");
 
+        const bool oneWayReverse = (oneWayTag != way.tags.end()) && 
+                            (oneWayTag->second == "-1");
+          
+
         //const double speed = (speedTag != way.tags.end())
         //    ? ParseMaxSpeed(speedTag->second)
         //    : GetDefaultSpeed(highwayTag->second);
@@ -119,14 +138,13 @@ bool OSMGraph::BuildAdjList()
             adj_list_prev.insert({a, 0xFFFFFFFF});
             adj_list_prev.insert({b, 0xFFFFFFFF});
 
-            adj_list[a].emplace_back(b, wayId);
+            if (!oneWayReverse)
+                adj_list[a].emplace_back(b, wayId);
 
-            if (!oneWay)
-            {
+            if (!oneWay || oneWayReverse)
                 adj_list[b].emplace_back(a, wayId);
-            }
-        }
-        
+
+        }    
     }
 
     return true;
@@ -366,6 +384,20 @@ double GetDefaultSpeed(const std::string& highway)
     return 50;
 }
 
+double GetRoadSmoothness(std::string value)
+{
+    if (value == "excellent")      return 1.0;
+    if (value == "good")           return 2.0;
+    if (value == "intermediate")   return 3.0;
+    if (value == "bad")            return 4.0;
+    if (value == "very_bad")       return 5.0;
+    if (value == "horrible")       return 6.0;
+    if (value == "very_horrible")  return 7.0;
+    if (value == "impassable")     return INFINITY;
+
+    return 4.0;
+}
+
 static double DegToRad(double deg)
 {
     return deg * PI / 180.0;
@@ -389,7 +421,7 @@ double Haversine(const Coord& a, const Coord& b)
     return EARTH_RADIUS * c;
 }
 
-double EquirectangularSq(const Coord& a, const Coord& b) 
+double Equirectangular(const Coord& a, const Coord& b) 
 {
     const double R = 6371000.0; // in meters
     double dLat = (b.lat - a.lat) * PI / 180;
@@ -397,7 +429,7 @@ double EquirectangularSq(const Coord& a, const Coord& b)
     double latM = (a.lat + b.lat) / 2 * PI / 180;
     double x = dLon * cos(latM);
     double y = dLat;
-    return (x*x + y*y) * R;
+    return std::sqrt(x*x + y*y) * R;
 }
 
 double EuclideanDistance(const Coord& a, const Coord& b)
@@ -452,7 +484,7 @@ void Tree2D::Nearest(node* root, const Coord& pt, std::size_t index)
 
     ++visited_;
 
-    double d = EquirectangularSq(root->location, pt);
+    double d = Equirectangular(root->location, pt);
     if (!best_ || d < best_dist_) 
     {
         best_ = root;
@@ -477,7 +509,8 @@ void Tree2D::Nearest(node* root, const Coord& pt, std::size_t index)
     }
 }
 
-const OSMNodeID& Tree2D::Nearest(const Coord& pt) {
+ std::pair<OSMNodeID, double> Tree2D::Nearest(const Coord& pt) 
+ {
     if (!root_) throw std::logic_error("tree is empty");
 
     best_ = nullptr;
@@ -485,5 +518,6 @@ const OSMNodeID& Tree2D::Nearest(const Coord& pt) {
     visited_ = 0;
 
     Nearest(root_, pt, 0);
-    return best_->nodeId;
+
+    return { best_->nodeId, best_dist_ };
 }

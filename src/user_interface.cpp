@@ -212,12 +212,17 @@ void UserInterface::DrawRouteInfo()
     DrawCustomSlider(&objDistance);
     DrawCustomText("Time");
     DrawCustomSlider(&objTime);
-    DrawCustomText("Scenery");
-    DrawCustomSlider(&objScenery);
+    DrawCustomText("Lit Roads");
+    DrawCustomSlider(&objLitRoads);
+    DrawCustomText("Smoothness");
+    DrawCustomSlider(&objSmoothness);
+    DrawCustomText("Gas Station");
+    DrawCustomSlider(&objGasStation);
+    DrawCustomText("Cafe");
+    DrawCustomSlider(&objCafe);
     DrawCustomText("Tourism");
     DrawCustomSlider(&objTourism);
-    DrawCustomText("Comfort");
-    DrawCustomSlider(&objComfort);
+    
 
     // Draw the model dropdown last so it's drawn over the sliders if open
     DrawCustomSelection("Dijkstra;A Star", modelY, &modelSelectionIndex, modelSelectionEdit);
@@ -255,6 +260,7 @@ void UserInterface::DrawDebugInfo()
     DrawCustomText(std::format("Nodes: {}/{}", debugRenderNodes, debugTotalNodes).c_str());
     DrawCustomText(std::format("Ways: {}/{}", debugRenderedWays, debugTotalWays).c_str());
     DrawCustomText(std::format("Model Time: {:.3f} ms", debugModelTime.count()).c_str());
+    DrawCustomText(std::format("POI: {}", poiText).c_str());
 
     // Mouse crosshair
 

@@ -28,12 +28,16 @@ public:
 
     // Model getters
 
+
     auto GetModel()    const { return modelSelectionIndex; }
-    auto GetDistance() const { return objDistance;    }
-    auto GetTime()     const { return objTime;        }
-    auto GetScenery()  const { return objScenery;     }
-    auto GetTourism()  const { return objTourism;     }
-    auto GetComfort()  const { return objComfort;     }
+    auto GetDistance() const { return objDistance / GetSum();    }
+    auto GetTime()     const { return objTime / GetSum();        }
+    auto GetLitRoads()  const { return objLitRoads / GetSum();     }
+    auto GetSmoothness()  const { return objSmoothness / GetSum();     }
+    auto GetGasStation()  const { return objGasStation / GetSum();     }
+    auto GetCafe()  const { return objCafe / GetSum();     }
+    auto GetTourism()  const { return objTourism / GetSum();     }
+    float GetSum()     const { return objDistance + objTime + objLitRoads + objSmoothness + objGasStation + objCafe + objTourism; }
 
     // Debug setters
 
@@ -43,6 +47,7 @@ public:
     auto SetDebugRenderNodes(auto nodes)  { debugRenderNodes = nodes;  }
     auto SetDebugRenderedWays(auto ways)  { debugRenderedWays = ways;  }
     auto SetDebugMouseCoords(auto lat, auto lon)  { debugMouseWorldPos = {lat, lon}; }
+    auto SetPOIText(std::string text)     { poiText = text; }
 
     // Visibility toggles
 
@@ -60,9 +65,11 @@ private:
 
     float objDistance = 0.5;
     float objTime     = 0.5;
-    float objScenery  = 0.5;
+    float objLitRoads  = 0.5;
+    float objSmoothness  = 0.5;
+    float objGasStation  = 0.5;
+    float objCafe  = 0.5;
     float objTourism  = 0.5;
-    float objComfort  = 0.5;
 
     ms_duration debugModelTime{0};
     size_t debugTotalNodes = 0;
@@ -70,6 +77,7 @@ private:
     size_t debugRenderNodes = 0;
     size_t debugRenderedWays = 0;
     Vector2 debugMouseWorldPos{0, 0};
+    std::string poiText = "";
 
     bool showDebug = true;
     bool showUI    = true;

@@ -55,7 +55,7 @@ public:
 
     bool InsertNode(const MapObject& obj);
     bool InsertWay(const MapObject& obj);
-    void Query(const AABB& range, MapObjects* foundNodes, LayeredMapObjects* foundWays, int depth) const;
+    void Query(const AABB& range, LayeredMapObjects* foundNodes, LayeredMapObjects* foundWays, int depth) const;
     void QueryQuads(const AABB& range, std::vector<AABB>* foundBounds, int depth) const;
 
 private:
@@ -119,9 +119,17 @@ public:
     void FinishThread() { if (renderThread.joinable()) renderThread.join(); }
 
     void ToggleQuad() { showQuad = !showQuad; }
+    void CyclePOI() { showPoi = (showPoi + 1) % 4; }
+
+    std::string GetPOIText() { return poiText[showPoi]; }
 
     // Rendering stats (call after DrawGraph)
-    inline size_t GetNodeRenderCount() const { return m_NodesToRender.size(); }
+    inline size_t GetNodeRenderCount() const 
+    { 
+        size_t a = 0; 
+        for (const MapObjects& layer : m_NodesToRender) { a += layer.size(); }
+        return a; 
+    }
     inline size_t GetWayRenderCount() const 
     { 
         size_t a = 0; 
@@ -138,6 +146,9 @@ private:
     RenderPacket nextPacket;
 
     bool showQuad = false;
+    int  showPoi = 0;
+
+    std::vector<std::string> poiText;
 
 public:
     OSMGraph* m_pGraph;
@@ -146,7 +157,7 @@ public:
     std::unordered_map<OSMWayID, Polygon> m_CachedPolygons; // WayID, Polygon data
 
     // Temporary buffers for rendering
-    MapObjects        m_NodesToRender;
+    LayeredMapObjects m_NodesToRender;
     LayeredMapObjects m_WaysToRender;
 };
 
