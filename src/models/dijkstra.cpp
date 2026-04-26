@@ -1,6 +1,5 @@
 #include "dijkstra.h"
 #include "../osm/tags.h"
-#include "spdlog/spdlog.h"
 
 #include <cmath>
 #include <cstdint>
@@ -11,31 +10,29 @@
 
 bool Dijkstra::FindPath(OSMGraph& graph, UserInterface& ui)
 {
-    spdlog::info("Dist: {}   Time: {}", ui.GetDistance(), ui.GetTime());
-
-    using PQNode = std::pair<double, OSMNodeID>;
+    using PQNode = std::pair<double, uint64_t>;
     std::priority_queue<PQNode, std::vector<PQNode>, std::greater<>> p_queue;
 
     auto source = graph.GetNodeA();
     auto destination = graph.GetNodeB();
     
     auto adj_list = graph.GetAdjList();
-    auto cost = graph.GetAdjListDist();
+    auto dist = graph.GetAdjListDist();
     auto prev = graph.GetAdjListPrev();
 
-    cost[source] = 0;
-    p_queue.push({cost[source], source});
+    dist[source] = 0;
+    p_queue.push({dist[source], source});
 
     while (!p_queue.empty())
     {
         // Get the node with the smallest cost + heuristic
-        OSMNodeID current = p_queue.top().second;
+        uint64_t current = p_queue.top().second;
         p_queue.pop();
 
         // If we reached the end node, reconstruct the path
         if (current == destination) 
         {
-            while (current != 0xFFFFFFFF)
+            while (current != 0xFFFFFFFF) 
             {
                 graph.InsertPath(current);
                 current = prev[current];
@@ -53,46 +50,17 @@ bool Dijkstra::FindPath(OSMGraph& graph, UserInterface& ui)
             const OSMNode& nodeB = graph.GetNode(neighborID);
             const OSMWay& way = graph.GetWay(edgeWay);
 
-            auto speedTag = way.tags.find("maxspeed");
-            auto highwayTag = way.tags.find("highway");
-            auto litTag = way.tags.find("lit");
-            auto smoothnessTag = way.tags.find("smoothness");
+            double distance = Haversine(nodeA.location, nodeB.location);
 
-            double speed = (speedTag != way.tags.end())
-               ? ParseMaxSpeed(speedTag->second)
-               : GetDefaultSpeed(highwayTag->second);
-
-            double speedMS = KmhToMS(speed);
-            double distance = Equirectangular(nodeA.location, nodeB.location);
-
-            double lit = (litTag != way.tags.end() && litTag->second == "yes") ? 1.0 : 10.0;
-            double smoothness = (smoothnessTag != way.tags.end() ? GetRoadSmoothness(smoothnessTag->second) : 5.0);
-
-            double timeToDrive = distance / speedMS;
-
-            std::pair<OSMNodeID, double> null = {0, 0.0};
-
-            std::pair<OSMNodeID, double> nearestFuel = (ui.GetGasStation() != 0.0) ?    graph.GetNearestNode("amenity=fuel", nodeB.location) : null;
-            std::pair<OSMNodeID, double> nearestCafe = (ui.GetCafe() != 0.0) ?          graph.GetNearestNode("amenity=cafe", nodeB.location) : null;
-            std::pair<OSMNodeID, double> nearestTourism = (ui.GetTourism() != 0.0) ?    graph.GetNearestNode("tourism", nodeB.location) : null;
-
-            double alt = cost[current] + (ui.GetDistance()      * distance) + 
-                                         (ui.GetTime()          * timeToDrive) + 
-                                         (ui.GetLitRoads()      * lit * distance) +
-                                         (ui.GetSmoothness()    * smoothness * distance) +
-                                         (ui.GetGasStation()    * pow(nearestFuel.second * distance, 2)) +
-                                         (ui.GetCafe()          * pow(nearestCafe.second * distance, 2)) +
-                                         (ui.GetTourism()       * pow(nearestTourism.second * distance, 2));
-
-            //double alt = cost[current] + (nearestDist * distance);
+            double alt = dist[current] + distance;
             
-            if (alt < cost[neighborID])
+            if (alt < dist[neighborID])
             {
-                cost[neighborID] = alt;
+                dist[neighborID] = alt;
                 prev[neighborID] = current;
 
-                // Push the neighbor onto the priority queue with cost
-                p_queue.push({ alt, neighborID });
+                // Push the neighbor onto the priority queue with cost + heuristic
+                p_queue.push({alt, neighborID });
             }
         }
     }

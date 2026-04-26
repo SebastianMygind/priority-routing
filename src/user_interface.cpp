@@ -225,7 +225,7 @@ void UserInterface::DrawRouteInfo()
     
 
     // Draw the model dropdown last so it's drawn over the sliders if open
-    DrawCustomSelection("Dijkstra;A Star", modelY, &modelSelectionIndex, modelSelectionEdit);
+    DrawCustomSelection("Dijkstra;A Star;Weighted Sum", modelY, &modelSelectionIndex, modelSelectionEdit);
 
 }
 
