@@ -1,7 +1,6 @@
 #pragma once
 #include "graph.h"
 #include "raylib.h"
-#include "raymath.h"
 #include "../Window.h"
 
 #include <vector>

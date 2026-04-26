@@ -1,4 +1,5 @@
 #include <unordered_set>
+#include <string>
 
 static const std::unordered_set<std::string> kDrivableHighways = {
     "motorway", "trunk", "primary", "secondary", "tertiary",

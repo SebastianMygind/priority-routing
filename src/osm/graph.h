@@ -6,12 +6,10 @@
 
 #include <vector>
 #include <unordered_map>
-#include <cstdint>
 #include <string>
 #include <set>
 #include <utility>
 #include <memory>
-#include <cmath>
 
 class Tree2D
 {

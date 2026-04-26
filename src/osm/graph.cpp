@@ -3,20 +3,17 @@
 #include "../node_attributes.h"
 
 #include <filesystem>
-#include <float.h>
-#include <math.h>
+#include <cfloat>
+#include <cmath>
 #ifdef _WIN32
 #define NOUSER
 #endif
 
 #include "graph.h"
 #include "tags.h"
-#include "tinyxml2.h"
-#include "rlgl.h"
 #include "spdlog/spdlog.h"
 
 #include <algorithm>
-#include <cmath>
 #include <array>
 #include <ranges>
 #include <osmium/io/any_input.hpp>

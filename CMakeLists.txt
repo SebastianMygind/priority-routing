@@ -21,12 +21,7 @@ FetchContent_Declare(
         GIT_PROGRESS TRUE
         SYSTEM
 )
-FetchContent_Declare(
-        tinyxml2
-        GIT_REPOSITORY https://github.com/leethomason/tinyxml2
-        GIT_TAG 11.0.0
-        GIT_PROGRESS TRUE
-)
+
 
 FetchContent_Declare(
         googletest
@@ -37,7 +32,6 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(googletest)
 FetchContent_MakeAvailable(raylib)
-FetchContent_MakeAvailable(tinyxml2)
 
 # 1. Define raygui as a library so it's only compiled once
 add_library(raygui_lib OBJECT vendor/raygui_impl.cpp)
@@ -98,7 +92,6 @@ target_link_libraries(
         priority_routing
         PRIVATE
         raylib
-        tinyxml2
         spdlog::spdlog
         BZip2::BZip2
         ZLIB::ZLIB
@@ -120,7 +113,6 @@ target_link_libraries(
         priority_routing_tests
         PRIVATE
         raylib
-        tinyxml2
         spdlog::spdlog
         BZip2::BZip2
         ZLIB::ZLIB

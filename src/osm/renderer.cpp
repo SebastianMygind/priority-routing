@@ -7,6 +7,8 @@
 
 #include <array>
 
+#include "raymath.h"
+
 // Render extension adds a margin so that some elements are drawn outside the camera
 // Increasing this value decreases pop in for the cost of performance
 constexpr int RNDR_EXT = 25;

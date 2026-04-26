@@ -7,7 +7,6 @@
 #include "osm/renderer.h"
 #include "path_finder.h"
 #include "raylib.h"
-#include "rlgl.h"
 #include "Window.h"
 #include "raymath.h"
 #include "spdlog/spdlog.h"
