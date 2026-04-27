@@ -11,8 +11,6 @@
 
 bool Weighted::FindPath(OSMGraph& graph, UserInterface& ui)
 {
-    spdlog::info("Dist: {}   Time: {}", ui.GetDistance(), ui.GetTime());
-
     using PQNode = std::pair<double, OSMNodeID>;
     std::priority_queue<PQNode, std::vector<PQNode>, std::greater<>> p_queue;
 
@@ -90,9 +88,6 @@ bool Weighted::FindPath(OSMGraph& graph, UserInterface& ui)
             {
                 cost[neighborID] = alt;
                 prev[neighborID] = current;
-
-                spdlog::info("Neighbor: {} \nCost: {} \nDist: {} \nTime: {} \nLitt: {} \nSmth: {} \nFuel: {} \nCafe: {} \nTour: {}", 
-                neighborID, cost[neighborID], distance, timeToDrive, lit, smoothness, nearestFuel.second, nearestCafe.second, nearestTourism.second);
 
                 // Push the neighbor onto the priority queue with cost
                 p_queue.push({ alt, neighborID });

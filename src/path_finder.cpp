@@ -7,8 +7,8 @@
 #include <memory>
 
 std::thread pathfindingThread;
-std::atomic<bool> threadDone = { true };
-std::atomic<bool> threadKill = { false };
+std::atomic<bool> threadDone = true;
+std::atomic<bool> threadKill = false;
 
 void PathFinder(OSMGraph& graph, UserInterface& ui)
 {
