@@ -41,6 +41,8 @@ enum AccumulatorTypes
 
 UserInterface::~UserInterface() {
     UnloadTexture(spinnerTexture);
+    UnloadImage(spinnerImage);
+    UnloadTexture(checkTexture);
 }
 
 /*
@@ -155,11 +157,12 @@ void UserInterface::SetupUI(const char* file)
     GuiSetStyle(DEFAULT, BORDER_WIDTH, 1);
     GuiSetStyle(TEXTBOX, BORDER_WIDTH, 0);
 
-    Image image = LoadImageAnim("../assets/spinner.gif", &spinnerFrameCount);
-    ImageResize(&image, 50, 50);
-    spinnerTexture = LoadTextureFromImage(image);
-    spdlog::info("Frames in GIF: {}", spinnerFrameCount);
-    UnloadImage(image);
+    spinnerImage = LoadImageAnim("../assets/spinner.gif", &spinnerFrameCount);
+    spinnerTexture = LoadTextureFromImage(spinnerImage);
+
+    auto checkImage = LoadImage("../assets/checkmark.png");
+    ImageResize(&checkImage, 50, 50);
+    checkTexture = LoadTextureFromImage(checkImage);
 }
 
 /*
@@ -279,18 +282,46 @@ void UserInterface::DrawDebugInfo()
 }
 
 void UserInterface::DrawPathLoader(const Window &window) {
-    const auto xPos = window.width - 800 - 50;
-    const auto yPos = 50;
+    constexpr auto displayHeight = 50.;
+    constexpr auto displayWidth = 50.;
+
+    const auto xPos = window.width - displayWidth - 50;
+    constexpr auto yPos = 50;
 
     if (pathfindingInProgress) {
-        DrawTexture(spinnerTexture, xPos, yPos, WHITE);
+        if (spinnerFrameTimer.IsActive()) {
+            currentFrame += 1;
+            if (currentFrame >= spinnerFrameCount) currentFrame = 0;
+
+            const auto nextFrameDataOffset = spinnerImage.width*spinnerImage.height*4*currentFrame;
+            UpdateTexture(spinnerTexture, (static_cast<unsigned char *>(spinnerImage.data) + nextFrameDataOffset));
+        }
+        const Rectangle sourceRec = {
+            .x=0.0F,
+            .y=0.0F,
+            .width=static_cast<float>(spinnerTexture.width),
+            .height=static_cast<float>(spinnerTexture.height)
+        };
+        const Rectangle destRec = {
+            .x=static_cast<float>(xPos),
+            .y=yPos,
+            .width=displayWidth,
+            .height=displayHeight
+        };
+
+        constexpr Vector2 origin = { .x=0.0F, .y=0.0F };
+
+        DrawTexturePro(spinnerTexture, sourceRec, destRec, origin, 0.0F, WHITE);
     } else if (showPathfindingComplete) {
         const auto passedTime = std::chrono::high_resolution_clock::now() - lastCompletion;
         if (passedTime >= showTime) {
             showPathfindingComplete = false;
         }
 
-        DrawRectangle(xPos, yPos, 50, 50, BLACK);
+        const float progress = std::chrono::duration<float>(passedTime) / std::chrono::duration<float>(showTime);
+        const float alpha = 1.0F - progress;
+
+        DrawTexture(checkTexture, xPos, yPos, Fade(WHITE, alpha));
     }
 
 }

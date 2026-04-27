@@ -5,6 +5,8 @@
 #include <cstring>
 #include <chrono>
 
+#include "timer.h"
+
 using ms_duration = std::chrono::duration<double, std::milli>;
 
 class UserInterface 
@@ -65,13 +67,18 @@ private:
     Font fontText, fontHeading;
 
     // State for showing the loading spinner when pathfinding
+    Image spinnerImage;
     Texture2D spinnerTexture;
+    Timer spinnerFrameTimer{8};
+    int currentFrame = 0;
     int spinnerFrameCount = 0;
     bool pathfindingInProgress = false;
     bool showPathfindingComplete = false;
     std::chrono::system_clock::time_point lastCompletion = std::chrono::system_clock::from_time_t(0);
     // in nanoseconds
-    static constexpr std::chrono::nanoseconds showTime{500'000'000};
+    static constexpr std::chrono::nanoseconds showTime{1'000'000'000};
+
+    Texture2D checkTexture;
 
     // Should match the PathfindingModel enum in path_finder.h
     int modelSelectionIndex = 2;
