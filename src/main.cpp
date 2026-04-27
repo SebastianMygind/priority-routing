@@ -25,17 +25,17 @@ int main() {
     OSMRenderer renderer(&graph);
     renderer.BuildQuadTree();
 
-    UserInterface ui;
-    ui.SetDebugTotalNodes(graph.GetNodeCount());
-    ui.SetDebugTotalWays(graph.GetWayCount());
-
     SetTraceLogCallback(SPDLogger);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI | FLAG_VSYNC_HINT);
 
     auto window = Window("Routing Simulation");
 
     InitWindow(window.width, window.height, window.title.c_str());
-    ui.SetupFontConfig("../fonts/JetBrainsMono-Regular.ttf");
+    // UI must be initialized after creating the window.
+    UserInterface ui;
+    ui.SetDebugTotalNodes(graph.GetNodeCount());
+    ui.SetDebugTotalWays(graph.GetWayCount());
+    ui.SetupUI("../fonts/JetBrainsMono-Regular.ttf");
 
     Camera2D camera = {};
     camera.zoom = 1.0F;

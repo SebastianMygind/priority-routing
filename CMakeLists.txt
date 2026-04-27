@@ -62,6 +62,8 @@ set(CORE_SOURCES
         src/osm/osm_handler.cpp
         src/osm/osm_handler.h
         src/osm/osm_types.h
+        src/timer.cpp
+        src/timer.h
 )
 
 if (MSVC)

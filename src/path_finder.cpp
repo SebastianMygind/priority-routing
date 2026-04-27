@@ -41,12 +41,14 @@ void PathFinder(OSMGraph& graph, UserInterface& ui)
 
     pathfindingThread = std::thread([&graph, &ui, pathfinder = std::move(pathfinder)]() mutable
     {
+        ui.ActivateLoader();
         threadDone.store(false);
         auto time_start = std::chrono::high_resolution_clock::now();
         pathfinder->FindPath(graph, ui);
         auto time_end = std::chrono::high_resolution_clock::now();
         ui.SetDebugModelTime(time_end - time_start);
         threadDone.store(true);
+        ui.DeactivateLoader();
     });
 
     pathfindingThread.detach();

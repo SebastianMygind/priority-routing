@@ -39,6 +39,12 @@ enum AccumulatorTypes
     paddingType = 4 * V_PAD
 };
 
+UserInterface::~UserInterface() {
+    UnloadTexture(spinnerTexture);
+    UnloadImage(spinnerImage);
+    UnloadTexture(checkTexture);
+}
+
 /*
     Keeps track of and increses the y position of the elements based on their type.
 */
@@ -142,7 +148,7 @@ void UserInterface::DrawCustomSlider(float* value)
 /*
     Sets the fonts needed for the UI and sets the proper raygui style.
 */
-void UserInterface::SetupFontConfig(const char* file) 
+void UserInterface::SetupUI(const char* file)
 { 
     fontText = LoadFontEx(file, TEXT_HEIGHT, nullptr, 0);
     fontHeading = LoadFontEx(file, HEADING_HEIGHT, nullptr, 0);
@@ -150,6 +156,15 @@ void UserInterface::SetupFontConfig(const char* file)
     GuiSetStyle(DEFAULT, TEXT_SIZE, TEXT_HEIGHT);
     GuiSetStyle(DEFAULT, BORDER_WIDTH, 1);
     GuiSetStyle(TEXTBOX, BORDER_WIDTH, 0);
+
+    spinnerImage = LoadImageAnim("../assets/spinner.gif", &spinnerFrameCount);
+    spinnerTexture = LoadTextureFromImage(spinnerImage);
+
+    auto checkImage = LoadImage("../assets/checkmark.png");
+    ImageResize(&checkImage, 50, 50);
+    checkTexture = LoadTextureFromImage(checkImage);
+
+    UnloadImage(checkImage);
 }
 
 /*
@@ -182,6 +197,7 @@ void UserInterface::DrawUserInterface(const Window &window)
     // Draw the UI
 
     DrawRouteInfo();
+    DrawPathLoader(window);
     DrawDebugInfo();
 }
 
@@ -267,11 +283,66 @@ void UserInterface::DrawDebugInfo()
     DrawRectangle(mousePos.x-1, mousePos.y-20, 2, 40, DARKGRAY);
 }
 
+void UserInterface::DrawPathLoader(const Window &window) {
+    constexpr auto displayHeight = 50.;
+    constexpr auto displayWidth = 50.;
 
-/* 
-    A locked UI means that the mouse is interacting with the map, so the UI elements cannot be interacted with.
-    This function should be called before input handling and checks if the mouse is clicking inside the UI.
-    MouseInUI() would therefore signal if the mouse is focused on the UI (if it's left unlocked).
+    const auto xPos = window.width - displayWidth - 50;
+    constexpr auto yPos = 50;
+
+    if (pathfindingInProgress) {
+        if (spinnerFrameTimer.IsActive()) {
+            currentFrame += 1;
+            if (currentFrame >= spinnerFrameCount) currentFrame = 0;
+
+            const auto nextFrameDataOffset = spinnerImage.width*spinnerImage.height*4*currentFrame;
+            UpdateTexture(spinnerTexture, (static_cast<unsigned char *>(spinnerImage.data) + nextFrameDataOffset));
+        }
+        const Rectangle sourceRec = {
+            .x=0.0F,
+            .y=0.0F,
+            .width=static_cast<float>(spinnerTexture.width),
+            .height=static_cast<float>(spinnerTexture.height)
+        };
+        const Rectangle destRec = {
+            .x=static_cast<float>(xPos),
+            .y=yPos,
+            .width=displayWidth,
+            .height=displayHeight
+        };
+
+        constexpr Vector2 origin = { .x=0.0F, .y=0.0F };
+
+        DrawTexturePro(spinnerTexture, sourceRec, destRec, origin, 0.0F, WHITE);
+    }
+
+    const auto passedTime = std::chrono::steady_clock::now() - lastCompletion;
+    if (passedTime >= showTime) {
+        return;
+    }
+
+    const float progress = std::chrono::duration<float>(passedTime) / std::chrono::duration<float>(showTime);
+    const float alpha = 1.0F - progress;
+
+    DrawTexture(checkTexture, xPos, yPos, Fade(WHITE, alpha));
+
+}
+
+void UserInterface::ActivateLoader() {
+    pathfindingInProgress = true;
+}
+
+void UserInterface::DeactivateLoader() {
+    pathfindingInProgress = false;
+    lastCompletion = std::chrono::steady_clock::now();
+}
+
+/*
+    A locked UI means that the mouse is interacting with the map, so the UI
+   elements cannot be interacted with. This function should be called before
+   input handling and checks if the mouse is clicking inside the UI. MouseInUI()
+   would therefore signal if the mouse is focused on the UI (if it's left
+   unlocked).
 */
 void UserInterface::UpdateLockState() 
 {
