@@ -180,6 +180,7 @@ int main() {
     CloseWindow();
 
     renderer.FinishThread();
+    threadKill.store(true);
 
     return 0;
 }
