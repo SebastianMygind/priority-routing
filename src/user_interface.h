@@ -11,9 +11,13 @@ class UserInterface
 {
 public:
 
+    ~UserInterface();
+
     void DrawUserInterface(const Window &window);
-    void SetupFontConfig(const char* file);
+    void SetupUI(const char* file);
     void UpdateLockState();
+    void ActivateLoader();
+    void DeactivateLoader();
 
     bool KeyboardInUI() const { return originTextboxEdit || destinationTextboxEdit; }
     bool MouseInUI()    const { return !GuiIsLocked(); }
@@ -59,7 +63,16 @@ private:
     Rectangle uiRect;
     Vector2 mousePos;
     Font fontText, fontHeading;
-    
+
+    // State for showing the loading spinner when pathfinding
+    Texture2D spinnerTexture;
+    int spinnerFrameCount = 0;
+    bool pathfindingInProgress = false;
+    bool showPathfindingComplete = false;
+    std::chrono::system_clock::time_point lastCompletion = std::chrono::system_clock::from_time_t(0);
+    // in nanoseconds
+    static constexpr std::chrono::nanoseconds showTime{500'000'000};
+
     // Should match the PathfindingModel enum in path_finder.h
     int modelSelectionIndex = 2;
 
@@ -98,6 +111,7 @@ private:
 
     void DrawRouteInfo();
     void DrawDebugInfo();
+    void DrawPathLoader(const Window &window);
 
     void DrawCustomHeading(const char* text);
     void DrawCustomText(const char* text);
