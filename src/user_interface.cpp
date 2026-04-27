@@ -316,7 +316,7 @@ void UserInterface::DrawPathLoader(const Window &window) {
         DrawTexturePro(spinnerTexture, sourceRec, destRec, origin, 0.0F, WHITE);
     }
 
-    const auto passedTime = std::chrono::high_resolution_clock::now() - lastCompletion;
+    const auto passedTime = std::chrono::steady_clock::now() - lastCompletion;
     if (passedTime >= showTime) {
         return;
     }
@@ -334,7 +334,7 @@ void UserInterface::ActivateLoader() {
 
 void UserInterface::DeactivateLoader() {
     pathfindingInProgress = false;
-    lastCompletion = std::chrono::high_resolution_clock::now();
+    lastCompletion = std::chrono::steady_clock::now();
 }
 
 /*
