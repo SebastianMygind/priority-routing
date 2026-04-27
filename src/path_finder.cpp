@@ -5,10 +5,21 @@
 #include "spdlog/spdlog.h"
 #include <chrono>
 #include <memory>
-#include <thread>
+
+std::thread pathfindingThread;
+std::atomic<bool> threadDone = { true };
+std::atomic<bool> threadKill = { false };
 
 void PathFinder(OSMGraph& graph, UserInterface& ui)
 {
+    // Check if thread is already running, if so, kill it
+    if (!threadDone.load())
+    {
+        threadKill.store(true);
+        while (!threadDone.load()) {}
+        threadKill.store(false);
+    }
+
     std::unique_ptr<IPathFinder> pathfinder = nullptr;
     PathfindingModel model = static_cast<PathfindingModel>(ui.GetModel());
 
@@ -28,11 +39,15 @@ void PathFinder(OSMGraph& graph, UserInterface& ui)
             return;
     }
 
-    std::thread ([&graph, &ui, pathfinder = std::move(pathfinder)]() mutable
+    pathfindingThread = std::thread([&graph, &ui, pathfinder = std::move(pathfinder)]() mutable
     {
+        threadDone.store(false);
         auto time_start = std::chrono::high_resolution_clock::now();
         pathfinder->FindPath(graph, ui);
         auto time_end = std::chrono::high_resolution_clock::now();
         ui.SetDebugModelTime(time_end - time_start);
-    }).detach();
+        threadDone.store(true);
+    });
+
+    pathfindingThread.detach();
 };

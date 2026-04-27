@@ -23,7 +23,7 @@ bool Dijkstra::FindPath(OSMGraph& graph, UserInterface& ui)
     dist[source] = 0;
     p_queue.push({dist[source], source});
 
-    while (!p_queue.empty())
+    while (!p_queue.empty() && !threadKill.load())
     {
         // Get the node with the smallest cost + heuristic
         uint64_t current = p_queue.top().second;
