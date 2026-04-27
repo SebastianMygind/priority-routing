@@ -163,6 +163,8 @@ void UserInterface::SetupUI(const char* file)
     auto checkImage = LoadImage("../assets/checkmark.png");
     ImageResize(&checkImage, 50, 50);
     checkTexture = LoadTextureFromImage(checkImage);
+
+    UnloadImage(checkImage);
 }
 
 /*
@@ -312,29 +314,26 @@ void UserInterface::DrawPathLoader(const Window &window) {
         constexpr Vector2 origin = { .x=0.0F, .y=0.0F };
 
         DrawTexturePro(spinnerTexture, sourceRec, destRec, origin, 0.0F, WHITE);
-    } else if (showPathfindingComplete) {
-        const auto passedTime = std::chrono::high_resolution_clock::now() - lastCompletion;
-        if (passedTime >= showTime) {
-            showPathfindingComplete = false;
-            return;
-        }
-
-        const float progress = std::chrono::duration<float>(passedTime) / std::chrono::duration<float>(showTime);
-        const float alpha = 1.0F - progress;
-
-        DrawTexture(checkTexture, xPos, yPos, Fade(WHITE, alpha));
     }
+
+    const auto passedTime = std::chrono::high_resolution_clock::now() - lastCompletion;
+    if (passedTime >= showTime) {
+        return;
+    }
+
+    const float progress = std::chrono::duration<float>(passedTime) / std::chrono::duration<float>(showTime);
+    const float alpha = 1.0F - progress;
+
+    DrawTexture(checkTexture, xPos, yPos, Fade(WHITE, alpha));
 
 }
 
 void UserInterface::ActivateLoader() {
-    showPathfindingComplete = false;
     pathfindingInProgress = true;
 }
 
 void UserInterface::DeactivateLoader() {
     pathfindingInProgress = false;
-    showPathfindingComplete = true;
     lastCompletion = std::chrono::high_resolution_clock::now();
 }
 

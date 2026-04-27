@@ -73,7 +73,6 @@ private:
     int currentFrame = 0;
     int spinnerFrameCount = 0;
     bool pathfindingInProgress = false;
-    bool showPathfindingComplete = false;
     std::chrono::system_clock::time_point lastCompletion = std::chrono::system_clock::from_time_t(0);
     // in nanoseconds
     static constexpr std::chrono::nanoseconds showTime{1'000'000'000};
