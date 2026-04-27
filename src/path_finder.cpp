@@ -1,12 +1,25 @@
 #include "path_finder.h"
 #include "models/dijkstra.h"
 #include "models/a_star.h"
+#include "models/weighted.h"
 #include "spdlog/spdlog.h"
 #include <chrono>
 #include <memory>
 
+std::thread pathfindingThread;
+std::atomic<bool> threadDone = true;
+std::atomic<bool> threadKill = false;
+
 void PathFinder(OSMGraph& graph, UserInterface& ui)
 {
+    // Check if thread is already running, if so, kill it
+    if (!threadDone.load())
+    {
+        threadKill.store(true);
+        while (!threadDone.load()) {}
+        threadKill.store(false);
+    }
+
     std::unique_ptr<IPathFinder> pathfinder = nullptr;
     PathfindingModel model = static_cast<PathfindingModel>(ui.GetModel());
 
@@ -18,14 +31,23 @@ void PathFinder(OSMGraph& graph, UserInterface& ui)
         case PathfindingModel::AStar:
             pathfinder = std::make_unique<AStar>();
             break;
+        case PathfindingModel::Weighted:
+            pathfinder = std::make_unique<Weighted>();
+            break;
         default:
             spdlog::error("Invalid pathfinding model selected");
             return;
     }
 
-    auto time_start = std::chrono::high_resolution_clock::now();
-    pathfinder->FindPath(graph, ui);
-    auto time_end = std::chrono::high_resolution_clock::now();
+    pathfindingThread = std::thread([&graph, &ui, pathfinder = std::move(pathfinder)]() mutable
+    {
+        threadDone.store(false);
+        auto time_start = std::chrono::high_resolution_clock::now();
+        pathfinder->FindPath(graph, ui);
+        auto time_end = std::chrono::high_resolution_clock::now();
+        ui.SetDebugModelTime(time_end - time_start);
+        threadDone.store(true);
+    });
 
-    ui.SetDebugModelTime(time_end - time_start);    
+    pathfindingThread.detach();
 };

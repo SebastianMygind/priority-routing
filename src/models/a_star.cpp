@@ -12,23 +12,23 @@ const double H_WEIGHT = 1.0;
 
 bool AStar::FindPath(OSMGraph& graph, UserInterface& ui)
 {
-    using PQNode = std::pair<double, uint64_t>;
+    using PQNode = std::pair<double, OSMNodeID>;
     std::priority_queue<PQNode, std::vector<PQNode>, std::greater<>> p_queue;
 
     auto source = graph.GetNodeA();
     auto destination = graph.GetNodeB();
     
     auto adj_list = graph.GetAdjList();
-    auto dist = graph.GetAdjListDist();
+    auto cost = graph.GetAdjListDist();
     auto prev = graph.GetAdjListPrev();
 
-    dist[source] = 0;
-    p_queue.push({dist[source], source});
+    cost[source] = 0;
+    p_queue.push({cost[source], source});
 
-    while (!p_queue.empty())
+    while (!p_queue.empty() && !threadKill.load())
     {
         // Get the node with the smallest cost + heuristic
-        uint64_t current = p_queue.top().second;
+        OSMNodeID current = p_queue.top().second;
         p_queue.pop();
 
         // If we reached the end node, reconstruct the path
@@ -54,11 +54,11 @@ bool AStar::FindPath(OSMGraph& graph, UserInterface& ui)
 
             double distance = Haversine(nodeA.location, nodeB.location);
 
-            double alt = dist[current] + distance;
+            double alt = cost[current] + distance;
             
-            if (alt < dist[neighborID])
+            if (alt < cost[neighborID])
             {
-                dist[neighborID] = alt;
+                cost[neighborID] = alt;
                 prev[neighborID] = current;
 
                 // Calculate the heuristic value

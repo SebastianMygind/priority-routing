@@ -61,7 +61,7 @@ private:
     Font fontText, fontHeading;
     
     // Should match the PathfindingModel enum in path_finder.h
-    int modelSelectionIndex = 1;
+    int modelSelectionIndex = 2;
 
     float objDistance = 0.5;
     float objTime     = 0.5;

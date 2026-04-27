@@ -58,6 +58,8 @@ set(CORE_SOURCES
         src/models/dijkstra.h
         src/models/a_star.cpp
         src/models/a_star.h
+        src/models/weighted.cpp
+        src/models/weighted.h
         src/osm/graph.cpp
         src/osm/graph.h
         src/osm/renderer.cpp
