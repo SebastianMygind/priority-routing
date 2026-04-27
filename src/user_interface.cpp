@@ -316,6 +316,7 @@ void UserInterface::DrawPathLoader(const Window &window) {
         const auto passedTime = std::chrono::high_resolution_clock::now() - lastCompletion;
         if (passedTime >= showTime) {
             showPathfindingComplete = false;
+            return;
         }
 
         const float progress = std::chrono::duration<float>(passedTime) / std::chrono::duration<float>(showTime);
