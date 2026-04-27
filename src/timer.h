@@ -15,7 +15,6 @@ public:
     bool IsActive();
 
 private:
-    // In hertz
     std::chrono::__enable_if_is_duration<std::chrono::nanoseconds> nsPerTick{};
     std::chrono::system_clock::time_point lastTick;
 };
