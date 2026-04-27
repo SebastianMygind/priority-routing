@@ -1,5 +1,4 @@
 #include "osm_handler.h"
-#include "osmium/handler.hpp"
 #include "osmium/osm.hpp"
 
 OSMHandler::OSMHandler(OSMGraph& graph) : graph(graph)

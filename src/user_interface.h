@@ -5,7 +5,7 @@
 #include <cstring>
 #include <chrono>
 
-typedef std::chrono::duration<double, std::milli> ms_duration;
+using ms_duration = std::chrono::duration<double, std::milli>;
 
 class UserInterface 
 {

@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <format>
 
-#include "raymath.h"
 #include "Window.h"
 
 #include "spdlog/spdlog.h"

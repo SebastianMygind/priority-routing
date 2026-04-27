@@ -1,22 +1,15 @@
-﻿#include "../attribute_utils.h"
-#include "../caching.h"
-#include "../node_attributes.h"
-
-#include <filesystem>
-#include <float.h>
-#include <math.h>
+﻿#include <filesystem>
+#include <cfloat>
+#include <cmath>
 #ifdef _WIN32
 #define NOUSER
 #endif
 
 #include "graph.h"
 #include "tags.h"
-#include "tinyxml2.h"
-#include "rlgl.h"
 #include "spdlog/spdlog.h"
 
 #include <algorithm>
-#include <cmath>
 #include <array>
 #include <ranges>
 #include <osmium/io/any_input.hpp>
@@ -177,114 +170,6 @@ std::vector<OSMNodeID> OSMGraph::getNodesWithTourism() const {
     }
 
     return nodesWithTourism;
-}
-
-std::unordered_map<std::string, std::pair<OSMNodeID, double>> GenerateAttrMap (attr_map_t& attrInfo) {
-    std::unordered_map<std::string, std::pair<OSMNodeID, double>> map;
-
-    for (const auto& [attrName, tuple] : attrInfo) {
-        const auto goal = std::get<1>(tuple);
-
-        double startValue = 0;
-        if (goal == Goal::Maximize) {
-            startValue = DBL_MIN;
-        } else {
-            startValue = DBL_MAX;
-        }
-
-        map[attrName] = {0,startValue};
-    }
-
-    return map;
-}
-
-file_format_t OSMGraph::GenerateNodeAttributes(attr_map_t attrInfo) {
-    file_format_t fileAtributes;
-
-    for (const auto& [wayNodes, tags] : ways | std::views::values) {
-        auto highwayTag = tags.find("highway");
-        auto oneWayTag = tags.find("oneway");
-        auto speedTag = tags.find("maxspeed");
-
-        if (highwayTag == tags.end()) continue;
-
-        if (!kDrivableHighways.contains(highwayTag->second)) continue;
-
-        const double speed = (speedTag != tags.end())
-                                 ? ParseMaxSpeed(speedTag->second)
-                                 : GetDefaultSpeed(highwayTag->second);
-
-        for (const auto node : wayNodes) {
-            if (fileAtributes.contains(node)) {
-                continue;
-            }
-
-            auto bestResults = GenerateAttrMap(attrInfo);
-
-
-            for (const auto& [attrName, tuple] : attrInfo) {
-                const auto func = std::get<0>(tuple);
-                const auto& searchSpace = std::get<2>(tuple);
-                auto& currentAttr = bestResults[attrName];
-                // Call the function to update the best result.
-                func(nodes, searchSpace, node, currentAttr);
-            }
-
-            auto nodeAttributes = NodeAttributes();
-
-            for (const auto& [name, val] : bestResults) {
-                nodeAttributes.attributes[name] = val.second;
-            }
-            fileAtributes[node] = nodeAttributes;
-        }
-    }
-
-    return fileAtributes;
-}
-
-file_format_t OSMGraph::GetNodeAttributes() {
-    file_format_t nodeAttributes;
-
-    const std::vector<OSMNodeID>& tourismNodes = getNodesWithTourism();
-
-    attr_map_t attributeMap;
-
-    attributeMap["tourism"] = std::make_tuple(TourismFunc, Goal::Minimize, tourismNodes);
-
-    const auto attrCount = attributeMap.size();
-    const auto attrHash = GetAttrHash(attributeMap);
-
-    // Check if cache has valid info
-    const auto* const filepath = "../cache/attributes.cache";
-
-    const auto dataSetHash = DataSetHash(pathForOSM);
-    const auto combinedHash = CombineHash(attrHash, dataSetHash);
-
-    if (cacheIsValid(filepath, combinedHash)) {
-        spdlog::info(
-            "cached tourism file exists, loading from storage");
-
-        if (auto attrResult = ReadFromCache(filepath, attributeMap); attrResult.has_value()) {
-            nodeAttributes = attrResult.value();
-        } else {
-            spdlog::critical(attrResult.error());
-            exit(-1);
-        }
-        return nodeAttributes;
-    }
-
-    spdlog::info("Generating node attributes, this may take a while...");
-    nodeAttributes = GenerateNodeAttributes(attributeMap);
-
-    const auto writeRes =
-        WriteToCache(filepath, nodeAttributes, combinedHash, attrCount);
-
-    if (!writeRes.has_value()) {
-        spdlog::critical(writeRes.error());
-        exit(-1);
-    }
-
-    return nodeAttributes;
 }
 
 Vector2 MercatorProjection(Coord location)

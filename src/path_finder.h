@@ -1,8 +1,7 @@
 #pragma once
 #include "osm/graph.h"
 #include "user_interface.h"
-#include <sstream>
-#include <optional>
+
 #include <thread>
 #include <atomic>
 

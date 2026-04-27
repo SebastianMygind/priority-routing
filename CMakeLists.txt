@@ -21,12 +21,7 @@ FetchContent_Declare(
         GIT_PROGRESS TRUE
         SYSTEM
 )
-FetchContent_Declare(
-        tinyxml2
-        GIT_REPOSITORY https://github.com/leethomason/tinyxml2
-        GIT_TAG 11.0.0
-        GIT_PROGRESS TRUE
-)
+
 
 FetchContent_Declare(
         googletest
@@ -37,7 +32,6 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(googletest)
 FetchContent_MakeAvailable(raylib)
-FetchContent_MakeAvailable(tinyxml2)
 
 # 1. Define raygui as a library so it's only compiled once
 add_library(raygui_lib OBJECT vendor/raygui_impl.cpp)
@@ -67,14 +61,7 @@ set(CORE_SOURCES
         vendor/raygui.h
         src/osm/osm_handler.cpp
         src/osm/osm_handler.h
-        src/caching.cpp
-        src/caching.h
-        src/node_attributes.cpp
-        src/node_attributes.h
-        src/attribute_utils.cpp
-        src/attribute_utils.h
-        src/osm_types.cpp
-        src/osm_types.h
+        src/osm/osm_types.h
 )
 
 if (MSVC)
@@ -98,7 +85,6 @@ target_link_libraries(
         priority_routing
         PRIVATE
         raylib
-        tinyxml2
         spdlog::spdlog
         BZip2::BZip2
         ZLIB::ZLIB
@@ -120,7 +106,6 @@ target_link_libraries(
         priority_routing_tests
         PRIVATE
         raylib
-        tinyxml2
         spdlog::spdlog
         BZip2::BZip2
         ZLIB::ZLIB
