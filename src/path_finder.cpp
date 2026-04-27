@@ -5,6 +5,7 @@
 #include "spdlog/spdlog.h"
 #include <chrono>
 #include <memory>
+#include <thread>
 
 void PathFinder(OSMGraph& graph, UserInterface& ui)
 {
@@ -27,9 +28,11 @@ void PathFinder(OSMGraph& graph, UserInterface& ui)
             return;
     }
 
-    auto time_start = std::chrono::high_resolution_clock::now();
-    pathfinder->FindPath(graph, ui);
-    auto time_end = std::chrono::high_resolution_clock::now();
-
-    ui.SetDebugModelTime(time_end - time_start);    
+    std::thread ([&graph, &ui, pathfinder = std::move(pathfinder)]() mutable
+    {
+        auto time_start = std::chrono::high_resolution_clock::now();
+        pathfinder->FindPath(graph, ui);
+        auto time_end = std::chrono::high_resolution_clock::now();
+        ui.SetDebugModelTime(time_end - time_start);
+    }).detach();
 };
