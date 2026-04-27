@@ -61,14 +61,7 @@ set(CORE_SOURCES
         vendor/raygui.h
         src/osm/osm_handler.cpp
         src/osm/osm_handler.h
-        src/caching.cpp
-        src/caching.h
-        src/node_attributes.cpp
-        src/node_attributes.h
-        src/attribute_utils.cpp
-        src/attribute_utils.h
-        src/osm_types.cpp
-        src/osm_types.h
+        src/osm/osm_types.h
 )
 
 if (MSVC)

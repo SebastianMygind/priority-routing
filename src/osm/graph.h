@@ -1,8 +1,6 @@
 #pragma once
 #include "raylib.h"
-#include "../osm_types.h"
-#include "../attribute_utils.h"
-#include "../caching.h"
+#include "osm_types.h"
 
 #include <vector>
 #include <unordered_map>
@@ -94,8 +92,6 @@ private:
     std::unordered_map<OSMNodeID, OSMNodeID> adj_list_prev;
 
     std::vector<OSMNodeID> getNodesWithTourism() const;
-    file_format_t GetNodeAttributes();
-    file_format_t GenerateNodeAttributes(attr_map_t attrInfo);
 
     // Nodes that is not a part of a way
     std::vector<OSMNodeID> places;
