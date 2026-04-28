@@ -16,7 +16,8 @@ public:
 enum class PathfindingModel {
     Dijkstra = 0,
     AStar = 1,
-    Weighted = 2
+    Weighted = 2,
+    Pareto = 3,
 };
 
 extern std::thread pathfindingThread;

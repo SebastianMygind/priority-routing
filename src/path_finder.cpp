@@ -1,5 +1,6 @@
 #include "path_finder.h"
 #include "models/dijkstra.h"
+#include "models/pareto.h"
 #include "models/a_star.h"
 #include "models/weighted.h"
 #include "spdlog/spdlog.h"
@@ -33,6 +34,9 @@ void PathFinder(OSMGraph& graph, UserInterface& ui)
             break;
         case PathfindingModel::Weighted:
             pathfinder = std::make_unique<Weighted>();
+            break;
+        case PathfindingModel::Pareto:
+            pathfinder = std::make_unique<Pareto>();
             break;
         default:
             spdlog::error("Invalid pathfinding model selected");

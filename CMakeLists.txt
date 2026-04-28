@@ -50,6 +50,8 @@ set(CORE_SOURCES
         src/user_interface.h
         src/models/dijkstra.cpp
         src/models/dijkstra.h
+        src/models/pareto.cpp
+        src/models/pareto.h
         src/models/a_star.cpp
         src/models/a_star.h
         src/models/weighted.cpp
