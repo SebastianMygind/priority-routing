@@ -24,22 +24,30 @@ inline Cost operator+(const Cost& a, const Cost& b)
     };
 }
 
-// a dominates b if a is better/equal in both,
-// and strictly better in at least one.
 bool Dominates(const Cost& a, const Cost& b)
 {
-    return (a.distance <= b.distance &&
-            a.time <= b.time &&
-           (a.distance < b.distance ||
-            a.time < b.time));
+    return (
+        a.distance <= b.distance &&
+        a.time <= b.time &&
+        (
+            a.distance < b.distance ||
+            a.time < b.time
+        )
+    );
 }
+
+// -------------------------------------
+// Label stores path via parent pointer
+// -------------------------------------
 
 struct Label
 {
     OSMNodeID node;
     Cost cost;
 
-    // priority queue ordering (lexicographic)
+    std::shared_ptr<Label> parent;
+
+    // PQ ordering
     bool operator>(const Label& other) const
     {
         if(cost.distance != other.cost.distance)
@@ -57,79 +65,81 @@ struct ParetoRoute
     double totalTime;
 };
 
+
 bool Pareto::FindPath(OSMGraph& graph, UserInterface& ui)
 {
-    // Pareto frontier at each node
-    std::unordered_map<OSMNodeID, std::vector<Cost>> frontier;
-
-    std::priority_queue<Label, std::vector<Label>, std::greater<Label>> pq;
+    using LabelPtr = std::shared_ptr<Label>;
 
     OSMNodeID start = graph.GetNodeA();
-    OSMNodeID end = graph.GetNodeB();
+    OSMNodeID goal = graph.GetNodeB();
 
     auto adj_list = graph.GetAdjList();
 
-    frontier[start].push_back({0.0,0.0});
-    pq.push({start,{0.0,0.0}});
+    // Pareto labels per node
+    std::unordered_map<OSMNodeID, std::vector<LabelPtr>> frontier;
 
-    while(!pq.empty())
+    auto cmp =
+        [](const LabelPtr& a, const LabelPtr& b)
+        {
+            return *a > *b;
+        };
+
+    std::priority_queue<LabelPtr, std::vector<LabelPtr>, decltype(cmp)> pq(cmp);
+
+    auto startLabel = std::make_shared<Label>();
+
+    startLabel->node = start;
+    startLabel->cost = {0,0};
+    startLabel->parent = nullptr;
+
+    frontier[start].push_back(startLabel);
+
+    pq.push(startLabel);
+
+    while(!pq.empty() && !threadKill.load())
     {
-        Label currentLabel = pq.top();
+        auto current = pq.top();
         pq.pop();
 
-        OSMNodeID current = currentLabel.node;
-        Cost currentCost = currentLabel.cost;
+        OSMNodeID currentNode = current->node;
 
-        OSMNode d = graph.GetNode(current);
-
-        if (current == end)
-        {
-            return true;
-        }
-
-        printf("%ld \n", current);
-
-        // Expand neighbors
-        for (std::pair<OSMNodeID, OSMWayID> neighbor : adj_list.at(current))
+        if (currentNode == goal)
+            break;
+        printf("%u\n", currentNode);
+        for(auto neighbor : adj_list.at(currentNode))
         {
             OSMNodeID neighborID = neighbor.first;
-            OSMWayID edgeWay     = neighbor.second;
+            OSMWayID edgeWay = neighbor.second;
 
-            const OSMNode& nodeA = graph.GetNode(current);
+            graph.nodeTest.push_back(neighborID);
+
+            if (neighborID == goal)
+                spdlog::info("goal vistited");
+
+            const OSMNode& nodeA = graph.GetNode(currentNode);
             const OSMNode& nodeB = graph.GetNode(neighborID);
-            const OSMWay&  way   = graph.GetWay(edgeWay);
+            const OSMWay& way = graph.GetWay(edgeWay);
 
             auto highwayTag = way.tags.find("highway");
-            auto speedTag   = way.tags.find("maxspeed");
+            auto speedTag = way.tags.find("maxspeed");
 
-            double speed =
-                (speedTag != way.tags.end())
-                    ? ParseMaxSpeed(speedTag->second)
-                    : GetDefaultSpeed(highwayTag->second);
+            double speed = (speedTag != way.tags.end())
+                ? ParseMaxSpeed(speedTag->second)
+                : GetDefaultSpeed(highwayTag->second);
 
-            double speedMS  = KmhToMS(speed);
+            double speedMS = KmhToMS(speed);
             double distance = Haversine(nodeA.location, nodeB.location);
-            double timeToDrive = distance / speedMS;
+            double driveTime = distance / speedMS;
 
-            Cost edgeCost {
-                distance,
-                timeToDrive
-            };
-
-            Cost newCost = currentCost + edgeCost;
-
-            //-----------------------------------
-            // Pareto dominance check
-            //-----------------------------------
+            Cost edgeCost = { distance, driveTime };
+            Cost newCost = current->cost + edgeCost;
 
             auto& labels = frontier[neighborID];
-
             bool dominated = false;
 
-            // If any existing label dominates new one -> skip
-            for(const Cost& c : labels)
+            for(auto& existing : labels)
             {
-                if(Dominates(c, newCost))
+                if(Dominates(existing->cost, newCost))
                 {
                     dominated = true;
                     break;
@@ -139,48 +149,51 @@ bool Pareto::FindPath(OSMGraph& graph, UserInterface& ui)
             if(dominated)
                 continue;
 
-            // Remove labels dominated by new label
+            // Remove labels dominated
             labels.erase(
                 std::remove_if(
                     labels.begin(),
                     labels.end(),
-                    [&](const Cost& c)
-                    {
-                        return Dominates(
-                            newCost,
-                            c
-                        );
+                    [&](const LabelPtr& l){
+                        return Dominates(newCost, l->cost);
                     }),
                 labels.end()
             );
 
-            // Add new non-dominated label
-            labels.push_back(newCost);
+            auto newLabel = std::make_shared<Label>();
+            newLabel->node   = neighborID;
+            newLabel->cost   = newCost;
+            newLabel->parent = current;
 
-            pq.push({neighborID, newCost});
+            labels.push_back(newLabel);
+
+            pq.push(newLabel);
         }
     }
 
-    
-    
+
+
     // std::vector<ParetoRoute> results;
 
-    // for(auto solution : frontier[end])
+    // for(auto& solution : frontier[goal])
     // {
     //     ParetoRoute route;
-
-    //     route.totalDistance = solution.second.distance;
-    //     route.totalTime = solution.second.time;
+    //     route.totalDistance = solution->cost.distance;
+    //     route.totalTime = solution->cost.time;
 
     //     std::vector<OSMNodeID> reversed;
 
-    //     std::pair<OSMNodeID, Cost> node = solution;
+    //     LabelPtr p = solution;
 
-    //     while(node.first != 0)
+    //     while(p)
     //     {
-    //         reversed.push_back(node.first);
+    //         reversed.push_back(
+    //             p->node
+    //         );
 
-    //         node = frontier[node.first];
+    //         graph.InsertPath(p->node);
+
+    //         p = p->parent;
     //     }
 
     //     route.path.assign(
@@ -190,5 +203,6 @@ bool Pareto::FindPath(OSMGraph& graph, UserInterface& ui)
 
     //     results.push_back(route);
     // }
+
     return false;
 }

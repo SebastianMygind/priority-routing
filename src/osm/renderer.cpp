@@ -308,7 +308,15 @@ void OSMRenderer::PrepareGraph(Camera2D& camera, Window window, Vector2 mouseWor
         }
     }
 
+    for (const OSMNodeID& id : m_pGraph->nodeTest)
+    {
+        const OSMNode& current_node = m_pGraph->GetNode(id);
 
+        Vector2 p1 = MercatorProjection(current_node.location);
+        float radius = 5.F * (1.F / camera.zoom);
+
+        nextPacket.nodes.emplace_back(p1, radius, RED);
+    }
 
 
 

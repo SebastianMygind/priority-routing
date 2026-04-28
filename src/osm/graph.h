@@ -97,8 +97,10 @@ private:
     std::vector<OSMNodeID> places;
 
     std::unordered_map<std::string, Tree2D> tree2d;
+
    
 public:
+    std::vector<OSMNodeID> nodeTest;
 
     friend class OSMRenderer;
     friend class OSMHandler;
