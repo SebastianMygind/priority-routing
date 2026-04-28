@@ -76,7 +76,11 @@ int main() {
 
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !ui.MouseInUI() && camera.zoom > 7.F)
         {
-            AABB bounds = GetScreenLocationBounds(camera, (float)window.width * window.dpi.x, (float)window.height * window.dpi.y);
+            AABB bounds = GetScreenLocationBounds(
+                camera,
+                static_cast<float>(window.width) * window.dpi.x,
+                static_cast<float>(window.height) * window.dpi.y
+            );
 
             LayeredMapObjects visibleNodes(4);
             renderer.m_Tree.Query(bounds, &visibleNodes, nullptr, 20);

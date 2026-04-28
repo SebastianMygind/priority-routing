@@ -9,30 +9,30 @@
 #include <thread>
 
 
-typedef std::vector<Vector2> Polygon;
+using Polygon = std::vector<Vector2>;
 
 struct AABB 
 {
     double minX, minY;
     double maxX, maxY;
 
-    bool contains(double x, double y) const {
+    [[nodiscard]] bool contains(double x, double y) const {
         return x >= minX && x <= maxX &&
                y >= minY && y <= maxY;
     }
 
-    bool contains(const AABB& other) const {
+    [[nodiscard]] bool contains(const AABB& other) const {
     return other.minX >= minX &&
            other.maxX <= maxX &&
            other.minY >= minY &&
            other.maxY <= maxY;
     }
 
-    bool intersects(const AABB& other) const {
-        return !(other.minX > maxX || 
-                 other.maxX < minX ||
-                 other.minY > maxY ||
-                 other.maxY < minY);
+    [[nodiscard]] bool intersects(const AABB& other) const {
+        return other.minX <= maxX &&
+                 other.maxX >= minX &&
+                 other.minY <= maxY &&
+                 other.maxY >= minY;
     }
 };
 
@@ -49,8 +49,8 @@ using LayeredMapObjects = std::vector<MapObjects>;
 class QuadNode 
 {
 public:
-    QuadNode(const AABB& boundary, int capacity)
-        : boundary(boundary), capacity(capacity), divided(false) {}
+    QuadNode(const AABB& boundary, const int capacity)
+        : boundary(boundary), capacity(capacity){}
 
     bool InsertNode(const MapObject& obj);
     bool InsertWay(const MapObject& obj);
@@ -60,7 +60,7 @@ public:
 private:
     AABB boundary;
     size_t capacity;
-    bool divided;
+    bool divided{false};
 
     std::vector<MapObject> nodes;
     std::vector<MapObject> ways;
@@ -109,7 +109,7 @@ struct RenderPacket
 class OSMRenderer
 {
 public:
-    OSMRenderer(OSMGraph* graph);
+    explicit OSMRenderer(OSMGraph* graph);
 
     void BuildQuadTree();
     void PrepareGraph(Camera2D& camera, Window window, Vector2 mouseWorldPos);
@@ -120,16 +120,16 @@ public:
     void ToggleQuad() { showQuad = !showQuad; }
     void CyclePOI() { showPoi = (showPoi + 1) % 4; }
 
-    std::string GetPOIText() { return poiText[showPoi]; }
+    std::string GetPOIText() { return poiText.at(showPoi); }
 
     // Rendering stats (call after DrawGraph)
-    inline size_t GetNodeRenderCount() const 
+    size_t GetNodeRenderCount() const
     { 
         size_t a = 0; 
         for (const MapObjects& layer : m_NodesToRender) { a += layer.size(); }
         return a; 
     }
-    inline size_t GetWayRenderCount() const 
+    size_t GetWayRenderCount() const
     { 
         size_t a = 0; 
         for (const MapObjects& layer : m_WaysToRender) { a += layer.size(); }

@@ -21,9 +21,8 @@ void PathFinder(OSMGraph& graph, UserInterface& ui)
     }
 
     std::unique_ptr<IPathFinder> pathfinder = nullptr;
-    PathfindingModel model = static_cast<PathfindingModel>(ui.GetModel());
 
-    switch (model)
+    switch (static_cast<PathfindingModel>(ui.GetModel()))
     {
         case PathfindingModel::Dijkstra:
             pathfinder = std::make_unique<Dijkstra>();
@@ -43,10 +42,10 @@ void PathFinder(OSMGraph& graph, UserInterface& ui)
     {
         ui.ActivateLoader();
         threadDone.store(false);
-        auto time_start = std::chrono::high_resolution_clock::now();
+        const auto timeStart = std::chrono::high_resolution_clock::now();
         pathfinder->FindPath(graph, ui);
-        auto time_end = std::chrono::high_resolution_clock::now();
-        ui.SetDebugModelTime(time_end - time_start);
+        const auto timeEnd = std::chrono::high_resolution_clock::now();
+        ui.SetDebugModelTime(timeEnd - timeStart);
         threadDone.store(true);
         ui.DeactivateLoader();
     });

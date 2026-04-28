@@ -30,7 +30,7 @@ constexpr float     UI_DEBUG_HEIGHT = 250.F;
     Accumulator types are used with elementY to determine the y position of the next element.
     Use the type of the element you're drawing or call elementY(padding) to add spacing between elements.
 */
-enum AccumulatorTypes 
+enum AccumulatorTypes
 {
     headingType = HEADING_HEIGHT + V_PAD, 
     textType = TEXT_HEIGHT + V_PAD,
@@ -48,8 +48,8 @@ UserInterface::~UserInterface() {
 /*
     Keeps track of and increses the y position of the elements based on their type.
 */
-float UserInterface::elementY(int type) {
-    auto current = accumulator;
+float UserInterface::elementY(const int type) {
+    const auto current = accumulator;
     accumulator += type;
     return current;
 };
@@ -57,16 +57,16 @@ float UserInterface::elementY(int type) {
 /*
     The following functions are shortened "presets" for custom styled raygui elements.
 */
-void UserInterface::DrawCustomHeading(const char* heading)
+void UserInterface::DrawCustomHeading(const char* text)
 {
     elementY(paddingType);
 
-    Vector2 headingPos{
+    const Vector2 headingPos{
         .x = elementX,
         .y = elementY(headingType)
     };
 
-    DrawTextEx(fontHeading, heading, headingPos, HEADING_HEIGHT, 1.2, BLACK);
+    DrawTextEx(fontHeading, text, headingPos, HEADING_HEIGHT, 1.2, BLACK);
     DrawRectangle(elementX, elementY(paddingType), elementWidth, 1, GRAY);
 }
 
@@ -85,21 +85,21 @@ void UserInterface::DrawCustomTextbox(char* text, bool& edit)
 {
     auto const yPos = elementY(boxType);
 
-    Rectangle textboxPos{
+    const Rectangle textboxPos{
         .x = elementX,
         .y = yPos,
         .width = elementWidth - BOX_HEIGHT,
         .height = BOX_HEIGHT
     };
 
-    Rectangle outlinePos{
+    const Rectangle outlinePos{
         .x = elementX,
         .y = yPos,
         .width = elementWidth,
         .height = BOX_HEIGHT
     };
 
-    Rectangle buttonPos{
+    const Rectangle buttonPos{
         .x = elementWidth - BOX_HEIGHT - H_PAD.second,
         .y = yPos,
         .width = BOX_HEIGHT,
@@ -111,16 +111,15 @@ void UserInterface::DrawCustomTextbox(char* text, bool& edit)
         edit = !edit;
     }
     DrawRectangleLinesEx(outlinePos, 1, GRAY);
-    if (GuiButton(buttonPos, "#113#"))
+    if (GuiButton(buttonPos, "#113#") != 0)
     {
         text[0] = '\0';
         wasPreviouslyEditing = true;
     }
 }
 
-void UserInterface::DrawCustomSelection(const char* text, float posY, int* selection, bool& edit)
-{
-    Rectangle selectionPos{
+void UserInterface::DrawCustomSelection(const char* text, float posY, int* selection, bool& edit) const {
+    const Rectangle selectionPos{
         .x = elementX,
         .y = posY,
         .width = elementWidth,
@@ -135,7 +134,7 @@ void UserInterface::DrawCustomSelection(const char* text, float posY, int* selec
 
 void UserInterface::DrawCustomSlider(float* value)
 {
-    Rectangle sliderPos{
+    const Rectangle sliderPos{
         .x = elementX,
         .y = elementY(sliderType),
         .width = elementWidth,
@@ -265,7 +264,7 @@ void UserInterface::DrawDebugInfo()
     elementWidth = uiRect.width + H_PAD.second;
     accumulator = debRect.y;
 
-    // The begginning of the debug panel
+    // The beginning of the debug panel
 
     GuiPanel(debRect, nullptr);
     
