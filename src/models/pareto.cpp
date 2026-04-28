@@ -80,10 +80,17 @@ bool Pareto::FindPath(OSMGraph& graph, UserInterface& ui)
         OSMNodeID current = currentLabel.node;
         Cost currentCost = currentLabel.cost;
 
+        OSMNode d = graph.GetNode(current);
+
+        if (current == end)
+        {
+            return true;
+        }
+
         printf("%ld \n", current);
 
         // Expand neighbors
-        for (auto neighbor : adj_list.at(current))
+        for (std::pair<OSMNodeID, OSMWayID> neighbor : adj_list.at(current))
         {
             OSMNodeID neighborID = neighbor.first;
             OSMWayID edgeWay     = neighbor.second;

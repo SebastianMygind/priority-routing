@@ -126,6 +126,9 @@ bool OSMGraph::BuildAdjList()
             OSMNode nodeA = nodes[a];
             OSMNode nodeB = nodes[b];
 
+            adj_list.try_emplace(a, std::vector<std::pair<OSMNodeID, OSMWayID>>());
+            adj_list.try_emplace(b, std::vector<std::pair<OSMNodeID, OSMWayID>>());
+
             adj_list_dist.insert({a, INFINITY});
             adj_list_dist.insert({b, INFINITY});
             adj_list_prev.insert({a, 0xFFFFFFFF});

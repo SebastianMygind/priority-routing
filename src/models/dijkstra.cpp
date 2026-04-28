@@ -41,7 +41,7 @@ bool Dijkstra::FindPath(OSMGraph& graph, UserInterface& ui)
         }
 
         // Update distances to neighbors
-        for (std::pair<OSMNodeID, OSMWayID> neighbor : adj_list[current])
+        for (std::pair<OSMNodeID, OSMWayID> neighbor : adj_list.at(current))
         {
             OSMNodeID neighborID = neighbor.first;
             OSMWayID edgeWay = neighbor.second;
