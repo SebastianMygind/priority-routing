@@ -59,7 +59,10 @@ public:
 
     auto& GetWays() const { return ways; }
 
-    std::pair<OSMNodeID, double> GetNearestNode(std::string tag, Coord location) { return tree2d.at(tag).Nearest(location); }
+    std::pair<OSMNodeID, double> GetNearestNode(
+        const std::string& tag,
+        const Coord location
+    ) { return tree2d.at(tag).Nearest(location); }
 
     OSMNodeID GetNodeA() const { return selectedNodeA; }
     OSMNodeID GetNodeB() const { return selectedNodeB; }

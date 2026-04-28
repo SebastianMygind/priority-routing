@@ -33,9 +33,9 @@ void OSMRenderer::BuildQuadTree()
     {
         const Coord& location = node.location;
 
-        MapObject obj;
+        MapObject obj{};
         obj.id = nodeId;
-        obj.bounds = { location.lon, location.lat, location.lon, location.lat };
+        obj.bounds = { .minX=location.lon, .minY=location.lat, .maxX=location.lon, .maxY=location.lat };
 
         if (auto tag = node.tags.find("amenity"); tag != node.tags.end())
         {
@@ -69,18 +69,18 @@ void OSMRenderer::BuildQuadTree()
         const OSMWay& way = wayPair.second;
 
         auto highwayTag = way.tags.find("highway");
-        auto landuseTag = way.tags.find("landuse");
-        bool isHighway = highwayTag != way.tags.end();
+        auto landUseTag = way.tags.find("landuse");
+        const bool isHighway = highwayTag != way.tags.end();
 
-        bool isZoomLevel = (isHighway && (kMotorways.find(highwayTag->second) != kMotorways.end() ||
-                                         kPrimary.find(highwayTag->second) != kPrimary.end() ||
-                                         kSecondary.find(highwayTag->second) != kSecondary.end() ||
-                                         kTertiary.find(highwayTag->second) != kTertiary.end())) || 
-                                         (landuseTag != way.tags.end());
+        const bool isZoomLevel = (isHighway && (kMotorways.contains(highwayTag->second) ||
+                                         kPrimary.contains(highwayTag->second) ||
+                                         kSecondary.contains(highwayTag->second) ||
+                                         kTertiary.contains(highwayTag->second))) ||
+                                         (landUseTag != way.tags.end());
 
 
-        AABB box;
-        OSMNode& node = m_pGraph->nodes[way.nodes[0]];
+        AABB box{};
+        OSMNode& node = m_pGraph->nodes[way.nodes.at(0)];
         Coord& location = node.location;
         box.minX = box.maxX = location.lon;
         box.minY = box.maxY = location.lat;
@@ -95,22 +95,22 @@ void OSMRenderer::BuildQuadTree()
 
             if (isHighway)
             {
-                MapObject obj;
+                MapObject obj{};
                 obj.id = nodeRef;
-                obj.bounds = { location.lon, location.lat, location.lon, location.lat };
+                obj.bounds = { .minX=location.lon, .minY=location.lat, .maxX=location.lon, .maxY=location.lat };
                 obj.layer = 0;
                 m_Tree.InsertNode(obj);
             }
         }
 
-        MapObject wayobj;
-        wayobj.id = id;
-        wayobj.bounds = box;
-        wayobj.layer = (landuseTag != way.tags.end()) ? 0 : 1;
-        m_Tree.InsertWay(wayobj);
+        MapObject wayObj{};
+        wayObj.id = id;
+        wayObj.bounds = box;
+        wayObj.layer = (landUseTag != way.tags.end()) ? 0 : 1;
+        m_Tree.InsertWay(wayObj);
 
         if (isZoomLevel)
-            m_Tree1.InsertWay(wayobj);
+            m_Tree1.InsertWay(wayObj);
 
     }
 }
