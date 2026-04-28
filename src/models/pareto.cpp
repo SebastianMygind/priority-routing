@@ -1,6 +1,5 @@
 #include "pareto.h"
 #include "../osm/tags.h"
-#include "spdlog/spdlog.h"
 
 #include <cmath>
 #include <cstdint>
@@ -9,6 +8,8 @@
 #include <algorithm>
 #include <queue>
 
+using LabelPtr = std::shared_ptr<struct Label>;
+using LabelSet = std::vector<LabelPtr>;
 
 struct Cost
 {
@@ -16,193 +17,149 @@ struct Cost
     double time;
 };
 
-inline Cost operator+(const Cost& a, const Cost& b)
-{
-    return {
-        a.distance + b.distance,
-        a.time + b.time
-    };
-}
-
-bool Dominates(const Cost& a, const Cost& b)
-{
-    return (
-        a.distance <= b.distance &&
-        a.time <= b.time &&
-        (
-            a.distance < b.distance ||
-            a.time < b.time
-        )
-    );
-}
-
-// -------------------------------------
-// Label stores path via parent pointer
-// -------------------------------------
-
 struct Label
 {
     OSMNodeID node;
-    Cost cost;
+    Cost      cost;
+    LabelPtr  prev;
+};
 
-    std::shared_ptr<Label> parent;
-
-    // PQ ordering
-    bool operator>(const Label& other) const
-    {
-        if(cost.distance != other.cost.distance)
-            return cost.distance > other.cost.distance;
-
-        return cost.time > other.cost.time;
+struct Compare
+{
+    bool operator()(const LabelPtr& a, const LabelPtr& b) {
+        if (a->cost.distance != b->cost.distance)
+            return a->cost.distance > b->cost.distance;
+        return a->cost.time > b->cost.time;
     }
 };
 
-// Final route result
-struct ParetoRoute
+// Does cost A dominate cost B?
+bool Dominates(const Cost& a, const Cost& b) 
 {
-    std::vector<OSMNodeID> path;
-    double totalDistance;
-    double totalTime;
-};
+    return (a.distance <= b.distance && a.time <= b.time &&
+           (a.distance < b.distance || a.time < b.time));
+}
+
 
 
 bool Pareto::FindPath(OSMGraph& graph, UserInterface& ui)
 {
-    using LabelPtr = std::shared_ptr<Label>;
-
-    OSMNodeID start = graph.GetNodeA();
-    OSMNodeID goal = graph.GetNodeB();
-
     auto adj_list = graph.GetAdjList();
+    auto start = graph.GetNodeA();
+    auto goal = graph.GetNodeB();
 
-    // Pareto labels per node
-    std::unordered_map<OSMNodeID, std::vector<LabelPtr>> frontier;
 
-    auto cmp =
-        [](const LabelPtr& a, const LabelPtr& b)
-        {
-            return *a > *b;
-        };
+    std::unordered_map<OSMNodeID, LabelSet> frontier;
 
-    std::priority_queue<LabelPtr, std::vector<LabelPtr>, decltype(cmp)> pq(cmp);
+    std::priority_queue<LabelPtr, std::vector<LabelPtr>, Compare> p_queue;
 
-    auto startLabel = std::make_shared<Label>();
 
+    LabelPtr startLabel = std::make_shared<Label>();
     startLabel->node = start;
-    startLabel->cost = {0,0};
-    startLabel->parent = nullptr;
+    startLabel->cost = { 0, 0 };
+    startLabel->prev = nullptr;
 
     frontier[start].push_back(startLabel);
+    p_queue.push(startLabel);
 
-    pq.push(startLabel);
 
-    while(!pq.empty() && !threadKill.load())
+    while (!p_queue.empty() && !threadKill.load())
     {
-        auto current = pq.top();
-        pq.pop();
+        LabelPtr current = p_queue.top();
+        p_queue.pop();
 
-        OSMNodeID currentNode = current->node;
 
-        if (currentNode == goal)
-            break;
-        printf("%u\n", currentNode);
-        for(auto neighbor : adj_list.at(currentNode))
+ /*       if (current->node == goal)
         {
-            OSMNodeID neighborID = neighbor.first;
-            OSMWayID edgeWay = neighbor.second;
+            while (current != nullptr)
+            {
+                graph.InsertPath(current->node);
+                current = current->prev;
+            }
+            return true;
+        }*/
 
-            graph.nodeTest.push_back(neighborID);
 
-            if (neighborID == goal)
-                spdlog::info("goal vistited");
+        for (auto [neighborId, wayId] : adj_list.at(current->node))
+        {
+            const OSMNode& nodeA = graph.GetNode(current->node);
+            const OSMNode& nodeB = graph.GetNode(neighborId);
+            const OSMWay&  way = graph.GetWay(wayId);
 
-            const OSMNode& nodeA = graph.GetNode(currentNode);
-            const OSMNode& nodeB = graph.GetNode(neighborID);
-            const OSMWay& way = graph.GetWay(edgeWay);
-
-            auto highwayTag = way.tags.find("highway");
             auto speedTag = way.tags.find("maxspeed");
+            auto highwayTag = way.tags.find("highway");
 
             double speed = (speedTag != way.tags.end())
                 ? ParseMaxSpeed(speedTag->second)
                 : GetDefaultSpeed(highwayTag->second);
 
             double speedMS = KmhToMS(speed);
-            double distance = Haversine(nodeA.location, nodeB.location);
-            double driveTime = distance / speedMS;
+            double distance = Equirectangular(
+                nodeA.location,
+                nodeB.location
+            );
 
-            Cost edgeCost = { distance, driveTime };
-            Cost newCost = current->cost + edgeCost;
+            double timeToDrive = distance / speedMS;
 
-            auto& labels = frontier[neighborID];
+            Cost newCost
+            {
+                current->cost.distance + distance,
+                current->cost.time + timeToDrive
+            };
+
             bool dominated = false;
 
-            for(auto& existing : labels)
+            LabelSet& neighborLabels = frontier[neighborId];
+
+            for (LabelPtr& oldLabel : neighborLabels)
             {
-                if(Dominates(existing->cost, newCost))
+                if (Dominates(oldLabel->cost, newCost))
                 {
                     dominated = true;
                     break;
                 }
             }
 
-            if(dominated)
+            if (dominated)
                 continue;
 
-            // Remove labels dominated
-            labels.erase(
+            neighborLabels.erase(
                 std::remove_if(
-                    labels.begin(),
-                    labels.end(),
-                    [&](const LabelPtr& l){
+                    neighborLabels.begin(),
+                    neighborLabels.end(),
+                    [&](const LabelPtr& l)
+                    {
                         return Dominates(newCost, l->cost);
                     }),
-                labels.end()
+                neighborLabels.end()
             );
 
-            auto newLabel = std::make_shared<Label>();
-            newLabel->node   = neighborID;
-            newLabel->cost   = newCost;
-            newLabel->parent = current;
+            LabelPtr candidate = std::make_shared<Label>();
+            candidate->node = neighborId;
+            candidate->cost = newCost;
+            candidate->prev = current;
 
-            labels.push_back(newLabel);
+            neighborLabels.push_back(candidate);
 
-            pq.push(newLabel);
+            p_queue.push(candidate);
+
+            if (neighborId == goal)
+            {
+                while (current != nullptr)
+                {
+                    graph.InsertPath(current->node);
+                    current = current->prev;
+                }
+
+                return true;
+            }
         }
     }
 
-
-
-    // std::vector<ParetoRoute> results;
-
-    // for(auto& solution : frontier[goal])
-    // {
-    //     ParetoRoute route;
-    //     route.totalDistance = solution->cost.distance;
-    //     route.totalTime = solution->cost.time;
-
-    //     std::vector<OSMNodeID> reversed;
-
-    //     LabelPtr p = solution;
-
-    //     while(p)
-    //     {
-    //         reversed.push_back(
-    //             p->node
-    //         );
-
-    //         graph.InsertPath(p->node);
-
-    //         p = p->parent;
-    //     }
-
-    //     route.path.assign(
-    //         reversed.rbegin(),
-    //         reversed.rend()
-    //     );
-
-    //     results.push_back(route);
-    // }
+    //if (!frontier[goal].empty())
+    //{
+    //    return true;
+    //}
 
     return false;
 }
