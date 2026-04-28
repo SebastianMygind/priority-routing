@@ -40,6 +40,12 @@ bool Dominates(const Cost& a, const Cost& b)
            (a.distance < b.distance || a.time < b.time));
 }
 
+bool EqualCost(const Cost& a, const Cost& b)
+{
+    return
+        a.distance == b.distance &&
+        a.time == b.time;
+}
 
 
 bool Pareto::FindPath(OSMGraph& graph, UserInterface& ui)
@@ -67,6 +73,13 @@ bool Pareto::FindPath(OSMGraph& graph, UserInterface& ui)
     {
         LabelPtr current = p_queue.top();
         p_queue.pop();
+
+        printf("%u \n", current->node);
+
+        if (std::find(frontier[current->node].begin(), frontier[current->node].end(), current) == frontier[current->node].end())
+        {
+            continue;
+        }
 
 
  /*       if (current->node == goal)
@@ -111,9 +124,10 @@ bool Pareto::FindPath(OSMGraph& graph, UserInterface& ui)
 
             LabelSet& neighborLabels = frontier[neighborId];
 
-            for (LabelPtr& oldLabel : neighborLabels)
+            for (auto& oldLabel : neighborLabels)
             {
-                if (Dominates(oldLabel->cost, newCost))
+                if (EqualCost(oldLabel->cost, newCost) ||
+                    Dominates(oldLabel->cost, newCost))
                 {
                     dominated = true;
                     break;
