@@ -5,14 +5,13 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
-#include <set>
 #include <utility>
 #include <memory>
 
 class Tree2D
 {
 public:
-    Tree2D() {}
+    Tree2D() = default;
 
     void BuildTree() { root_ = MakeTree(0, nodes_.size(), 0); }
     void AddNode(const OSMNodeID nodeId, const Coord location) { nodes_.emplace_back(nodeId, location); }
@@ -24,10 +23,10 @@ private:
     {
         OSMNodeID nodeId;
         Coord location;
-        node* left_;
-        node* right_;
+        node* left_{nullptr};
+        node* right_{nullptr};
 
-        node(const OSMNodeID& nodeId, const Coord& pt) : nodeId(nodeId), location(pt), left_(nullptr), right_(nullptr) {}
+        node(const OSMNodeID& nodeId, const Coord& pt) : nodeId(nodeId), location(pt){}
     };
 
     node* root_ = nullptr;
@@ -55,12 +54,15 @@ public:
     
     OSMNodeID StringToNode(const std::string& input);
 
-    inline OSMNode GetNode(OSMNodeID id) const { return nodes.at(id); }
-    inline OSMWay GetWay(OSMWayID id) const { return ways.at(id); }
+    OSMNode GetNode(OSMNodeID id) const { return nodes.at(id); }
+    OSMWay GetWay(OSMWayID id) const { return ways.at(id); }
 
-    inline auto& GetWays() const { return ways; }
+    auto& GetWays() const { return ways; }
 
-    inline std::pair<OSMNodeID, double> GetNearestNode(std::string tag, Coord location) { return tree2d.at(tag).Nearest(location); }
+    std::pair<OSMNodeID, double> GetNearestNode(
+        const std::string& tag,
+        const Coord location
+    ) { return tree2d.at(tag).Nearest(location); }
 
     OSMNodeID GetNodeA() const { return selectedNodeA; }
     OSMNodeID GetNodeB() const { return selectedNodeB; }
