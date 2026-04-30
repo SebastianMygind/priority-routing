@@ -118,7 +118,7 @@ void UserInterface::DrawCustomTextbox(char* text, bool& edit)
     }
 }
 
-void UserInterface::DrawCustomSelection(const char* text, float posY, int* selection, bool& edit) const {
+void UserInterface::DrawCustomSelection(const char* text, float posY, int* selection, bool& edit) {
     const Rectangle selectionPos{
         .x = elementX,
         .y = posY,
@@ -142,6 +142,53 @@ void UserInterface::DrawCustomSlider(float* value)
     };
 
     GuiSliderBar(sliderPos, nullptr, nullptr, value, 0.F, 1.F);
+}
+
+void UserInterface::DrawCustomPather(int& index, int count)
+{
+    auto const yPos = elementY(boxType);
+
+    const Rectangle outlinePos{
+        .x = elementX,
+        .y = yPos,
+        .width = elementWidth,
+        .height = BOX_HEIGHT
+    };
+
+    const Vector2 textPos{
+        .x = elementX + 56,
+        .y = yPos + 10
+    };
+
+    const Rectangle leftButton{
+        .x = elementX,
+        .y = yPos,
+        .width = BOX_HEIGHT,
+        .height = BOX_HEIGHT
+    };
+
+    const Rectangle rightButton{
+        .x = elementX + elementWidth - BOX_HEIGHT,
+        .y = yPos,
+        .width = BOX_HEIGHT,
+        .height = BOX_HEIGHT
+    };
+
+    const std::string text = (count > 0)
+        ? std::format("Route {} of {}", index + 1, count  + 1)
+        : "  No routes";
+
+    DrawRectangleLinesEx(outlinePos, 1, GRAY);
+    DrawTextEx(fontText, text.c_str(), textPos, TEXT_HEIGHT, 1.2, BLACK);
+
+    if (GuiButton(leftButton, "#114#") != 0)
+    {
+        index = std::max(0, index - 1);
+    }
+    if (GuiButton(rightButton, "#115#") != 0 && count > 0)
+    {
+        index = std::min(count - 1, index + 1);
+    }
 }
 
 /*
@@ -222,20 +269,32 @@ void UserInterface::DrawRouteInfo()
     DrawCustomText("Model");
     // Save the y pos, draw later
     float modelY = elementY(boxType); 
-    DrawCustomText("Distance");
-    DrawCustomSlider(&objDistance);
-    DrawCustomText("Time");
-    DrawCustomSlider(&objTime);
-    DrawCustomText("Lit Roads");
-    DrawCustomSlider(&objLitRoads);
-    DrawCustomText("Smoothness");
-    DrawCustomSlider(&objSmoothness);
-    DrawCustomText("Gas Station");
-    DrawCustomSlider(&objGasStation);
-    DrawCustomText("Cafe");
-    DrawCustomSlider(&objCafe);
-    DrawCustomText("Tourism");
-    DrawCustomSlider(&objTourism);
+
+    switch (modelSelectionIndex)
+    {
+    case 2: // Weighted Sum
+        DrawCustomText("Distance");
+        DrawCustomSlider(&objDistance);
+        DrawCustomText("Time");
+        DrawCustomSlider(&objTime);
+        DrawCustomText("Lit Roads");
+        DrawCustomSlider(&objLitRoads);
+        DrawCustomText("Smoothness");
+        DrawCustomSlider(&objSmoothness);
+        DrawCustomText("Gas Station");
+        DrawCustomSlider(&objGasStation);
+        DrawCustomText("Cafe");
+        DrawCustomSlider(&objCafe);
+        DrawCustomText("Tourism");
+        DrawCustomSlider(&objTourism);
+        break;
+    
+    case 3:
+        DrawCustomPather(pathSelectionIndex, pathCount);
+
+    default:
+        break;
+    }
     
 
     // Draw the model dropdown last so it's drawn over the sliders if open
