@@ -51,7 +51,6 @@ public:
 
     // Model getters
 
-
     [[nodiscard]] auto GetModel()    const { return modelSelectionIndex; }
     [[nodiscard]] auto GetDistance() const { return objDistance / GetSum();    }
     [[nodiscard]] auto GetTime()     const { return objTime / GetSum();        }
@@ -64,6 +63,9 @@ public:
         return objDistance + objTime + objLitRoads +
             objSmoothness + objGasStation + objCafe + objTourism;
     }
+
+    [[nodiscard]] auto GetPathIndex() const { return pathSelectionIndex; }
+    auto SetPathCount(auto count) { pathCount = count; }
 
     // Debug setters
 
@@ -101,6 +103,8 @@ private:
 
     // Should match the PathfindingModel enum in path_finder.h
     int modelSelectionIndex = 2;
+    int pathSelectionIndex = 0;
+    int pathCount = 0;
 
     float objDistance = 0.5;
     float objTime     = 0.5;
@@ -142,6 +146,7 @@ private:
     void DrawCustomHeading(const char* text);
     void DrawCustomText(const char* text);
     void DrawCustomTextbox(char* text, bool& edit);
-    void DrawCustomSelection(const char* text, float posY, int* selection, bool& edit) const;
+    void DrawCustomSelection(const char* text, float posY, int* selection, bool& edit);
     void DrawCustomSlider(float* value);
+    void DrawCustomPather(int& index, int count);
 };
