@@ -71,8 +71,9 @@ public:
     auto GetAdjListPrev() const { return adj_list_prev; }
     void SetNodeA(OSMNodeID id) { selectedNodeA = id; }
     void SetNodeB(OSMNodeID id) { selectedNodeB = id; }
-    void ClearPath() { selectedPath.clear(); }
-    void InsertPath(OSMNodeID path) { selectedPath.push_back(path); }
+    void ClearPath() { paths.clear(); }
+    void InsertPath(OSMPath path) { paths.push_back(path); }
+    void CyclePath() { selectedPath = (selectedPath + 1) % (paths.size()); }
 
     // Stats
     size_t GetNodeCount() const { return nodes.size(); }
@@ -85,9 +86,10 @@ private:
     std::unordered_map<OSMNodeID, OSMNode> nodes;
     std::unordered_map<OSMWayID, OSMWay> ways;
 
-    std::vector<OSMNodeID> selectedPath;
+    std::vector<OSMPath> paths;
     OSMNodeID selectedNodeA;
     OSMNodeID selectedNodeB;
+    int selectedPath = 0;
 
     std::unordered_map<OSMNodeID, std::vector<std::pair<OSMNodeID, OSMWayID>>> adj_list;
     std::unordered_map<OSMNodeID, double> adj_list_dist;

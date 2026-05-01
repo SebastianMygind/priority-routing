@@ -1,5 +1,6 @@
 #include "pareto.h"
 #include "../osm/tags.h"
+#include "spdlog/spdlog.h"
 
 #include <cmath>
 #include <cstdint>
@@ -13,7 +14,7 @@ using LabelSet = std::vector<LabelPtr>;
 
 struct Cost
 {
-    double distance;
+    double signals;
     double time;
 };
 
@@ -27,23 +28,23 @@ struct Label
 struct Compare
 {
     bool operator()(const LabelPtr& a, const LabelPtr& b) {
-        if (a->cost.distance != b->cost.distance)
-            return a->cost.distance > b->cost.distance;
-        return a->cost.time > b->cost.time;
+        if (a->cost.time != b->cost.time)
+            return a->cost.time > b->cost.time;
+        return a->cost.signals > b->cost.signals;
     }
 };
 
 // Does cost A dominate cost B?
 bool Dominates(const Cost& a, const Cost& b) 
 {
-    return (a.distance <= b.distance && a.time <= b.time &&
-           (a.distance < b.distance || a.time < b.time));
+    return (a.signals <= b.signals && a.time <= b.time &&
+           (a.signals < b.signals || a.time < b.time));
 }
 
 bool EqualCost(const Cost& a, const Cost& b)
 {
     return
-        a.distance == b.distance &&
+        a.signals == b.signals &&
         a.time == b.time;
 }
 
@@ -74,23 +75,28 @@ bool Pareto::FindPath(OSMGraph& graph, UserInterface& ui)
         LabelPtr current = p_queue.top();
         p_queue.pop();
 
-        printf("%u \n", current->node);
+        //printf("%u \n", current->node);
 
         if (std::find(frontier[current->node].begin(), frontier[current->node].end(), current) == frontier[current->node].end())
         {
             continue;
         }
 
+        //if (frontier[goal].size() > 2)
+        //    break;
 
- /*       if (current->node == goal)
-        {
-            while (current != nullptr)
-            {
-                graph.InsertPath(current->node);
-                current = current->prev;
-            }
-            return true;
-        }*/
+        //if (current->node == goal)
+        //{
+        //    OSMPath path;
+        //    while (current != nullptr)
+        //    {
+        //        path.push_back(current->node);
+        //        current = current->prev;
+        //    }
+        //    std::reverse(path.begin(), path.end());
+        //    graph.InsertPath(path);
+        //    return true;
+        //}
 
 
         for (auto [neighborId, wayId] : adj_list.at(current->node))
@@ -101,22 +107,24 @@ bool Pareto::FindPath(OSMGraph& graph, UserInterface& ui)
 
             auto speedTag = way.tags.find("maxspeed");
             auto highwayTag = way.tags.find("highway");
+            auto litTag = way.tags.find("lit");
+
+            auto highwayTagB = nodeB.tags.find("highway");
 
             double speed = (speedTag != way.tags.end())
                 ? ParseMaxSpeed(speedTag->second)
                 : GetDefaultSpeed(highwayTag->second);
 
             double speedMS = KmhToMS(speed);
-            double distance = Equirectangular(
-                nodeA.location,
-                nodeB.location
-            );
+            double distance = Equirectangular(nodeA.location, nodeB.location);
+            //double litDistance = (litTag != way.tags.end() && litTag->second == "yes") ? distance : distance * 10.0;
+            double signal = (highwayTagB != nodeB.tags.end() && highwayTagB->second == "traffic_signals") ? 1.0 : 0.0;
 
             double timeToDrive = distance / speedMS;
 
             Cost newCost
             {
-                current->cost.distance + distance,
+                current->cost.signals + signal,
                 current->cost.time + timeToDrive
             };
 
@@ -156,24 +164,27 @@ bool Pareto::FindPath(OSMGraph& graph, UserInterface& ui)
             neighborLabels.push_back(candidate);
 
             p_queue.push(candidate);
-
-            if (neighborId == goal)
-            {
-                while (current != nullptr)
-                {
-                    graph.InsertPath(current->node);
-                    current = current->prev;
-                }
-
-                return true;
-            }
         }
     }
 
-    //if (!frontier[goal].empty())
-    //{
-    //    return true;
-    //}
+    if (!frontier[goal].empty())
+    {
+        spdlog::info("Pareto found {} paths", frontier[goal].size());
+        for (const LabelPtr& label : frontier[goal])
+        {
+            LabelPtr it = label;
+            OSMPath path;
+            while (it != nullptr)
+            {
+                path.push_back(it->node);
+                it = it->prev;
+            }
+            std::reverse(path.begin(), path.end());
+            graph.InsertPath(path);
+        }
+
+        return true;
+    }
 
     return false;
 }

@@ -30,13 +30,16 @@ bool Dijkstra::FindPath(OSMGraph& graph, UserInterface& ui)
         p_queue.pop();
 
         // If we reached the end node, reconstruct the path
-        if (current == destination) 
+        if (current == destination)
         {
-            while (current != 0xFFFFFFFF) 
+            OSMPath path;
+            while (current != 0xFFFFFFFF)
             {
-                graph.InsertPath(current);
+                path.push_back(current);
                 current = prev[current];
             }
+            std::reverse(path.begin(), path.end());
+            graph.InsertPath(path);
             return true;
         }
 

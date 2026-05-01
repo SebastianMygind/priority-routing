@@ -34,11 +34,14 @@ bool AStar::FindPath(OSMGraph& graph, UserInterface& ui)
         // If we reached the end node, reconstruct the path
         if (current == destination) 
         {
+            OSMPath path;
             while (current != 0xFFFFFFFF) 
             {
-                graph.InsertPath(current);
+                path.push_back(current);
                 current = prev[current];
             }
+            std::reverse(path.begin(), path.end());
+            graph.InsertPath(path);
             return true;
         }
 

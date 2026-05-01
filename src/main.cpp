@@ -65,6 +65,7 @@ int main() {
             if (IsKeyPressed(KEY_D)) { ui.ToggleDebug();      }
             if (IsKeyPressed(KEY_V)) { renderer.ToggleQuad(); }
             if (IsKeyPressed(KEY_P)) { renderer.CyclePOI(); ui.SetPOIText(renderer.GetPOIText());  }
+            if (IsKeyPressed(KEY_R)) { graph.CyclePath(); }
         }
 
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && !ui.MouseInUI())
