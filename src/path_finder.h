@@ -1,16 +1,32 @@
 #pragma once
 #include "osm/graph.h"
-#include "user_interface.h"
 
-#include <thread>
+#include <functional>
 #include <atomic>
+
+using ObjectiveFunc = std::function<double(OSMGraph&, const OSMNode&, const OSMNode&, const OSMWay&, double)>;
+
+struct Objective
+{
+    std::string   name;
+    ObjectiveFunc func;
+
+    float         weight;
+};
+
+using ObjectiveList = std::vector<Objective>;
+
 
 class IPathFinder
 {
 public:
     virtual ~IPathFinder() = default;
+    virtual bool FindPath(OSMGraph& graph, ObjectiveList objectives) = 0;
 
-    virtual bool FindPath(OSMGraph& graph, UserInterface& ui) = 0;
+    void Stop() { running = false; }
+
+protected:
+    std::atomic<bool> running = true;
 };
 
 enum class PathfindingModel {
@@ -20,8 +36,11 @@ enum class PathfindingModel {
     Pareto = 3,
 };
 
-extern std::thread pathfindingThread;
-extern std::atomic<bool> threadDone;
-extern std::atomic<bool> threadKill;
-
-void PathFinder(OSMGraph& graph, UserInterface& ui);
+double DistanceObjective(OSMGraph& graph, const OSMNode& a, const OSMNode& b, const OSMWay& way, double distance);
+double TravelTimeObjective(OSMGraph& graph, const OSMNode& a, const OSMNode& b, const OSMWay& way, double distance);
+double TrafficSignalObjective(OSMGraph& graph, const OSMNode& a, const OSMNode& b, const OSMWay& way, double distance);
+double LitRoadObjective(OSMGraph& graph, const OSMNode& a, const OSMNode& b, const OSMWay& way, double distance);
+double RoadSmoothnessObjective(OSMGraph& graph, const OSMNode& a, const OSMNode& b, const OSMWay& way, double distance);
+double GasStationObjective(OSMGraph& graph, const OSMNode& a, const OSMNode& b, const OSMWay& way, double distance);
+double CafeObjective(OSMGraph& graph, const OSMNode& a, const OSMNode& b, const OSMWay& way, double distance);
+double TourismObjective(OSMGraph& graph, const OSMNode& a, const OSMNode& b, const OSMWay& way, double distance);

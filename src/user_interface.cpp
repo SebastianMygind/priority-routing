@@ -25,29 +25,6 @@ constexpr int       V_PAD = 5;
 constexpr std::pair UI_MIN_SIZE   = {200.F, 620.F};
 constexpr float     UI_MULTIPLIER = 0.20;
 constexpr float     UI_DEBUG_HEIGHT = 250.F;
-
-double DistanceObjective(const OSMNode& a, const OSMNode& b, const OSMWay& way)
-{
-    return Haversine(a.location, b.location);
-}
-
-double TravelTimeObjective(const OSMNode& a, const OSMNode& b, const OSMWay& way)
-{
-    auto speedTag = way.tags.find("maxspeed");
-    auto highwayTag = way.tags.find("highway");
-    double speed = (speedTag != way.tags.end())
-        ? ParseMaxSpeed(speedTag->second)
-        : GetDefaultSpeed(highwayTag->second);
-    double distance = Haversine(a.location, b.location);
-    return distance / speed;
-}
-
-double TrafficSignalObjective(const OSMNode& a, const OSMNode& b, const OSMWay& way)
-{
-    auto highwayTagB = b.tags.find("highway");
-    return (highwayTagB != b.tags.end() && highwayTagB->second == "traffic_signals") ? 1.0 : 0.0;
-}
-
 /*
     Accumulator types are used with elementY to determine the y position of the next element.
     Use the type of the element you're drawing or call elementY(padding) to add spacing between elements.
@@ -75,6 +52,7 @@ float UserInterface::elementY(const int type) {
     accumulator += type;
     return current;
 };
+
 
 /*
     The following functions are shortened "presets" for custom styled raygui elements.
@@ -219,11 +197,13 @@ void UserInterface::DrawCustomPather(int& index, int count)
     }
 }
 
-void UserInterface::DrawObjecive(std::string text, bool removable, int objectiveIndex) 
+void UserInterface::DrawObjecive(ObjectiveList& objectives, int index, bool removable) 
 {
+    Objective& objective = objectives[index];
+
     auto const yPos = elementY(boxType);
 
-    Vector2 textSize = MeasureTextEx(fontText, text.c_str(), TEXT_HEIGHT, 1.2);
+    Vector2 textSize = MeasureTextEx(fontText, objective.name.c_str(), TEXT_HEIGHT, 1.2);
 
     const Rectangle outlinePos{
         .x = elementX,
@@ -245,13 +225,52 @@ void UserInterface::DrawObjecive(std::string text, bool removable, int objective
     };
 
     DrawRectangleLinesEx(outlinePos, 1, LIGHTGRAY);
-    DrawTextEx(fontText, text.c_str(), textPos, TEXT_HEIGHT, 1.2, BLACK);
+    DrawTextEx(fontText, objective.name.c_str(), textPos, TEXT_HEIGHT, 1.2, BLACK);
 
     if (removable) 
     {
         if (GuiButton(rightButton, "x") != 0)
         {
-            objectives.erase(objectives.begin() + objectiveIndex);
+            objectives.erase(objectives.begin() + index);
+        }
+    }
+}
+
+void UserInterface::DrawObjeciveWeight(ObjectiveList& objectives, int index, bool removable) 
+{
+    Objective& objective = objectives[index];
+
+    auto const yPos = elementY(boxType);
+
+    Vector2 textSize = MeasureTextEx(fontText, objective.name.c_str(), TEXT_HEIGHT, 1.2);
+
+    const Rectangle outlinePos{
+        .x = elementX,
+        .y = yPos,
+        .width = elementWidth,
+        .height = BOX_HEIGHT
+    };
+
+    const Vector2 textPos{
+        .x = elementX + 10,
+        .y = yPos + (BOX_HEIGHT / 2) - (TEXT_HEIGHT / 2) + 1
+    };
+
+    const Rectangle rightButton{
+        .x = elementX + elementWidth - BOX_HEIGHT + 5,
+        .y = yPos + 5,
+        .width = BOX_HEIGHT - 10,
+        .height = BOX_HEIGHT - 10
+    };
+
+    DrawRectangleLinesEx(outlinePos, 1, LIGHTGRAY);
+    DrawTextEx(fontText, objective.name.c_str(), textPos, TEXT_HEIGHT, 1.2, BLACK);
+
+    if (removable) 
+    {
+        if (GuiButton(rightButton, "x") != 0)
+        {
+            objectives.erase(objectives.begin() + index);
         }
     }
 }
@@ -271,10 +290,18 @@ void UserInterface::SetupUI(const char* file)
     spinnerImage = LoadImageAnim("../assets/spinner.gif", &spinnerFrameCount);
     spinnerTexture = LoadTextureFromImage(spinnerImage);
 
-    objectives = {
-        { "Distance", DistanceObjective },
-        { "Time", TravelTimeObjective },
-        { "Traffic Lights", TrafficSignalObjective },
+    objPareto = {
+        { "Distance", DistanceObjective, 0.0 },
+        { "Time", TravelTimeObjective, 0.0 },
+        { "Traffic Lights", TrafficSignalObjective, 0.0 },
+    };
+
+    objWeightedSum =  {
+        { "Distance", DistanceObjective, 0.5 },
+        { "Time", TravelTimeObjective, 0.5 },
+        { "Lit Roads", LitRoadObjective, 0.5 },
+        { "Road Smoothness", RoadSmoothnessObjective, 0.5 },
+        
     };
 
     auto checkImage = LoadImage("../assets/checkmark.png");
@@ -353,32 +380,28 @@ void UserInterface::DrawRouteInfo()
     {
         case 0:  // Dijkstra
         case 1:
-        DrawObjecive("Distance", false, 0);
+        //DrawObjecive("Distance", false, 0);
 
         break;
 
     case 2: // Weighted Sum
-        DrawCustomText("Distance");
-        DrawCustomSlider(&objDistance);
-        DrawCustomText("Time");
-        DrawCustomSlider(&objTime);
-        DrawCustomText("Lit Roads");
-        DrawCustomSlider(&objLitRoads);
-        DrawCustomText("Smoothness");
-        DrawCustomSlider(&objSmoothness);
-        DrawCustomText("Gas Station");
-        DrawCustomSlider(&objGasStation);
-        DrawCustomText("Cafe");
-        DrawCustomSlider(&objCafe);
-        DrawCustomText("Tourism");
-        DrawCustomSlider(&objTourism);
+        for (size_t i = 0; i < objWeightedSum.size(); i++) 
+        {
+            DrawObjeciveWeight(objWeightedSum, i, true);
+        }
+
+        GuiButton({.x = elementX,
+                   .y = elementY(boxType),
+                   .width = elementWidth,
+                   .height = BOX_HEIGHT},
+                  "Add");
         break;
     
     case 3:
     {
-        for (size_t i = 0; i < objectives.size(); i++) 
+        for (size_t i = 0; i < objPareto.size(); i++) 
         {
-            DrawObjecive(objectives[i].name, true, i);
+            DrawObjecive(objPareto, i, true);
         }
 
         GuiButton({.x = elementX,

@@ -68,13 +68,17 @@ bool EqualCost(const Cost& a, const Cost& b)
 }
 
 
-bool Pareto::FindPath(OSMGraph& graph, UserInterface& ui)
+bool Pareto::FindPath(OSMGraph& graph, ObjectiveList objectives)
 {
+    if (objectives.empty())
+    {
+        spdlog::error("At least one objective is required.");
+        return false;
+    }
+
     auto adj_list = graph.GetAdjList();
     auto start = graph.GetNodeA();
     auto goal = graph.GetNodeB();
-
-    auto objectives = ui.GetObjectives();
 
     std::unordered_map<OSMNodeID, LabelSet> frontier;
 
@@ -90,7 +94,7 @@ bool Pareto::FindPath(OSMGraph& graph, UserInterface& ui)
     p_queue.push(startLabel);
 
 
-    while (!p_queue.empty() && !threadKill.load())
+    while (!p_queue.empty() && running)
     {
         LabelPtr current = p_queue.top();
         p_queue.pop();
@@ -125,35 +129,14 @@ bool Pareto::FindPath(OSMGraph& graph, UserInterface& ui)
             const OSMNode& nodeB = graph.GetNode(neighborId);
             const OSMWay&  way = graph.GetWay(wayId);
 
-            auto speedTag = way.tags.find("maxspeed");
-            auto highwayTag = way.tags.find("highway");
-            auto litTag = way.tags.find("lit");
-
-            auto highwayTagB = nodeB.tags.find("highway");
-
-            double speed = (speedTag != way.tags.end())
-                ? ParseMaxSpeed(speedTag->second)
-                : GetDefaultSpeed(highwayTag->second);
-
-            double speedMS = KmhToMS(speed);
-            double distance = Equirectangular(nodeA.location, nodeB.location);
-            //double litDistance = (litTag != way.tags.end() && litTag->second == "yes") ? distance : distance * 10.0;
-            double signal = (highwayTagB != nodeB.tags.end() && highwayTagB->second == "traffic_signals") ? 1.0 : 0.0;
-
-            double timeToDrive = distance / speedMS;
+            double distance = Haversine(nodeA.location, nodeB.location);
 
             Cost newCost;
-
             for (size_t i = 0; i < objectives.size(); ++i)
             {
-                double edgeCost = objectives[i].func(nodeA, nodeB, way);
+                double edgeCost = objectives[i].func(graph, nodeA, nodeB, way, distance);
                 newCost.push_back(current->cost[i] + edgeCost);
             }
-
-            //{
-            //    current->cost[0] + signal,
-            //    current->cost[1] + timeToDrive
-            //};
 
             bool dominated = false;
 
@@ -210,8 +193,6 @@ bool Pareto::FindPath(OSMGraph& graph, UserInterface& ui)
             std::reverse(path.begin(), path.end());
             graph.InsertPath(path);
         }
-
-        ui.SetPathCount(frontier[goal].size());
 
         return true;
     }

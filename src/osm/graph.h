@@ -73,6 +73,7 @@ public:
     void SetNodeB(OSMNodeID id) { selectedNodeB = id; }
     void ClearPath() { paths.clear(); }
     void InsertPath(OSMPath path) { paths.push_back(path); }
+    size_t GetPathCount() { return paths.size(); }
 
     // Stats
     size_t GetNodeCount() const { return nodes.size(); }

@@ -1,5 +1,6 @@
 #include "dijkstra.h"
 #include "../osm/tags.h"
+#include "spdlog/spdlog.h"
 
 #include <cmath>
 #include <cstdint>
@@ -8,8 +9,14 @@
 #include <algorithm>
 #include <queue>
 
-bool Dijkstra::FindPath(OSMGraph& graph, UserInterface& ui)
+bool Dijkstra::FindPath(OSMGraph& graph, ObjectiveList objectives)
 {
+    if (objectives.empty())
+    {
+        spdlog::error("One objective is required.");
+        return false;
+    }
+
     using PQNode = std::pair<double, OSMNodeID>;
     std::priority_queue<PQNode, std::vector<PQNode>, std::greater<>> p_queue;
 
@@ -23,7 +30,7 @@ bool Dijkstra::FindPath(OSMGraph& graph, UserInterface& ui)
     cost[source] = 0;
     p_queue.push({cost[source], source});
 
-    while (!p_queue.empty() && !threadKill.load())
+    while (!p_queue.empty() && running)
     {
         // Get the node with the smallest cost + heuristic
         OSMNodeID current = p_queue.top().second;

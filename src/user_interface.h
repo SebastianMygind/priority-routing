@@ -9,19 +9,10 @@
 #include "../vendor/raygui.h"
 
 #include "Window.h"
-#include "osm/osm_types.h"
+#include "path_finder.h"
+
 
 using ms_duration = std::chrono::duration<double, std::milli>;
-
-using ObjectiveFunc = std::function<double(const OSMNode&, const OSMNode&, const OSMWay&)>;
-
-struct Objective
-{
-    std::string   name;
-    ObjectiveFunc func;
-};
-
-using ObjectiveList = std::vector<Objective>;
 
 class UserInterface 
 {
@@ -62,7 +53,7 @@ public:
 
     // Model getters
 
-    [[nodiscard]] auto GetModel()    const { return modelSelectionIndex; }
+    [[nodiscard]] auto GetModel()    const { return (PathfindingModel)modelSelectionIndex; }
     [[nodiscard]] auto GetDistance() const { return objDistance / GetSum();    }
     [[nodiscard]] auto GetTime()     const { return objTime / GetSum();        }
     [[nodiscard]] auto GetLitRoads()  const { return objLitRoads / GetSum();     }
@@ -75,7 +66,7 @@ public:
             objSmoothness + objGasStation + objCafe + objTourism;
     }
 
-    auto GetObjectives() const { return objectives; }
+    auto GetObjectives() const { if (modelSelectionIndex == 2){ return objWeightedSum; } else {return objPareto;} }
 
     [[nodiscard]] auto GetPathIndex() const { return pathSelectionIndex; }
     auto SetPathCount(auto count) { pathCount = count; }
@@ -129,7 +120,8 @@ private:
     float objCafe  = 0.5;
     float objTourism  = 0.5;
 
-    ObjectiveList objectives;
+    ObjectiveList objWeightedSum;
+    ObjectiveList objPareto;
 
     ms_duration debugModelTime{0};
     size_t debugTotalNodes = 0;
@@ -168,5 +160,6 @@ private:
     void DrawCustomSelection(const char* text, float posY, int* selection, bool& edit);
     void DrawCustomSlider(float* value);
     void DrawCustomPather(int& index, int count);
-    void DrawObjecive(std::string text, bool removable, int objectiveIndex);
+    void DrawObjecive(ObjectiveList& objectives, int index, bool removable);
+    void DrawObjeciveWeight(ObjectiveList& objectives, int index, bool removable);
 };

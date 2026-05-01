@@ -13,6 +13,8 @@
 #include "raylib_logger.h"
 #include "user_interface.h"
 
+void PathFinder(OSMGraph& graph, UserInterface& ui);
+
 int main() {
 
     OSMGraph graph;
