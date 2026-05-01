@@ -12,11 +12,13 @@
 using LabelPtr = std::shared_ptr<struct Label>;
 using LabelSet = std::vector<LabelPtr>;
 
-struct Cost
-{
-    double signals;
-    double time;
-};
+//struct Cost
+//{
+//    double signals;
+//    double time;
+//};
+
+using Cost = std::vector<double>;
 
 struct Label
 {
@@ -28,24 +30,41 @@ struct Label
 struct Compare
 {
     bool operator()(const LabelPtr& a, const LabelPtr& b) {
-        if (a->cost.time != b->cost.time)
-            return a->cost.time > b->cost.time;
-        return a->cost.signals > b->cost.signals;
+        if (a->cost[0] != b->cost[0])
+            return a->cost[0] > b->cost[0];
+        return a->cost[1] > b->cost[1];
     }
 };
 
 // Does cost A dominate cost B?
-bool Dominates(const Cost& a, const Cost& b) 
+//bool Dominates(const Cost& a, const Cost& b) 
+//{
+//    return (a.signals <= b.signals && a.time <= b.time &&
+//           (a.signals < b.signals || a.time < b.time));
+//}
+
+bool Dominates(const Cost& a, const Cost& b)
 {
-    return (a.signals <= b.signals && a.time <= b.time &&
-           (a.signals < b.signals || a.time < b.time));
+    bool strictlyBetter = false;
+
+    for (size_t i = 0; i < a.size(); ++i) {
+        if (a[i] > b[i])
+            return false;
+
+        if (a[i] < b[i])
+            strictlyBetter = true;
+    }
+
+    return strictlyBetter;
 }
 
 bool EqualCost(const Cost& a, const Cost& b)
 {
-    return
-        a.signals == b.signals &&
-        a.time == b.time;
+    for (size_t i = 0; i < a.size(); ++i) {
+        if (a[i] != b[i])
+            return false;
+    }
+    return true;
 }
 
 
@@ -55,6 +74,7 @@ bool Pareto::FindPath(OSMGraph& graph, UserInterface& ui)
     auto start = graph.GetNodeA();
     auto goal = graph.GetNodeB();
 
+    auto objectives = ui.GetObjectives();
 
     std::unordered_map<OSMNodeID, LabelSet> frontier;
 
@@ -122,11 +142,18 @@ bool Pareto::FindPath(OSMGraph& graph, UserInterface& ui)
 
             double timeToDrive = distance / speedMS;
 
-            Cost newCost
+            Cost newCost;
+
+            for (size_t i = 0; i < objectives.size(); ++i)
             {
-                current->cost.signals + signal,
-                current->cost.time + timeToDrive
-            };
+                double edgeCost = objectives[i].func(nodeA, nodeB, way);
+                newCost.push_back(current->cost[i] + edgeCost);
+            }
+
+            //{
+            //    current->cost[0] + signal,
+            //    current->cost[1] + timeToDrive
+            //};
 
             bool dominated = false;
 
@@ -172,6 +199,7 @@ bool Pareto::FindPath(OSMGraph& graph, UserInterface& ui)
         spdlog::info("Pareto found {} paths", frontier[goal].size());
         for (const LabelPtr& label : frontier[goal])
         {
+            //spdlog::info("Signals {}, Travel Time {} ", label->cost[0], label->cost[1]);
             LabelPtr it = label;
             OSMPath path;
             while (it != nullptr)
@@ -182,6 +210,8 @@ bool Pareto::FindPath(OSMGraph& graph, UserInterface& ui)
             std::reverse(path.begin(), path.end());
             graph.InsertPath(path);
         }
+
+        ui.SetPathCount(frontier[goal].size());
 
         return true;
     }

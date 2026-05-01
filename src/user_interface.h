@@ -2,15 +2,26 @@
 
 #include <cstring>
 #include <chrono>
+#include <functional>
 #include "timer.h"
 
 #include "raylib.h"
 #include "../vendor/raygui.h"
 
 #include "Window.h"
-
+#include "osm/osm_types.h"
 
 using ms_duration = std::chrono::duration<double, std::milli>;
+
+using ObjectiveFunc = std::function<double(const OSMNode&, const OSMNode&, const OSMWay&)>;
+
+struct Objective
+{
+    std::string   name;
+    ObjectiveFunc func;
+};
+
+using ObjectiveList = std::vector<Objective>;
 
 class UserInterface 
 {
@@ -64,6 +75,8 @@ public:
             objSmoothness + objGasStation + objCafe + objTourism;
     }
 
+    auto GetObjectives() const { return objectives; }
+
     [[nodiscard]] auto GetPathIndex() const { return pathSelectionIndex; }
     auto SetPathCount(auto count) { pathCount = count; }
 
@@ -76,6 +89,8 @@ public:
     auto SetDebugRenderedWays(auto ways)  { debugRenderedWays = ways;  }
     auto SetDebugMouseCoords(auto lat, auto lon)  { debugMouseWorldPos = {lat, lon}; }
     auto SetPOIText(const std::string& text)     { poiText = text; }
+
+    void SetPathSelectionCallback(std::function<void(int)> callback) { pathSelectionCallback = std::move(callback); }
 
     // Visibility toggles
 
@@ -114,6 +129,8 @@ private:
     float objCafe  = 0.5;
     float objTourism  = 0.5;
 
+    ObjectiveList objectives;
+
     ms_duration debugModelTime{0};
     size_t debugTotalNodes = 0;
     size_t debugTotalWays = 0;
@@ -129,6 +146,8 @@ private:
     bool originTextboxEdit = false;
     bool destinationTextboxEdit = false;
     bool wasPreviouslyEditing = false;
+
+    std::function<void(int)> pathSelectionCallback;
 
     static constexpr int textboxSize = 128;
     char originTextboxText[textboxSize] = "";
@@ -149,4 +168,5 @@ private:
     void DrawCustomSelection(const char* text, float posY, int* selection, bool& edit);
     void DrawCustomSlider(float* value);
     void DrawCustomPather(int& index, int count);
+    void DrawObjecive(std::string text, bool removable, int objectiveIndex);
 };

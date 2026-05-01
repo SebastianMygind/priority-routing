@@ -73,7 +73,6 @@ public:
     void SetNodeB(OSMNodeID id) { selectedNodeB = id; }
     void ClearPath() { paths.clear(); }
     void InsertPath(OSMPath path) { paths.push_back(path); }
-    void CyclePath() { selectedPath = (selectedPath + 1) % (paths.size()); }
 
     // Stats
     size_t GetNodeCount() const { return nodes.size(); }
@@ -89,7 +88,6 @@ private:
     std::vector<OSMPath> paths;
     OSMNodeID selectedNodeA;
     OSMNodeID selectedNodeB;
-    int selectedPath = 0;
 
     std::unordered_map<OSMNodeID, std::vector<std::pair<OSMNodeID, OSMWayID>>> adj_list;
     std::unordered_map<OSMNodeID, double> adj_list_dist;
@@ -101,10 +99,9 @@ private:
     std::vector<OSMNodeID> places;
 
     std::unordered_map<std::string, Tree2D> tree2d;
-
    
+
 public:
-    std::vector<OSMNodeID> nodeTest;
 
     friend class OSMRenderer;
     friend class OSMHandler;

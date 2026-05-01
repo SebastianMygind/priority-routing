@@ -254,7 +254,7 @@ void OSMRenderer::PrepareGraph(Camera2D& camera, Window window, Vector2 mouseWor
         {
             // We start from selectedPath + 1 to ensure that the selected path
             // is drawn last (aka. on top of the others)
-            size_t i = (m_pGraph->selectedPath + 1 + k) % paths.size();
+            size_t i = (showPath + 1 + k) % paths.size();
 
             OSMPath& path = paths[i];
             
@@ -268,7 +268,7 @@ void OSMRenderer::PrepareGraph(Camera2D& camera, Window window, Vector2 mouseWor
 
                 float width = std::fmax(2.6F * (1.0 / camera.zoom), 0.2F);
 
-                nextPacket.path.push_back({ p1, p2, width, i == m_pGraph->selectedPath ? SKYBLUE : CLITERAL(Color) { 100, 140, 180, 255 } });
+                nextPacket.path.push_back({ p1, p2, width, i == showPath ? SKYBLUE : CLITERAL(Color) { 100, 140, 180, 255 } });
             }
         }
     }
@@ -316,17 +316,6 @@ void OSMRenderer::PrepareGraph(Camera2D& camera, Window window, Vector2 mouseWor
             nextPacket.nodes.emplace_back(p1, radius, VIOLET);
         }
     }
-
-    for (const OSMNodeID& id : m_pGraph->nodeTest)
-    {
-        const OSMNode& current_node = m_pGraph->GetNode(id);
-
-        Vector2 p1 = MercatorProjection(current_node.location);
-        float radius = 5.F * (1.F / camera.zoom);
-
-        nextPacket.nodes.emplace_back(p1, radius, RED);
-    }
-
 
 
     //  for (const auto& node : m_pGraph->places) {

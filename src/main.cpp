@@ -36,6 +36,7 @@ int main() {
     ui.SetDebugTotalNodes(graph.GetNodeCount());
     ui.SetDebugTotalWays(graph.GetWayCount());
     ui.SetupUI("../fonts/JetBrainsMono-Regular.ttf");
+    ui.SetPathSelectionCallback([&renderer](int index) { renderer.SetVisiblePath(index); });
 
     Camera2D camera = {};
     camera.zoom = 1.0F;
@@ -65,7 +66,6 @@ int main() {
             if (IsKeyPressed(KEY_D)) { ui.ToggleDebug();      }
             if (IsKeyPressed(KEY_V)) { renderer.ToggleQuad(); }
             if (IsKeyPressed(KEY_P)) { renderer.CyclePOI(); ui.SetPOIText(renderer.GetPOIText());  }
-            if (IsKeyPressed(KEY_R)) { graph.CyclePath(); }
         }
 
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && !ui.MouseInUI())
@@ -125,6 +125,8 @@ int main() {
             graph.ClearPath();
             graph.SetNodeA(graph.StringToNode(ui.GetOrigin()));
             graph.SetNodeB(graph.StringToNode(ui.GetDestination()));
+
+            renderer.SetVisiblePath(ui.GetPathIndex());
             
             if (graph.GetNodeA() != 0xFFFFFFFF && graph.GetNodeB() != 0xFFFFFFFF) 
             {

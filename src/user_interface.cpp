@@ -5,15 +5,15 @@
 #include <format>
 
 #include "Window.h"
-
+#include "osm/graph.h"
 #include "spdlog/spdlog.h"
 
 // Height of elements, effectively their size
 
 constexpr int HEADING_HEIGHT = 30;
-constexpr int TEXT_HEIGHT    = 20;
-constexpr int BOX_HEIGHT     = 40;
-constexpr int SLIDER_HEIGHT  = 20;
+constexpr int TEXT_HEIGHT    = 15;
+constexpr int BOX_HEIGHT     = 25;
+constexpr int SLIDER_HEIGHT  = 15;
 
 // Padding between elements, horizontal and vertical
 
@@ -26,6 +26,28 @@ constexpr std::pair UI_MIN_SIZE   = {200.F, 620.F};
 constexpr float     UI_MULTIPLIER = 0.20;
 constexpr float     UI_DEBUG_HEIGHT = 250.F;
 
+double DistanceObjective(const OSMNode& a, const OSMNode& b, const OSMWay& way)
+{
+    return Haversine(a.location, b.location);
+}
+
+double TravelTimeObjective(const OSMNode& a, const OSMNode& b, const OSMWay& way)
+{
+    auto speedTag = way.tags.find("maxspeed");
+    auto highwayTag = way.tags.find("highway");
+    double speed = (speedTag != way.tags.end())
+        ? ParseMaxSpeed(speedTag->second)
+        : GetDefaultSpeed(highwayTag->second);
+    double distance = Haversine(a.location, b.location);
+    return distance / speed;
+}
+
+double TrafficSignalObjective(const OSMNode& a, const OSMNode& b, const OSMWay& way)
+{
+    auto highwayTagB = b.tags.find("highway");
+    return (highwayTagB != b.tags.end() && highwayTagB->second == "traffic_signals") ? 1.0 : 0.0;
+}
+
 /*
     Accumulator types are used with elementY to determine the y position of the next element.
     Use the type of the element you're drawing or call elementY(padding) to add spacing between elements.
@@ -33,7 +55,7 @@ constexpr float     UI_DEBUG_HEIGHT = 250.F;
 enum AccumulatorTypes
 {
     headingType = HEADING_HEIGHT + V_PAD, 
-    textType = TEXT_HEIGHT + V_PAD,
+    textType = (TEXT_HEIGHT - 4) + V_PAD,
     boxType = BOX_HEIGHT + V_PAD,
     sliderType = SLIDER_HEIGHT + V_PAD,
     paddingType = 4 * V_PAD
@@ -148,6 +170,12 @@ void UserInterface::DrawCustomPather(int& index, int count)
 {
     auto const yPos = elementY(boxType);
 
+    const std::string text = (count > 0)
+        ? std::format("Route {} of {}", index + 1, count)
+        : "No routes";
+
+    Vector2 textSize = MeasureTextEx(fontText, text.c_str(), TEXT_HEIGHT, 1.2);
+
     const Rectangle outlinePos{
         .x = elementX,
         .y = yPos,
@@ -156,8 +184,8 @@ void UserInterface::DrawCustomPather(int& index, int count)
     };
 
     const Vector2 textPos{
-        .x = elementX + 56,
-        .y = yPos + 10
+        .x = elementX + (elementWidth / 2) - (textSize.x / 2),
+        .y = yPos + (BOX_HEIGHT / 2) - (TEXT_HEIGHT / 2) + 1
     };
 
     const Rectangle leftButton{
@@ -174,9 +202,7 @@ void UserInterface::DrawCustomPather(int& index, int count)
         .height = BOX_HEIGHT
     };
 
-    const std::string text = (count > 0)
-        ? std::format("Route {} of {}", index + 1, count  + 1)
-        : "  No routes";
+
 
     DrawRectangleLinesEx(outlinePos, 1, GRAY);
     DrawTextEx(fontText, text.c_str(), textPos, TEXT_HEIGHT, 1.2, BLACK);
@@ -184,10 +210,49 @@ void UserInterface::DrawCustomPather(int& index, int count)
     if (GuiButton(leftButton, "#114#") != 0)
     {
         index = std::max(0, index - 1);
+        pathSelectionCallback(index);
     }
     if (GuiButton(rightButton, "#115#") != 0 && count > 0)
     {
         index = std::min(count - 1, index + 1);
+        pathSelectionCallback(index);
+    }
+}
+
+void UserInterface::DrawObjecive(std::string text, bool removable, int objectiveIndex) 
+{
+    auto const yPos = elementY(boxType);
+
+    Vector2 textSize = MeasureTextEx(fontText, text.c_str(), TEXT_HEIGHT, 1.2);
+
+    const Rectangle outlinePos{
+        .x = elementX,
+        .y = yPos,
+        .width = elementWidth,
+        .height = BOX_HEIGHT
+    };
+
+    const Vector2 textPos{
+        .x = elementX + 10,
+        .y = yPos + (BOX_HEIGHT / 2) - (TEXT_HEIGHT / 2) + 1
+    };
+
+    const Rectangle rightButton{
+        .x = elementX + elementWidth - BOX_HEIGHT + 5,
+        .y = yPos + 5,
+        .width = BOX_HEIGHT - 10,
+        .height = BOX_HEIGHT - 10
+    };
+
+    DrawRectangleLinesEx(outlinePos, 1, LIGHTGRAY);
+    DrawTextEx(fontText, text.c_str(), textPos, TEXT_HEIGHT, 1.2, BLACK);
+
+    if (removable) 
+    {
+        if (GuiButton(rightButton, "x") != 0)
+        {
+            objectives.erase(objectives.begin() + objectiveIndex);
+        }
     }
 }
 
@@ -205,6 +270,12 @@ void UserInterface::SetupUI(const char* file)
 
     spinnerImage = LoadImageAnim("../assets/spinner.gif", &spinnerFrameCount);
     spinnerTexture = LoadTextureFromImage(spinnerImage);
+
+    objectives = {
+        { "Distance", DistanceObjective },
+        { "Time", TravelTimeObjective },
+        { "Traffic Lights", TrafficSignalObjective },
+    };
 
     auto checkImage = LoadImage("../assets/checkmark.png");
     ImageResize(&checkImage, 50, 50);
@@ -232,7 +303,7 @@ void UserInterface::DrawUserInterface(const Window &window)
 
     const auto winX = H_PAD.first;
     const auto winY = H_PAD.first;
-    const auto winWidth  = std::max(screenX * UI_MULTIPLIER, UI_MIN_SIZE.first);
+    const auto winWidth  = std::min(std::max(screenX * UI_MULTIPLIER, UI_MIN_SIZE.first), 400.f);
     const auto winHeight = std::max(screenY + H_PAD.second, UI_MIN_SIZE.second);
 
     // Set up the UI box and mouse pos used throughout the class
@@ -245,6 +316,13 @@ void UserInterface::DrawUserInterface(const Window &window)
     DrawRouteInfo();
     DrawPathLoader(window);
     DrawDebugInfo();
+
+
+    static int scroll = 0;
+    GuiListView({ .x = elementX, .y = 10, .width = elementWidth, .height = 100 },
+        "Distance;Time;Lit Roads;Smoothness;Gas Station;Cafe;Tourism",
+        &scroll,
+        nullptr);
 }
 
 void UserInterface::DrawRouteInfo() 
@@ -270,8 +348,15 @@ void UserInterface::DrawRouteInfo()
     // Save the y pos, draw later
     float modelY = elementY(boxType); 
 
+    DrawCustomText("Objectives");
     switch (modelSelectionIndex)
     {
+        case 0:  // Dijkstra
+        case 1:
+        DrawObjecive("Distance", false, 0);
+
+        break;
+
     case 2: // Weighted Sum
         DrawCustomText("Distance");
         DrawCustomSlider(&objDistance);
@@ -290,15 +375,30 @@ void UserInterface::DrawRouteInfo()
         break;
     
     case 3:
-        DrawCustomPather(pathSelectionIndex, pathCount);
+    {
+        for (size_t i = 0; i < objectives.size(); i++) 
+        {
+            DrawObjecive(objectives[i].name, true, i);
+        }
+
+        GuiButton({.x = elementX,
+                   .y = elementY(boxType),
+                   .width = elementWidth,
+                   .height = BOX_HEIGHT},
+                  "Add");
+        break;
+    }
 
     default:
         break;
     }
     
+    DrawCustomHeading("Solution");
+    DrawCustomPather(pathSelectionIndex, pathCount);
 
     // Draw the model dropdown last so it's drawn over the sliders if open
     DrawCustomSelection("Dijkstra;A Star;Weighted Sum;Pareto", modelY, &modelSelectionIndex, modelSelectionEdit);
+
 
 }
 
