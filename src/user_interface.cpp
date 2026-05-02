@@ -8,6 +8,7 @@
 #include "osm/graph.h"
 #include "spdlog/spdlog.h"
 
+
 // Height of elements, effectively their size
 
 constexpr int HEADING_HEIGHT = 30;
@@ -238,22 +239,26 @@ void UserInterface::DrawObjecive(ObjectiveList& objectives, int index, bool remo
 
 void UserInterface::DrawObjeciveWeight(ObjectiveList& objectives, int index, bool removable) 
 {
+
     Objective& objective = objectives[index];
 
     auto const yPos = elementY(boxType);
 
-    Vector2 textSize = MeasureTextEx(fontText, objective.name.c_str(), TEXT_HEIGHT, 1.2);
-
     const Rectangle outlinePos{
         .x = elementX,
         .y = yPos,
-        .width = elementWidth,
+        .width = elementWidth - BOX_HEIGHT,
         .height = BOX_HEIGHT
     };
 
     const Vector2 textPos{
         .x = elementX + 10,
         .y = yPos + (BOX_HEIGHT / 2) - (TEXT_HEIGHT / 2) + 1
+    };
+
+    const Vector2 textPosRight{
+    .x = elementX + elementWidth - 50,
+    .y = yPos + (BOX_HEIGHT / 2) - (TEXT_HEIGHT / 2) + 1
     };
 
     const Rectangle rightButton{
@@ -264,7 +269,33 @@ void UserInterface::DrawObjeciveWeight(ObjectiveList& objectives, int index, boo
     };
 
     DrawRectangleLinesEx(outlinePos, 1, LIGHTGRAY);
+
+
+    Vector2 mousePoint = GUI_POINTER_POSITION;
+    if (CheckCollisionPointRec(mousePoint, outlinePos))
+    {
+        DrawRectangle(elementX + 1, yPos + 1, outlinePos.width * objective.weight, BOX_HEIGHT - 2, Color{ 0xc7, 0xed, 0xfd, 0xff });
+
+        if (GUI_BUTTON_DOWN && !GuiIsLocked())
+        {
+            float value = (mousePoint.x - elementX) / outlinePos.width;
+            objective.weight = std::clamp(value, 0.f, 1.f);
+        }
+    }
+    else
+    {
+        DrawRectangle(elementX + 1, yPos + 1, outlinePos.width * objective.weight, BOX_HEIGHT - 2, SKYBLUE);
+    }
+
     DrawTextEx(fontText, objective.name.c_str(), textPos, TEXT_HEIGHT, 1.2, BLACK);
+
+    float sum = 0.f;
+    for (const auto& obj : objectives) {
+        sum += obj.weight;
+    }
+
+    std::string weightText = std::format("{:.0f}%", objective.weight / sum * 100.f);
+    DrawTextEx(fontText, weightText.c_str(), textPosRight, TEXT_HEIGHT, 1.2, BLACK);
 
     if (removable) 
     {
@@ -273,6 +304,7 @@ void UserInterface::DrawObjeciveWeight(ObjectiveList& objectives, int index, boo
             objectives.erase(objectives.begin() + index);
         }
     }
+
 }
 
 /*
@@ -342,14 +374,11 @@ void UserInterface::DrawUserInterface(const Window &window)
 
     DrawRouteInfo();
     DrawPathLoader(window);
+
     DrawDebugInfo();
 
 
-    static int scroll = 0;
-    GuiListView({ .x = elementX, .y = 10, .width = elementWidth, .height = 100 },
-        "Distance;Time;Lit Roads;Smoothness;Gas Station;Cafe;Tourism",
-        &scroll,
-        nullptr);
+
 }
 
 void UserInterface::DrawRouteInfo() 
@@ -375,6 +404,8 @@ void UserInterface::DrawRouteInfo()
     // Save the y pos, draw later
     float modelY = elementY(boxType); 
 
+    float addButtonY = 0.f;
+
     DrawCustomText("Objectives");
     switch (modelSelectionIndex)
     {
@@ -390,11 +421,15 @@ void UserInterface::DrawRouteInfo()
             DrawObjeciveWeight(objWeightedSum, i, true);
         }
 
-        GuiButton({.x = elementX,
-                   .y = elementY(boxType),
+        addButtonY = elementY(boxType);
+        if (GuiButton({.x = elementX,
+                   .y = addButtonY,
                    .width = elementWidth,
                    .height = BOX_HEIGHT},
-                  "Add");
+                  "Add"))
+        {
+            showNewObjective = true;
+        }
         break;
     
     case 3:
@@ -404,11 +439,15 @@ void UserInterface::DrawRouteInfo()
             DrawObjecive(objPareto, i, true);
         }
 
-        GuiButton({.x = elementX,
-                   .y = elementY(boxType),
+        addButtonY = elementY(boxType);
+        if (GuiButton({.x = elementX,
+                   .y = addButtonY,
                    .width = elementWidth,
                    .height = BOX_HEIGHT},
-                  "Add");
+                  "Add"))
+        {
+            showNewObjective = true;
+        }
         break;
     }
 
@@ -422,6 +461,53 @@ void UserInterface::DrawRouteInfo()
     // Draw the model dropdown last so it's drawn over the sliders if open
     DrawCustomSelection("Dijkstra;A Star;Weighted Sum;Pareto", modelY, &modelSelectionIndex, modelSelectionEdit);
 
+    if (showNewObjective)
+    {
+        static int scroll = 0;
+        int active = -1;
+        GuiListView({ .x = elementX, .y = addButtonY, .width = elementWidth, .height = 200 },
+            "Distance;Time;Traffic Lights;Lit Roads;Smoothness;Gas Station;Cafe;Tourism",
+            &scroll,
+            &active);
+        if (active != -1 && showNewObjective)
+        {
+            showNewObjective = false;
+            Objective newObj;
+            switch (active)
+            {
+            case 0:
+                newObj = { "Distance", DistanceObjective, 0.5 };
+                break;
+            case 1:
+                newObj = { "Time", TravelTimeObjective, 0.5 };
+                break;
+            case 2:
+                newObj = { "Traffic Lights", TrafficSignalObjective, 0.5 };
+                break;
+            case 3:
+                newObj = { "Lit Roads", LitRoadObjective, 0.5 };
+                break;
+            case 4:
+                newObj = { "Road Smoothness", RoadSmoothnessObjective, 0.5 };
+                break;
+            case 5:
+                newObj = { "Gas Station Proximity", GasStationObjective, 0.5 };
+                break;
+            case 6:
+                newObj = { "Cafe Proximity", CafeObjective, 0.5 };
+                break;
+            case 7:
+                newObj = { "Tourism Proximity", TourismObjective, 0.5 };
+                break;
+            default:
+                break;
+            }
+            if (modelSelectionIndex == 2)
+                objWeightedSum.push_back(newObj);
+            else
+                objPareto.push_back(newObj);
+        }
+    }
 
 }
 
@@ -527,18 +613,17 @@ void UserInterface::DeactivateLoader() {
 */
 void UserInterface::UpdateLockState() 
 {
-    // If the left mouse is pressed when the cursor is outside the visible UI box, lock it
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !(CheckCollisionPointRec(mousePos, uiRect) && showUI))
+    // If the mouse is outside the visible UI box, lock it
+    if (!(CheckCollisionPointRec(mousePos, uiRect) && showUI))
     {
         GuiLock();
         originTextboxEdit = false;
         destinationTextboxEdit = false;
         modelSelectionEdit = false;
     }
-    // If the left mouse is released, unlock it
-    if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
+    else
     {
-        GuiUnlock();
+         GuiUnlock();
     }
 }
 
@@ -560,3 +645,22 @@ bool UserInterface::IsUpdated()
     wasPreviouslyEditing = isCurrentlyEditing;
     return false;
 }
+
+ObjectiveList UserInterface::GetObjectives()
+{
+    ObjectiveList result;
+    if (modelSelectionIndex == 2) 
+        result = objWeightedSum;
+    else
+        result = objPareto;
+
+    float sum = 0.f;
+    for (const auto& obj : result) 
+        sum += obj.weight;
+
+    for (auto& obj : result) 
+        obj.weight /= sum;
+
+    return result;
+}
+

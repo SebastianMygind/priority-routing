@@ -122,6 +122,15 @@ int main() {
             }
         }
 
+        if (const float wheel = GetMouseWheelMove(); wheel != 0 && !ui.MouseInUI())
+        {
+            camera.offset = GetMousePosition() * window.dpi;
+            camera.target = mouseWorldPos;
+
+            const float scale = 0.2F * wheel;
+            camera.zoom = Clamp(expf(logf(camera.zoom) + scale), 0.125F, 64.0F);
+        }
+
         if (ui.IsUpdated())
         {
             graph.ClearPath();
@@ -136,14 +145,6 @@ int main() {
             }
         }
 
-        if (const float wheel = GetMouseWheelMove(); wheel != 0) 
-        {
-            camera.offset = GetMousePosition() * window.dpi;
-            camera.target = mouseWorldPos;
-
-            const float scale = 0.2F * wheel;
-            camera.zoom = Clamp(expf(logf(camera.zoom) + scale), 0.125F, 64.0F);
-        }
 
         // Prepare renderer
         renderer.UpdateGraph(camera, window, mouseWorldPos);

@@ -6,11 +6,11 @@
 #include "timer.h"
 
 #include "raylib.h"
-#include "../vendor/raygui.h"
+
 
 #include "Window.h"
 #include "path_finder.h"
-
+#include "../vendor/raygui.h"
 
 using ms_duration = std::chrono::duration<double, std::milli>;
 
@@ -53,20 +53,8 @@ public:
 
     // Model getters
 
-    [[nodiscard]] auto GetModel()    const { return (PathfindingModel)modelSelectionIndex; }
-    [[nodiscard]] auto GetDistance() const { return objDistance / GetSum();    }
-    [[nodiscard]] auto GetTime()     const { return objTime / GetSum();        }
-    [[nodiscard]] auto GetLitRoads()  const { return objLitRoads / GetSum();     }
-    [[nodiscard]] auto GetSmoothness()  const { return objSmoothness / GetSum();     }
-    [[nodiscard]] auto GetGasStation()  const { return objGasStation / GetSum();     }
-    [[nodiscard]] auto GetCafe()  const { return objCafe / GetSum();     }
-    [[nodiscard]] auto GetTourism()  const { return objTourism / GetSum();     }
-    [[nodiscard]] float GetSum()     const {
-        return objDistance + objTime + objLitRoads +
-            objSmoothness + objGasStation + objCafe + objTourism;
-    }
-
-    auto GetObjectives() const { if (modelSelectionIndex == 2){ return objWeightedSum; } else {return objPareto;} }
+    [[nodiscard]] PathfindingModel GetModel()    const { return (PathfindingModel)modelSelectionIndex; }
+    ObjectiveList GetObjectives();
 
     [[nodiscard]] auto GetPathIndex() const { return pathSelectionIndex; }
     auto SetPathCount(auto count) { pathCount = count; }
@@ -112,14 +100,6 @@ private:
     int pathSelectionIndex = 0;
     int pathCount = 0;
 
-    float objDistance = 0.5;
-    float objTime     = 0.5;
-    float objLitRoads  = 0.5;
-    float objSmoothness  = 0.5;
-    float objGasStation  = 0.5;
-    float objCafe  = 0.5;
-    float objTourism  = 0.5;
-
     ObjectiveList objWeightedSum;
     ObjectiveList objPareto;
 
@@ -138,6 +118,7 @@ private:
     bool originTextboxEdit = false;
     bool destinationTextboxEdit = false;
     bool wasPreviouslyEditing = false;
+    bool showNewObjective = false;
 
     std::function<void(int)> pathSelectionCallback;
 

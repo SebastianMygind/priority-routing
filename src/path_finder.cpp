@@ -48,11 +48,13 @@ void PathFinder(OSMGraph& graph, UserInterface& ui)
         ui.ActivateLoader();
         threadDone.store(false);
         const auto timeStart = std::chrono::high_resolution_clock::now();
+        graph.ClearPath();
         pathfinder->FindPath(graph, ui.GetObjectives());
         const auto timeEnd = std::chrono::high_resolution_clock::now();
         ui.SetDebugModelTime(timeEnd - timeStart);
         threadDone.store(true);
         ui.DeactivateLoader();
+        ui.SetPathCount(graph.GetPathCount());
     });
 
     pathfindingThread.detach();
