@@ -94,7 +94,7 @@ bool Pareto::FindPath(OSMGraph& graph, ObjectiveList objectives)
     p_queue.push(startLabel);
 
 
-    while (!p_queue.empty() && running)
+    while (!p_queue.empty() && !threadKill.load())
     {
         LabelPtr current = p_queue.top();
         p_queue.pop();

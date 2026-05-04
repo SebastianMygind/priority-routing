@@ -72,7 +72,7 @@ if (MSVC)
     add_compile_options(/W4 /permissive-)
     add_definitions(/DNOMINMAX)
 else()
-    add_compile_options(-Wall -Wextra -Wpedantic)
+    add_compile_options(-Wall -Wextra -Wpedantic -O3)
 endif()
 
 # Main executable that runs the application

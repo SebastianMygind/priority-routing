@@ -30,7 +30,7 @@ bool Dijkstra::FindPath(OSMGraph& graph, ObjectiveList objectives)
     cost[source] = 0;
     p_queue.push({cost[source], source});
 
-    while (!p_queue.empty() && running)
+    while (!p_queue.empty() && !threadKill.load())
     {
         // Get the node with the smallest cost + heuristic
         OSMNodeID current = p_queue.top().second;

@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <atomic>
+#include <thread>
 
 using ObjectiveFunc = std::function<double(OSMGraph&, const OSMNode&, const OSMNode&, const OSMWay&, double)>;
 
@@ -22,11 +23,6 @@ class IPathFinder
 public:
     virtual ~IPathFinder() = default;
     virtual bool FindPath(OSMGraph& graph, ObjectiveList objectives) = 0;
-
-    void Stop() { running = false; }
-
-protected:
-    std::atomic<bool> running = true;
 };
 
 enum class PathfindingModel {
@@ -35,6 +31,10 @@ enum class PathfindingModel {
     Weighted = 2,
     Pareto = 3,
 };
+
+extern std::thread pathfindingThread;
+extern std::atomic<bool> threadDone;
+extern std::atomic<bool> threadKill;
 
 double DistanceObjective(OSMGraph& graph, const OSMNode& a, const OSMNode& b, const OSMWay& way, double distance);
 double TravelTimeObjective(OSMGraph& graph, const OSMNode& a, const OSMNode& b, const OSMWay& way, double distance);
