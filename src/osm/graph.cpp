@@ -1,4 +1,5 @@
-﻿#include <filesystem>
+﻿#include <algorithm>
+#include <filesystem>
 #include <cfloat>
 #include <cmath>
 #ifdef _WIN32
@@ -24,9 +25,13 @@ OSMGraph::OSMGraph() : selectedNodeA(UINT32_MAX), selectedNodeB(UINT32_MAX)
 bool OSMGraph::ParseOSMFile(const std::string& path) {
     nodes.clear();
     ways.clear();
+    addressIndex.clear();
+    addressLowerCache.clear();
 
     nodes.reserve(10'000'000);
     ways.reserve(1'000'000);
+    addressIndex.reserve(1'000'000);
+    addressLowerCache.reserve(addressIndex.size());
 
     spdlog::info("Loading OSM file from path: {}", path);
 
@@ -39,6 +44,13 @@ bool OSMGraph::ParseOSMFile(const std::string& path) {
     spdlog::info("Successfully loaded OSM file, parsing...");
 
     reader.close();
+
+    // Lowercase address cache
+    for (const auto& [address, nodeIds] : addressIndex) {
+        std::string lowerAddr = address;
+        std::ranges::transform(lowerAddr, lowerAddr.begin(), ::tolower);
+        addressLowerCache.emplace_back(std::move(lowerAddr), nodeIds);
+    }
 
     return true;
 }
@@ -144,6 +156,10 @@ bool OSMGraph::BuildAdjList()
 }
 
 OSMNodeID OSMGraph::StringToNode(const std::string& input) {
+    if (input.empty())
+    {
+        return 0xFFFFFFFF;
+    }
     try 
     {
         OSMNodeID node = std::stoull(input);
@@ -155,8 +171,20 @@ OSMNodeID OSMGraph::StringToNode(const std::string& input) {
     } 
     catch (const std::exception& e) 
     {
-        return 0xFFFFFFFF;
     }
+
+    // If node not found by string input then go by address
+    std::vector<OSMNodeID> addressResults = SearchByAddress(input);
+
+    if (!addressResults.empty())
+    {
+        OSMNodeID addressNodeId = addressResults.at(0);
+        const auto& addressLocation = nodes.at(addressNodeId).location;
+
+        auto [nearestRoadNode, distance] = tree2d.at("road_nodes").Nearest(addressLocation);
+        return nearestRoadNode;
+    }
+    return 0xFFFFFFFF;
 }
 
 
@@ -171,6 +199,50 @@ std::vector<OSMNodeID> OSMGraph::getNodesWithTourism() const {
 
     return nodesWithTourism;
 }
+
+
+std::vector<OSMNodeID> OSMGraph::SearchByAddress(const std::string& address)
+{
+    // Find address EXACT match
+    if (auto iter = addressIndex.find(address); iter != addressIndex.end())
+    {
+        return iter->second;
+    }
+
+    std::vector<OSMNodeID> results;
+    std::string lowerAddress = address;
+    std::ranges::transform(lowerAddress, lowerAddress.begin(), ::tolower);
+
+    for (const auto& [lowerAddr, nodeIds] : addressLowerCache) {
+        if (lowerAddr.contains(lowerAddress)) {
+            results.insert(results.end(), nodeIds.begin(), nodeIds.end());
+        }
+    }
+
+    return results;
+}
+
+bool OSMGraph::BuildRoadNodes()
+{
+    if (adj_list.empty())
+    {
+        spdlog::error("Cannot build road_nodes because adj_list is empty");
+        return false;
+    }
+
+    spdlog::info("Building road_nodes 2D tree...");
+    for (const auto& nodeIds : adj_list | std::views::keys)
+    {
+        if (nodes.contains(nodeIds))
+        {
+            tree2d["road_nodes"].AddNode(nodeIds, nodes.at(nodeIds).location);
+        }
+    }
+    tree2d["road_nodes"].BuildTree();
+    spdlog::info("Finished building road node 2D tree");
+    return true;
+}
+
 
 Vector2 MercatorProjection(Coord location)
 {

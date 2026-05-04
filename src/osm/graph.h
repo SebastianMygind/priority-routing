@@ -51,6 +51,7 @@ public:
     bool ParseOSMFile(const std::string& path);
     bool Build2DTree();
     bool BuildAdjList();
+    bool BuildRoadNodes();
     
     OSMNodeID StringToNode(const std::string& input);
 
@@ -85,6 +86,9 @@ private:
     std::unordered_map<OSMNodeID, OSMNode> nodes;
     std::unordered_map<OSMWayID, OSMWay> ways;
 
+    std::unordered_map<std::string, std::vector<OSMNodeID>> addressIndex;
+    std::vector<std::pair<std::string, std::vector<OSMNodeID>>> addressLowerCache;
+
     std::vector<OSMNodeID> selectedPath;
     OSMNodeID selectedNodeA;
     OSMNodeID selectedNodeB;
@@ -94,6 +98,7 @@ private:
     std::unordered_map<OSMNodeID, OSMNodeID> adj_list_prev;
 
     std::vector<OSMNodeID> getNodesWithTourism() const;
+    std::vector<OSMNodeID> SearchByAddress(const std::string& address);
 
     // Nodes that is not a part of a way
     std::vector<OSMNodeID> places;
