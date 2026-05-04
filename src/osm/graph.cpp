@@ -25,9 +25,13 @@ OSMGraph::OSMGraph() : selectedNodeA(UINT32_MAX), selectedNodeB(UINT32_MAX)
 bool OSMGraph::ParseOSMFile(const std::string& path) {
     nodes.clear();
     ways.clear();
+    addressIndex.clear();
+    addressLowerCache.clear();
 
     nodes.reserve(10'000'000);
     ways.reserve(1'000'000);
+    addressIndex.reserve(1'000'000);
+    addressLowerCache.reserve(addressIndex.size());
 
     spdlog::info("Loading OSM file from path: {}", path);
 
@@ -40,6 +44,13 @@ bool OSMGraph::ParseOSMFile(const std::string& path) {
     spdlog::info("Successfully loaded OSM file, parsing...");
 
     reader.close();
+
+    // Lowercase address cache
+    for (const auto& [address, nodeIds] : addressIndex) {
+        std::string lowerAddr = address;
+        std::ranges::transform(lowerAddr, lowerAddr.begin(), ::tolower);
+        addressLowerCache.emplace_back(std::move(lowerAddr), nodeIds);
+    }
 
     return true;
 }
@@ -145,6 +156,10 @@ bool OSMGraph::BuildAdjList()
 }
 
 OSMNodeID OSMGraph::StringToNode(const std::string& input) {
+    if (input.empty())
+    {
+        return 0xFFFFFFFF;
+    }
     try 
     {
         OSMNodeID node = std::stoull(input);
@@ -198,14 +213,9 @@ std::vector<OSMNodeID> OSMGraph::SearchByAddress(const std::string& address)
     std::string lowerAddress = address;
     std::ranges::transform(lowerAddress, lowerAddress.begin(), ::tolower);
 
-    for (const auto& [addr, nodeIDs] : addressIndex)
-    {
-        std::string lowerKey = addr;
-        std::ranges::transform(lowerKey, lowerKey.begin(), ::tolower);
-
-        if (lowerKey.contains(lowerAddress))
-        {
-            results.insert(results.end(), nodeIDs.begin(), nodeIDs.end());
+    for (const auto& [lowerAddr, nodeIds] : addressLowerCache) {
+        if (lowerAddr.contains(lowerAddress)) {
+            results.insert(results.end(), nodeIds.begin(), nodeIds.end());
         }
     }
 

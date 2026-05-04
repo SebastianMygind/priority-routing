@@ -87,6 +87,7 @@ private:
     std::unordered_map<OSMWayID, OSMWay> ways;
 
     std::unordered_map<std::string, std::vector<OSMNodeID>> addressIndex;
+    std::vector<std::pair<std::string, std::vector<OSMNodeID>>> addressLowerCache;
 
     std::vector<OSMNodeID> selectedPath;
     OSMNodeID selectedNodeA;
