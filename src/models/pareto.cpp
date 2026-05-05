@@ -12,12 +12,6 @@
 using LabelPtr = std::shared_ptr<struct Label>;
 using LabelSet = std::vector<LabelPtr>;
 
-//struct Cost
-//{
-//    double signals;
-//    double time;
-//};
-
 using Cost = std::vector<double>;
 
 struct Label
@@ -35,13 +29,6 @@ struct Compare
         return a->cost[1] > b->cost[1];
     }
 };
-
-// Does cost A dominate cost B?
-//bool Dominates(const Cost& a, const Cost& b) 
-//{
-//    return (a.signals <= b.signals && a.time <= b.time &&
-//           (a.signals < b.signals || a.time < b.time));
-//}
 
 bool Dominates(const Cost& a, const Cost& b)
 {
@@ -87,7 +74,7 @@ bool Pareto::FindPath(OSMGraph& graph, ObjectiveList objectives)
 
     LabelPtr startLabel = std::make_shared<Label>();
     startLabel->node = start;
-    startLabel->cost = { 0, 0 };
+    startLabel->cost = Cost(objectives.size(), 0);
     startLabel->prev = nullptr;
 
     frontier[start].push_back(startLabel);
@@ -99,29 +86,10 @@ bool Pareto::FindPath(OSMGraph& graph, ObjectiveList objectives)
         LabelPtr current = p_queue.top();
         p_queue.pop();
 
-        //printf("%u \n", current->node);
-
         if (std::find(frontier[current->node].begin(), frontier[current->node].end(), current) == frontier[current->node].end())
         {
             continue;
         }
-
-        //if (frontier[goal].size() > 2)
-        //    break;
-
-        //if (current->node == goal)
-        //{
-        //    OSMPath path;
-        //    while (current != nullptr)
-        //    {
-        //        path.push_back(current->node);
-        //        current = current->prev;
-        //    }
-        //    std::reverse(path.begin(), path.end());
-        //    graph.InsertPath(path);
-        //    return true;
-        //}
-
 
         for (auto [neighborId, wayId] : adj_list.at(current->node))
         {
