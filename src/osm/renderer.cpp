@@ -6,6 +6,7 @@
 #include "spdlog/spdlog.h"
 
 #include <array>
+#include <utility>
 
 #include "raymath.h"
 
@@ -266,9 +267,16 @@ void OSMRenderer::PrepareGraph(Camera2D& camera, Window window, Vector2 mouseWor
                 Vector2 p1 = MercatorProjection(node1.location);
                 Vector2 p2 = MercatorProjection(node2.location);
 
-                float width = std::fmax(2.6F * (1.0 / camera.zoom), 0.2F);
+                float width = std::fmax(2.6F * (1.0 / camera.zoom), 0.2F) *
+                    (std::cmp_equal(i , showPath) ? 2.F : 1.5F);
 
-                nextPacket.path.push_back({ p1, p2, width, i == showPath ? SKYBLUE : CLITERAL(Color) { 100, 140, 180, 255 } });
+                nextPacket.path.push_back(
+                    {
+                        .p1=p1,
+                        .p2=p2,
+                        .width=width,
+                        .color=std::cmp_equal(i , showPath) ? SKYBLUE : CLITERAL(Color)
+                        { .r=100, .g=140, .b=180, .a=255 } });
             }
         }
     }
