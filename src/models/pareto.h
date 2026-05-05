@@ -2,7 +2,7 @@
 #include "../osm/graph.h"
 #include "../path_finder.h"
 
-class Weighted : public IPathFinder
+class Pareto : public IPathFinder
 {
 public:
     bool FindPath(OSMGraph& graph, ObjectiveList objectives) override;

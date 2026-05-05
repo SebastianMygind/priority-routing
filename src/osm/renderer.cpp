@@ -6,6 +6,7 @@
 #include "spdlog/spdlog.h"
 
 #include <array>
+#include <utility>
 
 #include "raymath.h"
 
@@ -150,7 +151,7 @@ void OSMRenderer::PrepareGraph(Camera2D& camera, Window window, Vector2 mouseWor
 {
     std::unordered_map<OSMNodeID, OSMNode>& nodes = m_pGraph->nodes;
     std::unordered_map<OSMWayID, OSMWay>&  ways = m_pGraph->ways;
-    std::vector<OSMNodeID>&  selected_path = m_pGraph->selectedPath;
+    std::vector<OSMPath>& paths = m_pGraph->paths;
 
     AABB screenBounds = GetScreenLocationBounds(camera, window.width * window.dpi.x, window.height * window.dpi.y);
 
@@ -248,19 +249,35 @@ void OSMRenderer::PrepareGraph(Camera2D& camera, Window window, Vector2 mouseWor
         }
     }
 
-    if (!selected_path.empty())
+    if (!paths.empty())
     {
-        for (size_t i = 0; i < selected_path.size() - 1; i++)
+        for (size_t k = 0; k < paths.size(); ++k)
         {
-            OSMNode& node1 = nodes[selected_path[i]];
-            OSMNode& node2 = nodes[selected_path[i + 1]];
+            // We start from selectedPath + 1 to ensure that the selected path
+            // is drawn last (aka. on top of the others)
+            size_t i = (showPath + 1 + k) % paths.size();
 
-            Vector2 p1 = MercatorProjection(node1.location);
-            Vector2 p2 = MercatorProjection(node2.location);
+            OSMPath& path = paths[i];
+            
+            for (size_t j = 0; j < path.size() - 1; j++)
+            {
+                OSMNode& node1 = nodes[path[j]];
+                OSMNode& node2 = nodes[path[j + 1]];
 
-            float width = std::fmax(2.6F * (1.0 / camera.zoom), 0.2F);
+                Vector2 p1 = MercatorProjection(node1.location);
+                Vector2 p2 = MercatorProjection(node2.location);
 
-            nextPacket.path.push_back({ p1, p2, width, SKYBLUE });
+                float width = std::fmax(2.6F * (1.0 / camera.zoom), 0.2F) *
+                    (std::cmp_equal(i , showPath) ? 2.F : 1.5F);
+
+                nextPacket.path.push_back(
+                    {
+                        .p1=p1,
+                        .p2=p2,
+                        .width=width,
+                        .color=std::cmp_equal(i , showPath) ? SKYBLUE : CLITERAL(Color)
+                        { .r=100, .g=140, .b=180, .a=255 } });
+            }
         }
     }
 
@@ -307,9 +324,6 @@ void OSMRenderer::PrepareGraph(Camera2D& camera, Window window, Vector2 mouseWor
             nextPacket.nodes.emplace_back(p1, radius, VIOLET);
         }
     }
-
-
-
 
 
     //  for (const auto& node : m_pGraph->places) {

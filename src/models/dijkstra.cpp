@@ -1,5 +1,6 @@
 #include "dijkstra.h"
 #include "../osm/tags.h"
+#include "spdlog/spdlog.h"
 
 #include <cmath>
 #include <cstdint>
@@ -8,8 +9,14 @@
 #include <algorithm>
 #include <queue>
 
-bool Dijkstra::FindPath(OSMGraph& graph, UserInterface& ui)
+bool Dijkstra::FindPath(OSMGraph& graph, ObjectiveList objectives)
 {
+    if (objectives.empty())
+    {
+        spdlog::error("One objective is required.");
+        return false;
+    }
+
     using PQNode = std::pair<double, OSMNodeID>;
     std::priority_queue<PQNode, std::vector<PQNode>, std::greater<>> p_queue;
 
@@ -30,18 +37,21 @@ bool Dijkstra::FindPath(OSMGraph& graph, UserInterface& ui)
         p_queue.pop();
 
         // If we reached the end node, reconstruct the path
-        if (current == destination) 
+        if (current == destination)
         {
-            while (current != 0xFFFFFFFF) 
+            OSMPath path;
+            while (current != 0xFFFFFFFF)
             {
-                graph.InsertPath(current);
+                path.push_back(current);
                 current = prev[current];
             }
+            std::reverse(path.begin(), path.end());
+            graph.InsertPath(path);
             return true;
         }
 
         // Update distances to neighbors
-        for (std::pair<OSMNodeID, OSMWayID> neighbor : adj_list[current])
+        for (std::pair<OSMNodeID, OSMWayID> neighbor : adj_list.at(current))
         {
             OSMNodeID neighborID = neighbor.first;
             OSMWayID edgeWay = neighbor.second;

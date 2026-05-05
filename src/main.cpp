@@ -13,6 +13,8 @@
 #include "raylib_logger.h"
 #include "user_interface.h"
 
+void PathFinder(OSMGraph& graph, UserInterface& ui);
+
 int main() {
 
     OSMGraph graph;
@@ -37,6 +39,7 @@ int main() {
     ui.SetDebugTotalNodes(graph.GetNodeCount());
     ui.SetDebugTotalWays(graph.GetWayCount());
     ui.SetupUI("../fonts/JetBrainsMono-Regular.ttf");
+    ui.SetPathSelectionCallback([&renderer](int index) { renderer.SetVisiblePath(index); });
 
     Camera2D camera = {};
     camera.zoom = 1.0F;
@@ -120,11 +123,22 @@ int main() {
             }
         }
 
+        if (const float wheel = GetMouseWheelMove(); wheel != 0 && !ui.MouseInUI())
+        {
+            camera.offset = GetMousePosition() * window.dpi;
+            camera.target = mouseWorldPos;
+
+            const float scale = 0.2F * wheel;
+            camera.zoom = Clamp(expf(logf(camera.zoom) + scale), 0.125F, 64.0F);
+        }
+
         if (ui.IsUpdated())
         {
             graph.ClearPath();
             graph.SetNodeA(graph.StringToNode(ui.GetOrigin()));
             graph.SetNodeB(graph.StringToNode(ui.GetDestination()));
+
+            renderer.SetVisiblePath(ui.GetPathIndex());
 
             spdlog::info("Origin: {}, Destination: {}", graph.StringToNode(ui.GetOrigin()), graph.StringToNode(ui.GetDestination()));
             
@@ -134,14 +148,6 @@ int main() {
             }
         }
 
-        if (const float wheel = GetMouseWheelMove(); wheel != 0) 
-        {
-            camera.offset = GetMousePosition() * window.dpi;
-            camera.target = mouseWorldPos;
-
-            const float scale = 0.2F * wheel;
-            camera.zoom = Clamp(expf(logf(camera.zoom) + scale), 0.125F, 64.0F);
-        }
 
         // Prepare renderer
         renderer.UpdateGraph(camera, window, mouseWorldPos);

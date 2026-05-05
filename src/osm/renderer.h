@@ -119,6 +119,7 @@ public:
 
     void ToggleQuad() { showQuad = !showQuad; }
     void CyclePOI() { showPoi = (showPoi + 1) % 4; }
+    void SetVisiblePath(int path) { showPath = path; }
 
     std::string GetPOIText() { return poiText.at(showPoi); }
 
@@ -146,6 +147,7 @@ private:
 
     bool showQuad = false;
     int  showPoi = 0;
+    int  showPath = 0;
 
     std::vector<std::string> poiText;
 

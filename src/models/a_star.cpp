@@ -1,5 +1,6 @@
 #include "a_star.h"
 #include "../osm/tags.h"
+#include "spdlog/spdlog.h"
 
 #include <cmath>
 #include <cstdint>
@@ -10,8 +11,14 @@
 
 const double H_WEIGHT = 1.0;
 
-bool AStar::FindPath(OSMGraph& graph, UserInterface& ui)
+bool AStar::FindPath(OSMGraph& graph, ObjectiveList objectives)
 {
+    if (objectives.empty())
+    {
+        spdlog::error("One objective is required.");
+        return false;
+    }
+
     using PQNode = std::pair<double, OSMNodeID>;
     std::priority_queue<PQNode, std::vector<PQNode>, std::greater<>> p_queue;
 
@@ -34,11 +41,14 @@ bool AStar::FindPath(OSMGraph& graph, UserInterface& ui)
         // If we reached the end node, reconstruct the path
         if (current == destination) 
         {
+            OSMPath path;
             while (current != 0xFFFFFFFF) 
             {
-                graph.InsertPath(current);
+                path.push_back(current);
                 current = prev[current];
             }
+            std::reverse(path.begin(), path.end());
+            graph.InsertPath(path);
             return true;
         }
 

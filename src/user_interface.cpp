@@ -5,15 +5,16 @@
 #include <format>
 
 #include "Window.h"
-
+#include "osm/graph.h"
 #include "spdlog/spdlog.h"
+
 
 // Height of elements, effectively their size
 
 constexpr int HEADING_HEIGHT = 30;
-constexpr int TEXT_HEIGHT    = 20;
-constexpr int BOX_HEIGHT     = 40;
-constexpr int SLIDER_HEIGHT  = 20;
+constexpr int TEXT_HEIGHT    = 15;
+constexpr int BOX_HEIGHT     = 25;
+constexpr int SLIDER_HEIGHT  = 15;
 
 // Padding between elements, horizontal and vertical
 
@@ -25,7 +26,6 @@ constexpr int       V_PAD = 5;
 constexpr std::pair UI_MIN_SIZE   = {200.F, 620.F};
 constexpr float     UI_MULTIPLIER = 0.20;
 constexpr float     UI_DEBUG_HEIGHT = 250.F;
-
 /*
     Accumulator types are used with elementY to determine the y position of the next element.
     Use the type of the element you're drawing or call elementY(padding) to add spacing between elements.
@@ -33,7 +33,7 @@ constexpr float     UI_DEBUG_HEIGHT = 250.F;
 enum AccumulatorTypes
 {
     headingType = HEADING_HEIGHT + V_PAD, 
-    textType = TEXT_HEIGHT + V_PAD,
+    textType = (TEXT_HEIGHT - 4) + V_PAD,
     boxType = BOX_HEIGHT + V_PAD,
     sliderType = SLIDER_HEIGHT + V_PAD,
     paddingType = 4 * V_PAD
@@ -53,6 +53,7 @@ float UserInterface::elementY(const int type) {
     accumulator += type;
     return current;
 };
+
 
 /*
     The following functions are shortened "presets" for custom styled raygui elements.
@@ -148,6 +149,12 @@ void UserInterface::DrawCustomPather(int& index, int count)
 {
     auto const yPos = elementY(boxType);
 
+    const std::string text = (count > 0)
+        ? std::format("Route {} of {}", index + 1, count)
+        : "No routes";
+
+    Vector2 textSize = MeasureTextEx(fontText, text.c_str(), TEXT_HEIGHT, 1.2);
+
     const Rectangle outlinePos{
         .x = elementX,
         .y = yPos,
@@ -156,8 +163,8 @@ void UserInterface::DrawCustomPather(int& index, int count)
     };
 
     const Vector2 textPos{
-        .x = elementX + 56,
-        .y = yPos + 10
+        .x = elementX + (elementWidth / 2) - (textSize.x / 2),
+        .y = yPos + (BOX_HEIGHT / 2) - (TEXT_HEIGHT / 2) + 1
     };
 
     const Rectangle leftButton{
@@ -174,9 +181,7 @@ void UserInterface::DrawCustomPather(int& index, int count)
         .height = BOX_HEIGHT
     };
 
-    const std::string text = (count > 0)
-        ? std::format("Route {} of {}", index + 1, count  + 1)
-        : "  No routes";
+
 
     DrawRectangleLinesEx(outlinePos, 1, GRAY);
     DrawTextEx(fontText, text.c_str(), textPos, TEXT_HEIGHT, 1.2, BLACK);
@@ -184,11 +189,122 @@ void UserInterface::DrawCustomPather(int& index, int count)
     if (GuiButton(leftButton, "#114#") != 0)
     {
         index = std::max(0, index - 1);
+        pathSelectionCallback(index);
     }
     if (GuiButton(rightButton, "#115#") != 0 && count > 0)
     {
         index = std::min(count - 1, index + 1);
+        pathSelectionCallback(index);
     }
+}
+
+void UserInterface::DrawObjecive(ObjectiveList& objectives, int index, bool removable) 
+{
+    Objective& objective = objectives[index];
+
+    auto const yPos = elementY(boxType);
+
+    Vector2 textSize = MeasureTextEx(fontText, objective.name.c_str(), TEXT_HEIGHT, 1.2);
+
+    const Rectangle outlinePos{
+        .x = elementX,
+        .y = yPos,
+        .width = elementWidth,
+        .height = BOX_HEIGHT
+    };
+
+    const Vector2 textPos{
+        .x = elementX + 10,
+        .y = yPos + (BOX_HEIGHT / 2) - (TEXT_HEIGHT / 2) + 1
+    };
+
+    const Rectangle rightButton{
+        .x = elementX + elementWidth - BOX_HEIGHT + 5,
+        .y = yPos + 5,
+        .width = BOX_HEIGHT - 10,
+        .height = BOX_HEIGHT - 10
+    };
+
+    DrawRectangleLinesEx(outlinePos, 1, LIGHTGRAY);
+    DrawTextEx(fontText, objective.name.c_str(), textPos, TEXT_HEIGHT, 1.2, BLACK);
+
+    if (removable) 
+    {
+        if (GuiButton(rightButton, "x") != 0)
+        {
+            objectives.erase(objectives.begin() + index);
+        }
+    }
+}
+
+void UserInterface::DrawObjeciveWeight(ObjectiveList& objectives, int index, bool removable) 
+{
+
+    Objective& objective = objectives[index];
+
+    auto const yPos = elementY(boxType);
+
+    const Rectangle outlinePos{
+        .x = elementX,
+        .y = yPos,
+        .width = elementWidth - BOX_HEIGHT,
+        .height = BOX_HEIGHT
+    };
+
+    const Vector2 textPos{
+        .x = elementX + 10,
+        .y = yPos + (BOX_HEIGHT / 2) - (TEXT_HEIGHT / 2) + 1
+    };
+
+    const Vector2 textPosRight{
+    .x = elementX + elementWidth - 50,
+    .y = yPos + (BOX_HEIGHT / 2) - (TEXT_HEIGHT / 2) + 1
+    };
+
+    const Rectangle rightButton{
+        .x = elementX + elementWidth - BOX_HEIGHT + 5,
+        .y = yPos + 5,
+        .width = BOX_HEIGHT - 10,
+        .height = BOX_HEIGHT - 10
+    };
+
+    DrawRectangleLinesEx(outlinePos, 1, LIGHTGRAY);
+
+
+    Vector2 mousePoint = GUI_POINTER_POSITION;
+    if (CheckCollisionPointRec(mousePoint, outlinePos))
+    {
+        DrawRectangle(elementX + 1, yPos + 1, outlinePos.width * objective.weight, BOX_HEIGHT - 2, Color{ 0xc7, 0xed, 0xfd, 0xff });
+
+        if (GUI_BUTTON_DOWN && !GuiIsLocked())
+        {
+            float value = (mousePoint.x - elementX) / outlinePos.width;
+            objective.weight = std::clamp(value, 0.f, 1.f);
+        }
+    }
+    else
+    {
+        DrawRectangle(elementX + 1, yPos + 1, outlinePos.width * objective.weight, BOX_HEIGHT - 2, SKYBLUE);
+    }
+
+    DrawTextEx(fontText, objective.name.c_str(), textPos, TEXT_HEIGHT, 1.2, BLACK);
+
+    float sum = 0.f;
+    for (const auto& obj : objectives) {
+        sum += obj.weight;
+    }
+
+    std::string weightText = std::format("{:.0f}%", objective.weight / sum * 100.f);
+    DrawTextEx(fontText, weightText.c_str(), textPosRight, TEXT_HEIGHT, 1.2, BLACK);
+
+    if (removable) 
+    {
+        if (GuiButton(rightButton, "x") != 0)
+        {
+            objectives.erase(objectives.begin() + index);
+        }
+    }
+
 }
 
 /*
@@ -205,6 +321,20 @@ void UserInterface::SetupUI(const char* file)
 
     spinnerImage = LoadImageAnim("../assets/spinner.gif", &spinnerFrameCount);
     spinnerTexture = LoadTextureFromImage(spinnerImage);
+
+    objPareto = {
+        { "Distance", DistanceObjective, 0.0 },
+        { "Time", TravelTimeObjective, 0.0 },
+        { "Traffic Lights", TrafficSignalObjective, 0.0 },
+    };
+
+    objWeightedSum =  {
+        { "Distance", DistanceObjective, 0.5 },
+        { "Time", TravelTimeObjective, 0.5 },
+        { "Lit Roads", LitRoadObjective, 0.5 },
+        { "Road Smoothness", RoadSmoothnessObjective, 0.5 },
+        
+    };
 
     auto checkImage = LoadImage("../assets/checkmark.png");
     ImageResize(&checkImage, 50, 50);
@@ -232,7 +362,7 @@ void UserInterface::DrawUserInterface(const Window &window)
 
     const auto winX = H_PAD.first;
     const auto winY = H_PAD.first;
-    const auto winWidth  = std::max(screenX * UI_MULTIPLIER, UI_MIN_SIZE.first);
+    const auto winWidth  = std::min(std::max(screenX * UI_MULTIPLIER, UI_MIN_SIZE.first), 400.f);
     const auto winHeight = std::max(screenY + H_PAD.second, UI_MIN_SIZE.second);
 
     // Set up the UI box and mouse pos used throughout the class
@@ -244,7 +374,11 @@ void UserInterface::DrawUserInterface(const Window &window)
 
     DrawRouteInfo();
     DrawPathLoader(window);
+
     DrawDebugInfo();
+
+
+
 }
 
 void UserInterface::DrawRouteInfo() 
@@ -270,35 +404,110 @@ void UserInterface::DrawRouteInfo()
     // Save the y pos, draw later
     float modelY = elementY(boxType); 
 
+    float addButtonY = 0.f;
+
+    DrawCustomText("Objectives");
     switch (modelSelectionIndex)
     {
+        case 0:  // Dijkstra
+        case 1:
+        //DrawObjecive("Distance", false, 0);
+
+        break;
+
     case 2: // Weighted Sum
-        DrawCustomText("Distance");
-        DrawCustomSlider(&objDistance);
-        DrawCustomText("Time");
-        DrawCustomSlider(&objTime);
-        DrawCustomText("Lit Roads");
-        DrawCustomSlider(&objLitRoads);
-        DrawCustomText("Smoothness");
-        DrawCustomSlider(&objSmoothness);
-        DrawCustomText("Gas Station");
-        DrawCustomSlider(&objGasStation);
-        DrawCustomText("Cafe");
-        DrawCustomSlider(&objCafe);
-        DrawCustomText("Tourism");
-        DrawCustomSlider(&objTourism);
+        for (size_t i = 0; i < objWeightedSum.size(); i++) 
+        {
+            DrawObjeciveWeight(objWeightedSum, i, true);
+        }
+
+        addButtonY = elementY(boxType);
+        if (GuiButton({.x = elementX,
+                   .y = addButtonY,
+                   .width = elementWidth,
+                   .height = BOX_HEIGHT},
+                  "Add"))
+        {
+            showNewObjective = true;
+        }
         break;
     
     case 3:
-        DrawCustomPather(pathSelectionIndex, pathCount);
+    {
+        for (size_t i = 0; i < objPareto.size(); i++) 
+        {
+            DrawObjecive(objPareto, i, true);
+        }
+
+        addButtonY = elementY(boxType);
+        if (GuiButton({.x = elementX,
+                   .y = addButtonY,
+                   .width = elementWidth,
+                   .height = BOX_HEIGHT},
+                  "Add"))
+        {
+            showNewObjective = true;
+        }
+        break;
+    }
 
     default:
         break;
     }
     
+    DrawCustomHeading("Solution");
+    DrawCustomPather(pathSelectionIndex, pathCount);
 
     // Draw the model dropdown last so it's drawn over the sliders if open
-    DrawCustomSelection("Dijkstra;A Star;Weighted Sum", modelY, &modelSelectionIndex, modelSelectionEdit);
+    DrawCustomSelection("Dijkstra;A Star;Weighted Sum;Pareto", modelY, &modelSelectionIndex, modelSelectionEdit);
+
+    if (showNewObjective)
+    {
+        static int scroll = 0;
+        int active = -1;
+        GuiListView({ .x = elementX, .y = addButtonY, .width = elementWidth, .height = 200 },
+            "Distance;Time;Traffic Lights;Lit Roads;Smoothness;Gas Station;Cafe;Tourism",
+            &scroll,
+            &active);
+        if (active != -1 && showNewObjective)
+        {
+            showNewObjective = false;
+            Objective newObj;
+            switch (active)
+            {
+            case 0:
+                newObj = { "Distance", DistanceObjective, 0.5 };
+                break;
+            case 1:
+                newObj = { "Time", TravelTimeObjective, 0.5 };
+                break;
+            case 2:
+                newObj = { "Traffic Lights", TrafficSignalObjective, 0.5 };
+                break;
+            case 3:
+                newObj = { "Lit Roads", LitRoadObjective, 0.5 };
+                break;
+            case 4:
+                newObj = { "Road Smoothness", RoadSmoothnessObjective, 0.5 };
+                break;
+            case 5:
+                newObj = { "Gas Station Proximity", GasStationObjective, 0.5 };
+                break;
+            case 6:
+                newObj = { "Cafe Proximity", CafeObjective, 0.5 };
+                break;
+            case 7:
+                newObj = { "Tourism Proximity", TourismObjective, 0.5 };
+                break;
+            default:
+                break;
+            }
+            if (modelSelectionIndex == 2)
+                objWeightedSum.push_back(newObj);
+            else
+                objPareto.push_back(newObj);
+        }
+    }
 
 }
 
@@ -404,18 +613,17 @@ void UserInterface::DeactivateLoader() {
 */
 void UserInterface::UpdateLockState() 
 {
-    // If the left mouse is pressed when the cursor is outside the visible UI box, lock it
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !(CheckCollisionPointRec(mousePos, uiRect) && showUI))
+    // If the mouse is outside the visible UI box, lock it
+    if (!(CheckCollisionPointRec(mousePos, uiRect) && showUI))
     {
         GuiLock();
         originTextboxEdit = false;
         destinationTextboxEdit = false;
         modelSelectionEdit = false;
     }
-    // If the left mouse is released, unlock it
-    if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
+    else
     {
-        GuiUnlock();
+         GuiUnlock();
     }
 }
 
@@ -437,3 +645,22 @@ bool UserInterface::IsUpdated()
     wasPreviouslyEditing = isCurrentlyEditing;
     return false;
 }
+
+ObjectiveList UserInterface::GetObjectives()
+{
+    ObjectiveList result;
+    if (modelSelectionIndex == 2) 
+        result = objWeightedSum;
+    else
+        result = objPareto;
+
+    float sum = 0.f;
+    for (const auto& obj : result) 
+        sum += obj.weight;
+
+    for (auto& obj : result) 
+        obj.weight /= sum;
+
+    return result;
+}
+

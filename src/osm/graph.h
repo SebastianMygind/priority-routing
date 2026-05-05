@@ -72,8 +72,9 @@ public:
     auto GetAdjListPrev() const { return adj_list_prev; }
     void SetNodeA(OSMNodeID id) { selectedNodeA = id; }
     void SetNodeB(OSMNodeID id) { selectedNodeB = id; }
-    void ClearPath() { selectedPath.clear(); }
-    void InsertPath(OSMNodeID path) { selectedPath.push_back(path); }
+    void ClearPath() { paths.clear(); }
+    void InsertPath(OSMPath path) { paths.push_back(path); }
+    size_t GetPathCount() { return paths.size(); }
 
     // Stats
     size_t GetNodeCount() const { return nodes.size(); }
@@ -85,11 +86,11 @@ public:
 private:
     std::unordered_map<OSMNodeID, OSMNode> nodes;
     std::unordered_map<OSMWayID, OSMWay> ways;
-
+    
     std::unordered_map<std::string, std::vector<OSMNodeID>> addressIndex;
     std::vector<std::pair<std::string, std::vector<OSMNodeID>>> addressLowerCache;
 
-    std::vector<OSMNodeID> selectedPath;
+    std::vector<OSMPath> paths;
     OSMNodeID selectedNodeA;
     OSMNodeID selectedNodeB;
 
@@ -105,6 +106,7 @@ private:
 
     std::unordered_map<std::string, Tree2D> tree2d;
    
+
 public:
 
     friend class OSMRenderer;

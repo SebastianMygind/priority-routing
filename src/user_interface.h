@@ -2,13 +2,15 @@
 
 #include <cstring>
 #include <chrono>
+#include <functional>
 #include "timer.h"
 
 #include "raylib.h"
-#include "../vendor/raygui.h"
+
 
 #include "Window.h"
-
+#include "path_finder.h"
+#include "../vendor/raygui.h"
 
 using ms_duration = std::chrono::duration<double, std::milli>;
 
@@ -51,18 +53,8 @@ public:
 
     // Model getters
 
-    [[nodiscard]] auto GetModel()    const { return modelSelectionIndex; }
-    [[nodiscard]] auto GetDistance() const { return objDistance / GetSum();    }
-    [[nodiscard]] auto GetTime()     const { return objTime / GetSum();        }
-    [[nodiscard]] auto GetLitRoads()  const { return objLitRoads / GetSum();     }
-    [[nodiscard]] auto GetSmoothness()  const { return objSmoothness / GetSum();     }
-    [[nodiscard]] auto GetGasStation()  const { return objGasStation / GetSum();     }
-    [[nodiscard]] auto GetCafe()  const { return objCafe / GetSum();     }
-    [[nodiscard]] auto GetTourism()  const { return objTourism / GetSum();     }
-    [[nodiscard]] float GetSum()     const {
-        return objDistance + objTime + objLitRoads +
-            objSmoothness + objGasStation + objCafe + objTourism;
-    }
+    [[nodiscard]] PathfindingModel GetModel()    const { return (PathfindingModel)modelSelectionIndex; }
+    ObjectiveList GetObjectives();
 
     [[nodiscard]] auto GetPathIndex() const { return pathSelectionIndex; }
     auto SetPathCount(auto count) { pathCount = count; }
@@ -76,6 +68,8 @@ public:
     auto SetDebugRenderedWays(auto ways)  { debugRenderedWays = ways;  }
     auto SetDebugMouseCoords(auto lat, auto lon)  { debugMouseWorldPos = {lat, lon}; }
     auto SetPOIText(const std::string& text)     { poiText = text; }
+
+    void SetPathSelectionCallback(std::function<void(int)> callback) { pathSelectionCallback = std::move(callback); }
 
     // Visibility toggles
 
@@ -106,13 +100,8 @@ private:
     int pathSelectionIndex = 0;
     int pathCount = 0;
 
-    float objDistance = 0.5;
-    float objTime     = 0.5;
-    float objLitRoads  = 0.5;
-    float objSmoothness  = 0.5;
-    float objGasStation  = 0.5;
-    float objCafe  = 0.5;
-    float objTourism  = 0.5;
+    ObjectiveList objWeightedSum;
+    ObjectiveList objPareto;
 
     ms_duration debugModelTime{0};
     size_t debugTotalNodes = 0;
@@ -129,6 +118,9 @@ private:
     bool originTextboxEdit = false;
     bool destinationTextboxEdit = false;
     bool wasPreviouslyEditing = false;
+    bool showNewObjective = false;
+
+    std::function<void(int)> pathSelectionCallback;
 
     static constexpr int textboxSize = 128;
     char originTextboxText[textboxSize] = "";
@@ -149,4 +141,6 @@ private:
     void DrawCustomSelection(const char* text, float posY, int* selection, bool& edit);
     void DrawCustomSlider(float* value);
     void DrawCustomPather(int& index, int count);
+    void DrawObjecive(ObjectiveList& objectives, int index, bool removable);
+    void DrawObjeciveWeight(ObjectiveList& objectives, int index, bool removable);
 };
