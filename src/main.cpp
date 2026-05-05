@@ -23,6 +23,7 @@ int main() {
     if (!graph.BuildAdjList()) {
         return -1;
     }
+    graph.BuildRoadNodes();
 
     OSMRenderer renderer(&graph);
     renderer.BuildQuadTree();
@@ -138,6 +139,8 @@ int main() {
             graph.SetNodeB(graph.StringToNode(ui.GetDestination()));
 
             renderer.SetVisiblePath(ui.GetPathIndex());
+
+            spdlog::info("Origin: {}, Destination: {}", graph.StringToNode(ui.GetOrigin()), graph.StringToNode(ui.GetDestination()));
             
             if (graph.GetNodeA() != 0xFFFFFFFF && graph.GetNodeB() != 0xFFFFFFFF) 
             {

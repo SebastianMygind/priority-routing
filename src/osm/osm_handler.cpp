@@ -21,6 +21,18 @@ void OSMHandler::node(const osmium::Node& node)
         osmNode.tags.emplace(tag.key(), tag.value());
     }
 
+    // TODO: Make even more specific with zipcodes
+    if (const auto iter = osmNode.tags.find("addr:street"); iter != osmNode.tags.end())
+    {
+        std::string fullAddress = iter->second;
+
+        if (const auto houseNumber = osmNode.tags.find("addr:housenumber"); houseNumber != osmNode.tags.end())
+        {
+            fullAddress = fullAddress + " " + houseNumber->second;
+        }
+        graph.addressIndex[fullAddress].push_back(node.id());
+    }
+
     graph.nodes.emplace(node.id(), std::move(osmNode));
 }
 
