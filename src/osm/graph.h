@@ -125,5 +125,6 @@ double Haversine(const Coord& a, const Coord& b);
 double Equirectangular(const Coord& a, const Coord& b);
 double EuclideanDistance(const Coord& a, const Coord& b);
 double DistanceSq(const Coord& a, const Coord& b);
+double Normalize(double n, double min, double max);
 
 

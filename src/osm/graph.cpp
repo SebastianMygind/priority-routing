@@ -481,3 +481,11 @@ void Tree2D::Nearest(node* root, const Coord& pt, std::size_t index)
 
     return { best_->nodeId, best_dist_ };
 }
+
+double Normalize(double n, double min, double max) {
+    if (max - min == 0) return 0.0;
+    if (n < min) return 0.0;
+    if (n > max) return 1.0;
+    
+    return (n - min) / (max - min);
+}

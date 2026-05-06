@@ -12,36 +12,42 @@
 #include "spdlog/spdlog.h"
 #include "raylib_logger.h"
 #include "user_interface.h"
+#include "thread"
 
 void PathFinder(OSMGraph& graph, UserInterface& ui);
 
 int main() {
 
-    OSMGraph graph;
-    graph.load(graph.pathForOSM);
-    graph.Build2DTree();
-    if (!graph.BuildAdjList()) {
-        return -1;
-    }
-    graph.BuildRoadNodes();
-
-    OSMRenderer renderer(&graph);
-    renderer.BuildQuadTree();
-
     SetTraceLogCallback(SPDLogger);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI | FLAG_VSYNC_HINT);
 
     auto window = Window("Routing Simulation");
-
     InitWindow(window.width, window.height, window.title.c_str());
-    // UI must be initialized after creating the window.
-    UserInterface ui;
+
+    OSMGraph graph;
+    OSMRenderer renderer(&graph);
+    UserInterface ui; // keep under initwindow
+    Camera2D camera;
+
+    BeginDrawing();
+        ClearBackground(RAYWHITE);
+        DrawText("Loading...", window.width / 2 - MeasureText("Loading...", 40) / 2, window.height / 2 - 20, 40, BLACK);
+    EndDrawing();
+
+    graph.load(graph.pathForOSM);
+    graph.Build2DTree();
+    if (!graph.BuildAdjList())
+        return -1;
+    graph.BuildRoadNodes();
+
+    renderer.BuildQuadTree();
+
     ui.SetDebugTotalNodes(graph.GetNodeCount());
     ui.SetDebugTotalWays(graph.GetWayCount());
     ui.SetupUI("../fonts/JetBrainsMono-Regular.ttf");
     ui.SetPathSelectionCallback([&renderer](int index) { renderer.SetVisiblePath(index); });
 
-    Camera2D camera = {};
+    camera = {};
     camera.zoom = 1.0F;
 
 #ifndef __APPLE__
@@ -174,6 +180,7 @@ int main() {
     CloseWindow();
 
     renderer.FinishThread();
+    threadKill.store(true);
 
     return 0;
 }
