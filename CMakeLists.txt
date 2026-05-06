@@ -101,6 +101,7 @@ target_link_libraries(
 add_executable(
         priority_routing_tests
         tests/example_test.cpp
+        tests/graph_tests.cpp
         ${CORE_SOURCES}
 )
 
