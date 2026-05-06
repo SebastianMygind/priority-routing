@@ -26,7 +26,7 @@ int main() {
 
     OSMGraph graph;
     OSMRenderer renderer(&graph);
-    UserInterface ui;
+    UserInterface ui; // keep under initwindow
     Camera2D camera;
 
     BeginDrawing();
