@@ -62,7 +62,7 @@ void PathFinder(OSMGraph& graph, UserInterface& ui)
 
 double DistanceObjective(OSMGraph& graph, const OSMNode& a, const OSMNode& b, const OSMWay& way, double distance)
 {
-    return distance;
+    return Normalize(distance, 0, 750);;
 }
 
 double TravelTimeObjective(OSMGraph& graph, const OSMNode& a, const OSMNode& b, const OSMWay& way, double distance)
@@ -72,41 +72,46 @@ double TravelTimeObjective(OSMGraph& graph, const OSMNode& a, const OSMNode& b, 
     double speed = (speedTag != way.tags.end())
         ? ParseMaxSpeed(speedTag->second)
         : GetDefaultSpeed(highwayTag->second);
-    return distance / speed;
+    auto time = distance / speed;
+    return Normalize(time, 0, 150);
 }
 
 double TrafficSignalObjective(OSMGraph& graph, const OSMNode& a, const OSMNode& b, const OSMWay& way, double distance)
 {
     auto highwayTagB = b.tags.find("highway");
-    return (highwayTagB != b.tags.end() && highwayTagB->second == "traffic_signals") ? 1.0 : 0.0;
+    auto lights = (highwayTagB != b.tags.end() && highwayTagB->second == "traffic_signals") ? 1.0 : 0.0;
+    spdlog::info("{}", lights);
+    return Normalize(lights, 0, 2);
 }
 
 double LitRoadObjective(OSMGraph& graph, const OSMNode& a, const OSMNode& b, const OSMWay& way, double distance)
 {
     auto litTag = way.tags.find("lit");
-    return ((litTag != way.tags.end() && litTag->second == "yes") ? 1.0 : 10.0) * distance;
+    auto lit = ((litTag != way.tags.end() && litTag->second == "yes") ? 1.0 : 10.0) * distance;
+    return Normalize(lit, 0, 1500);
 }
 
 double RoadSmoothnessObjective(OSMGraph& graph, const OSMNode& a, const OSMNode& b, const OSMWay& way, double distance)
 {
     auto smoothnessTag = way.tags.find("smoothness");
-    return (smoothnessTag != way.tags.end() ? GetRoadSmoothness(smoothnessTag->second) : 5.0) * distance;
+    auto smoothness = (smoothnessTag != way.tags.end() ? GetRoadSmoothness(smoothnessTag->second) : 5.0) * distance;
+    return Normalize(smoothness, 0, 3000);
 }
 
 double GasStationObjective(OSMGraph& graph, const OSMNode& a, const OSMNode& b, const OSMWay& way, double distance)
 {
     std::pair<OSMNodeID, double> nearestFuel = graph.GetNearestNode("amenity=fuel", b.location);
-    return pow(nearestFuel.second * distance, 2);
+    return Normalize(nearestFuel.second, 100, 500);
 }
 
 double CafeObjective(OSMGraph& graph, const OSMNode& a, const OSMNode& b, const OSMWay& way, double distance)
 {
     std::pair<OSMNodeID, double> nearestCafe = graph.GetNearestNode("amenity=cafe", b.location);
-    return pow(nearestCafe.second * distance, 2);
+    return Normalize(nearestCafe.second, 100, 500);
 }
 
 double TourismObjective(OSMGraph& graph, const OSMNode& a, const OSMNode& b, const OSMWay& way, double distance)
 {
     std::pair<OSMNodeID, double> nearestTourism = graph.GetNearestNode("tourism", b.location);
-    return pow(nearestTourism.second * distance, 2);
+    return Normalize(nearestTourism.second, 100, 500);
 }
