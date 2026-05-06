@@ -18,16 +18,16 @@ void PathFinder(OSMGraph& graph, UserInterface& ui);
 
 int main() {
 
-    OSMGraph graph;
-    OSMRenderer renderer(&graph);
-    UserInterface ui;
-    Camera2D camera;
-
     SetTraceLogCallback(SPDLogger);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI | FLAG_VSYNC_HINT);
 
     auto window = Window("Routing Simulation");
     InitWindow(window.width, window.height, window.title.c_str());
+
+    OSMGraph graph;
+    OSMRenderer renderer(&graph);
+    UserInterface ui;
+    Camera2D camera;
 
     BeginDrawing();
         ClearBackground(RAYWHITE);
