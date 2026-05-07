@@ -72,7 +72,7 @@ double TravelTimeObjective(OSMGraph& graph, const OSMNode& a, const OSMNode& b, 
     double speed = (speedTag != way.tags.end())
         ? ParseMaxSpeed(speedTag->second)
         : GetDefaultSpeed(highwayTag->second);
-    auto time = distance / speed;
+    auto time = distance / KmhToMS(speed);
     return Normalize(time, 0, 150);
 }
 
@@ -80,7 +80,6 @@ double TrafficSignalObjective(OSMGraph& graph, const OSMNode& a, const OSMNode& 
 {
     auto highwayTagB = b.tags.find("highway");
     auto lights = (highwayTagB != b.tags.end() && highwayTagB->second == "traffic_signals") ? 1.0 : 0.0;
-    spdlog::info("{}", lights);
     return Normalize(lights, 0, 2);
 }
 
