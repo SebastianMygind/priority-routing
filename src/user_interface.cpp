@@ -32,7 +32,7 @@ constexpr float     UI_DEBUG_HEIGHT = 250.F;
 */
 enum AccumulatorTypes
 {
-    headingType = HEADING_HEIGHT + V_PAD, 
+    headingType = HEADING_HEIGHT + V_PAD,
     textType = (TEXT_HEIGHT - 4) + V_PAD,
     boxType = BOX_HEIGHT + V_PAD,
     sliderType = SLIDER_HEIGHT + V_PAD,
@@ -127,9 +127,14 @@ void UserInterface::DrawCustomSelection(const char* text, float posY, int* selec
         .height = BOX_HEIGHT
     };
 
-    if (GuiDropdownBox(selectionPos, text, selection, edit) != 0) 
+    if (GuiDropdownBox(selectionPos, text, selection, edit) != 0)
     {
         edit = !edit;
+    }
+
+    if (edit)
+    {
+        elementY(110);
     }
 }
 
@@ -198,7 +203,7 @@ void UserInterface::DrawCustomPather(int& index, int count)
     }
 }
 
-void UserInterface::DrawObjecive(ObjectiveList& objectives, int index, bool removable) 
+void UserInterface::DrawObjecive(ObjectiveList& objectives, int index, bool removable)
 {
     Objective& objective = objectives[index];
 
@@ -228,7 +233,7 @@ void UserInterface::DrawObjecive(ObjectiveList& objectives, int index, bool remo
     DrawRectangleLinesEx(outlinePos, 1, LIGHTGRAY);
     DrawTextEx(fontText, objective.name.c_str(), textPos, TEXT_HEIGHT, 1.2, BLACK);
 
-    if (removable) 
+    if (removable)
     {
         if (GuiButton(rightButton, "x") != 0)
         {
@@ -237,7 +242,7 @@ void UserInterface::DrawObjecive(ObjectiveList& objectives, int index, bool remo
     }
 }
 
-void UserInterface::DrawObjeciveWeight(ObjectiveList& objectives, int index, bool removable) 
+void UserInterface::DrawObjeciveWeight(ObjectiveList& objectives, int index, bool removable)
 {
 
     Objective& objective = objectives[index];
@@ -297,7 +302,7 @@ void UserInterface::DrawObjeciveWeight(ObjectiveList& objectives, int index, boo
     std::string weightText = std::format("{:.0f}%", objective.weight / sum * 100.f);
     DrawTextEx(fontText, weightText.c_str(), textPosRight, TEXT_HEIGHT, 1.2, BLACK);
 
-    if (removable) 
+    if (removable)
     {
         if (GuiButton(rightButton, "x") != 0)
         {
@@ -311,7 +316,7 @@ void UserInterface::DrawObjeciveWeight(ObjectiveList& objectives, int index, boo
     Sets the fonts needed for the UI and sets the proper raygui style.
 */
 void UserInterface::SetupUI(const char* file)
-{ 
+{
     fontText = LoadFontEx(file, TEXT_HEIGHT, nullptr, 0);
     fontHeading = LoadFontEx(file, HEADING_HEIGHT, nullptr, 0);
     GuiSetFont(fontText);
@@ -333,7 +338,7 @@ void UserInterface::SetupUI(const char* file)
         { "Time", TravelTimeObjective, 0.5 },
         { "Lit Roads", LitRoadObjective, 0.5 },
         { "Road Smoothness", RoadSmoothnessObjective, 0.5 },
-        
+
     };
 
     auto checkImage = LoadImage("../assets/checkmark.png");
@@ -345,16 +350,16 @@ void UserInterface::SetupUI(const char* file)
 
 /*
     The main UI function, it creates a rectangle based on the screen size and then calls
-    the routes and debug functions that use the presets from above to draw the UI. 
+    the routes and debug functions that use the presets from above to draw the UI.
 */
-void UserInterface::DrawUserInterface(const Window &window) 
+void UserInterface::DrawUserInterface(const Window &window)
 {
     // Skip drawing if UI is hidden
 
     if (!showUI) {
         return;
     }
-    
+
     // Set up the UI box dimensions based on the window size
 
     const auto screenX = static_cast<float>(window.width);
@@ -381,7 +386,7 @@ void UserInterface::DrawUserInterface(const Window &window)
 
 }
 
-void UserInterface::DrawRouteInfo() 
+void UserInterface::DrawRouteInfo()
 {
     // Define sizes and positions of UI elements
 
@@ -390,7 +395,7 @@ void UserInterface::DrawRouteInfo()
     accumulator = uiRect.y;
 
     // The beginning of the ui panel
-    
+
     GuiPanel(uiRect, nullptr);
 
     DrawCustomHeading("Location");
@@ -401,8 +406,8 @@ void UserInterface::DrawRouteInfo()
 
     DrawCustomHeading("Algorithm");
     DrawCustomText("Model");
-    // Save the y pos, draw later
-    float modelY = elementY(boxType); 
+
+    DrawCustomSelection("Dijkstra;A Star;Weighted Sum;Pareto", elementY(boxType), &modelSelectionIndex, modelSelectionEdit);
 
     float addButtonY = 0.f;
 
@@ -416,7 +421,7 @@ void UserInterface::DrawRouteInfo()
         break;
 
     case 2: // Weighted Sum
-        for (size_t i = 0; i < objWeightedSum.size(); i++) 
+        for (size_t i = 0; i < objWeightedSum.size(); i++)
         {
             DrawObjeciveWeight(objWeightedSum, i, true);
         }
@@ -431,10 +436,10 @@ void UserInterface::DrawRouteInfo()
             showNewObjective = true;
         }
         break;
-    
+
     case 3:
     {
-        for (size_t i = 0; i < objPareto.size(); i++) 
+        for (size_t i = 0; i < objPareto.size(); i++)
         {
             DrawObjecive(objPareto, i, true);
         }
@@ -454,12 +459,10 @@ void UserInterface::DrawRouteInfo()
     default:
         break;
     }
-    
+
     DrawCustomHeading("Solution");
     DrawCustomPather(pathSelectionIndex, pathCount);
 
-    // Draw the model dropdown last so it's drawn over the sliders if open
-    DrawCustomSelection("Dijkstra;A Star;Weighted Sum;Pareto", modelY, &modelSelectionIndex, modelSelectionEdit);
 
     if (showNewObjective)
     {
@@ -511,7 +514,7 @@ void UserInterface::DrawRouteInfo()
 
 }
 
-void UserInterface::DrawDebugInfo() 
+void UserInterface::DrawDebugInfo()
 {
     // Skip drawing if debug is hidden
 
@@ -535,7 +538,7 @@ void UserInterface::DrawDebugInfo()
     // The beginning of the debug panel
 
     GuiPanel(debRect, nullptr);
-    
+
     DrawCustomHeading("DEBUG");
     DrawCustomText(std::format("FPS: {}", GetFPS()).c_str());
     DrawCustomText(std::format("Coords: {:.3f}, {:.3f}", debugMouseWorldPos.x, debugMouseWorldPos.y).c_str());
@@ -611,37 +614,38 @@ void UserInterface::DeactivateLoader() {
    would therefore signal if the mouse is focused on the UI (if it's left
    unlocked).
 */
-void UserInterface::UpdateLockState() 
+void UserInterface::UpdateLockState()
 {
-    // If the mouse is outside the visible UI box, lock it
-    if (!(CheckCollisionPointRec(mousePos, uiRect) && showUI))
+    // If the left mouse is pressed when the cursor is outside the visible UI box, lock it
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !(CheckCollisionPointRec(mousePos, uiRect) && showUI))
     {
         GuiLock();
         originTextboxEdit = false;
         destinationTextboxEdit = false;
         modelSelectionEdit = false;
     }
-    else
+    // If the left mouse is released, unlock it
+    if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
     {
          GuiUnlock();
     }
 }
 
-/* 
+/*
     A function that triggers only once after modifying values in the UI.
-    Can be manually triggered by setting wasPreviouslyEditing = true. 
+    Can be manually triggered by setting wasPreviouslyEditing = true.
     Meant to be used in the main loop.
 */
 bool UserInterface::IsUpdated()
 {
     const bool isCurrentlyEditing = (originTextboxEdit || destinationTextboxEdit || modelSelectionEdit);
-    
-    if (!isCurrentlyEditing && wasPreviouslyEditing) 
+
+    if (!isCurrentlyEditing && wasPreviouslyEditing)
     {
         wasPreviouslyEditing = false;
         return true;
     }
-    
+
     wasPreviouslyEditing = isCurrentlyEditing;
     return false;
 }
@@ -649,18 +653,17 @@ bool UserInterface::IsUpdated()
 ObjectiveList UserInterface::GetObjectives()
 {
     ObjectiveList result;
-    if (modelSelectionIndex == 2) 
+    if (modelSelectionIndex == 2)
         result = objWeightedSum;
     else
         result = objPareto;
 
     float sum = 0.f;
-    for (const auto& obj : result) 
+    for (const auto& obj : result)
         sum += obj.weight;
 
-    for (auto& obj : result) 
+    for (auto& obj : result)
         obj.weight /= sum;
 
     return result;
 }
-

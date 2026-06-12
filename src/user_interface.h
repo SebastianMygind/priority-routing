@@ -14,7 +14,7 @@
 
 using ms_duration = std::chrono::duration<double, std::milli>;
 
-class UserInterface 
+class UserInterface
 {
 public:
     UserInterface() = default;
@@ -113,7 +113,7 @@ private:
 
     bool showDebug = true;
     bool showUI    = true;
-    
+
     bool modelSelectionEdit = false;
     bool originTextboxEdit = false;
     bool destinationTextboxEdit = false;

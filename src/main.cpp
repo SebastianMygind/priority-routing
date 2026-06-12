@@ -60,15 +60,15 @@ int main() {
         const Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition() * window.dpi, camera);
 
         // Update
-        if (IsWindowResized()) 
+        if (IsWindowResized())
         {
             // We divide here because some OS (Linux) return physical size on GetScreenWidth(). On others the dpi is 1.F
             window.width = static_cast<int>(static_cast<float>(GetScreenWidth()) / window.dpi.x);
             window.height = static_cast<int>(static_cast<float>(GetScreenHeight()) / window.dpi.y);
         }
-        
+
         ui.UpdateLockState();
- 
+
         if (!ui.KeyboardInUI())
         {
             if (IsKeyPressed(KEY_U)) { ui.ToggleUI();         }
@@ -95,7 +95,7 @@ int main() {
             LayeredMapObjects visibleNodes(4);
             renderer.m_Tree.Query(bounds, &visibleNodes, nullptr, 20);
 
-            for (MapObject& obj : visibleNodes[0]) 
+            for (MapObject& obj : visibleNodes[0])
             {
                 OSMNode node = graph.GetNode(obj.id);
                 if (Vector2Distance(MercatorProjection(node.location), mouseWorldPos) < 0.2F)
@@ -104,14 +104,14 @@ int main() {
                     {
                         graph.SetNodeA(obj.id);
                         ui.SetOrigin(std::format("{}", obj.id));
-                    } 
+                    }
                     else if (graph.GetNodeB() == 0xFFFFFFFF)            // Click two, B
                     {
                         graph.SetNodeB(obj.id);
                         ui.SetDestination(std::format("{}", obj.id));
-                    } 
+                    }
                     else                                                // Click three, reset
-                    {                                           
+                    {
                         graph.SetNodeA(0xFFFFFFFF);
                         graph.SetNodeB(0xFFFFFFFF);
                         graph.ClearPath();
@@ -119,17 +119,17 @@ int main() {
                         ui.SetDestination("");
                     }
 
-                    if (graph.GetNodeA() != 0xFFFFFFFF && graph.GetNodeB() != 0xFFFFFFFF) 
+                    if (graph.GetNodeA() != 0xFFFFFFFF && graph.GetNodeB() != 0xFFFFFFFF)
                     {
                         PathFinder(graph, ui);
                     }
-                    
+
                     break;
                 }
             }
         }
 
-        if (const float wheel = GetMouseWheelMove(); wheel != 0 && !ui.MouseInUI())
+        if (const float wheel = GetMouseWheelMove(); wheel != 0)
         {
             camera.offset = GetMousePosition() * window.dpi;
             camera.target = mouseWorldPos;
@@ -147,8 +147,8 @@ int main() {
             renderer.SetVisiblePath(ui.GetPathIndex());
 
             spdlog::info("Origin: {}, Destination: {}", graph.StringToNode(ui.GetOrigin()), graph.StringToNode(ui.GetDestination()));
-            
-            if (graph.GetNodeA() != 0xFFFFFFFF && graph.GetNodeB() != 0xFFFFFFFF) 
+
+            if (graph.GetNodeA() != 0xFFFFFFFF && graph.GetNodeB() != 0xFFFFFFFF)
             {
                 PathFinder(graph, ui);
             }
