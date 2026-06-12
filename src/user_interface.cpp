@@ -1,5 +1,6 @@
 #include "user_interface.h"
 
+#include "raygui.h"
 #include "raylib.h"
 #include <algorithm>
 #include <format>
@@ -134,7 +135,7 @@ void UserInterface::DrawCustomSelection(const char* text, float posY, int* selec
 
     if (edit)
     {
-        elementY(110);
+        GuiLock();
     }
 }
 
@@ -407,7 +408,7 @@ void UserInterface::DrawRouteInfo()
     DrawCustomHeading("Algorithm");
     DrawCustomText("Model");
 
-    DrawCustomSelection("Dijkstra;A Star;Weighted Sum;Pareto", elementY(boxType), &modelSelectionIndex, modelSelectionEdit);
+    float modelY = elementY(boxType);
 
     float addButtonY = 0.f;
 
@@ -462,6 +463,9 @@ void UserInterface::DrawRouteInfo()
 
     DrawCustomHeading("Solution");
     DrawCustomPather(pathSelectionIndex, pathCount);
+
+    // Draw the model dropdown last so it's drawn over the sliders if open
+    DrawCustomSelection("Dijkstra;A Star;Weighted Sum;Pareto", modelY, &modelSelectionIndex, modelSelectionEdit);
 
 
     if (showNewObjective)
