@@ -13,8 +13,8 @@
 // Height of elements, effectively their size
 
 constexpr int HEADING_HEIGHT = 30;
-constexpr int TEXT_HEIGHT    = 15;
-constexpr int BOX_HEIGHT     = 25;
+constexpr int TEXT_HEIGHT    = 18;
+constexpr int BOX_HEIGHT     = 30;
 constexpr int SLIDER_HEIGHT  = 15;
 
 // Padding between elements, horizontal and vertical
@@ -24,7 +24,7 @@ constexpr int       V_PAD = 5;
 
 // Used to scale the UI accordingly
 
-constexpr std::pair UI_MIN_SIZE   = {200.F, 620.F};
+constexpr std::pair UI_MIN_SIZE   = {270.F, 620.F};
 constexpr float     UI_MULTIPLIER = 0.20;
 constexpr float     UI_DEBUG_HEIGHT = 250.F;
 /*
@@ -187,8 +187,6 @@ void UserInterface::DrawCustomPather(int& index, int count)
         .height = BOX_HEIGHT
     };
 
-
-
     DrawRectangleLinesEx(outlinePos, 1, GRAY);
     DrawTextEx(fontText, text.c_str(), textPos, TEXT_HEIGHT, 1.2, BLACK);
 
@@ -207,10 +205,12 @@ void UserInterface::DrawCustomPather(int& index, int count)
 void UserInterface::DrawObjecive(ObjectiveList& objectives, int index, bool removable)
 {
     Objective& objective = objectives[index];
-
     auto const yPos = elementY(boxType);
 
-    Vector2 textSize = MeasureTextEx(fontText, objective.name.c_str(), TEXT_HEIGHT, 1.2);
+    const Vector2 textPos{
+        .x = elementX + V_PAD,
+        .y = yPos + (BOX_HEIGHT / 2) - (TEXT_HEIGHT / 2) + 1
+    };
 
     const Rectangle outlinePos{
         .x = elementX,
@@ -219,26 +219,21 @@ void UserInterface::DrawObjecive(ObjectiveList& objectives, int index, bool remo
         .height = BOX_HEIGHT
     };
 
-    const Vector2 textPos{
-        .x = elementX + 10,
-        .y = yPos + (BOX_HEIGHT / 2) - (TEXT_HEIGHT / 2) + 1
+    const Rectangle buttonPos{
+        .x = elementWidth - BOX_HEIGHT - H_PAD.second,
+        .y = yPos,
+        .width = BOX_HEIGHT,
+        .height = BOX_HEIGHT
     };
 
-    const Rectangle rightButton{
-        .x = elementX + elementWidth - BOX_HEIGHT + 5,
-        .y = yPos + 5,
-        .width = BOX_HEIGHT - 10,
-        .height = BOX_HEIGHT - 10
-    };
-
-    DrawRectangleLinesEx(outlinePos, 1, LIGHTGRAY);
-    DrawTextEx(fontText, objective.name.c_str(), textPos, TEXT_HEIGHT, 1.2, BLACK);
-
+    DrawRectangleLinesEx(outlinePos, 1, GRAY);
+    DrawTextEx(fontText, objective.name.c_str(), textPos, TEXT_HEIGHT, 1.2, DARKGRAY);
     if (removable)
     {
-        if (GuiButton(rightButton, "x") != 0)
+        if (GuiButton(buttonPos, "#113#") != 0)
         {
             objectives.erase(objectives.begin() + index);
+            wasPreviouslyEditing = true;
         }
     }
 }
@@ -247,35 +242,41 @@ void UserInterface::DrawObjeciveWeight(ObjectiveList& objectives, int index, boo
 {
 
     Objective& objective = objectives[index];
-
     auto const yPos = elementY(boxType);
+
+    float sum = 0.f;
+    for (const auto& obj : objectives) {
+        sum += obj.weight;
+    }
+    std::string weightText = std::format("{:.0f}%", objective.weight / sum * 100.f);
+    Vector2 weightTextSize = MeasureTextEx(fontText, weightText.c_str(), TEXT_HEIGHT, 1.2);
+
+
+    const Vector2 textPos{
+        .x = elementX + V_PAD,
+        .y = yPos + (BOX_HEIGHT / 2) - (TEXT_HEIGHT / 2) + 1
+    };
+
+    const Vector2 textPosR{
+        .x = elementX + elementWidth - BOX_HEIGHT - V_PAD - weightTextSize.x,
+        .y = yPos + (BOX_HEIGHT / 2) - (TEXT_HEIGHT / 2) + 1
+    };
 
     const Rectangle outlinePos{
         .x = elementX,
         .y = yPos,
-        .width = elementWidth - BOX_HEIGHT,
+        .width = elementWidth,
         .height = BOX_HEIGHT
     };
 
-    const Vector2 textPos{
-        .x = elementX + 10,
-        .y = yPos + (BOX_HEIGHT / 2) - (TEXT_HEIGHT / 2) + 1
+    const Rectangle buttonPos{
+        .x = elementWidth - BOX_HEIGHT - H_PAD.second,
+        .y = yPos,
+        .width = BOX_HEIGHT,
+        .height = BOX_HEIGHT
     };
 
-    const Vector2 textPosRight{
-    .x = elementX + elementWidth - 50,
-    .y = yPos + (BOX_HEIGHT / 2) - (TEXT_HEIGHT / 2) + 1
-    };
-
-    const Rectangle rightButton{
-        .x = elementX + elementWidth - BOX_HEIGHT + 5,
-        .y = yPos + 5,
-        .width = BOX_HEIGHT - 10,
-        .height = BOX_HEIGHT - 10
-    };
-
-    DrawRectangleLinesEx(outlinePos, 1, LIGHTGRAY);
-
+    DrawRectangleLinesEx(outlinePos, 1, DARKGRAY);
 
     Vector2 mousePoint = GUI_POINTER_POSITION;
     if (CheckCollisionPointRec(mousePoint, outlinePos))
@@ -293,21 +294,17 @@ void UserInterface::DrawObjeciveWeight(ObjectiveList& objectives, int index, boo
         DrawRectangle(elementX + 1, yPos + 1, outlinePos.width * objective.weight, BOX_HEIGHT - 2, SKYBLUE);
     }
 
-    DrawTextEx(fontText, objective.name.c_str(), textPos, TEXT_HEIGHT, 1.2, BLACK);
+    DrawTextEx(fontText, objective.name.c_str(), textPos, TEXT_HEIGHT, 1.2, DARKGRAY);
 
-    float sum = 0.f;
-    for (const auto& obj : objectives) {
-        sum += obj.weight;
-    }
 
-    std::string weightText = std::format("{:.0f}%", objective.weight / sum * 100.f);
-    DrawTextEx(fontText, weightText.c_str(), textPosRight, TEXT_HEIGHT, 1.2, BLACK);
+    DrawTextEx(fontText, weightText.c_str(), textPosR, TEXT_HEIGHT, 1.2, DARKGRAY);
 
     if (removable)
     {
-        if (GuiButton(rightButton, "x") != 0)
+        if (GuiButton(buttonPos, "#113#") != 0)
         {
             objectives.erase(objectives.begin() + index);
+            wasPreviouslyEditing = true;
         }
     }
 
@@ -621,7 +618,7 @@ void UserInterface::DeactivateLoader() {
 void UserInterface::UpdateLockState()
 {
     // If the left mouse is pressed when the cursor is outside the visible UI box, lock it
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !(CheckCollisionPointRec(mousePos, uiRect) && showUI))
+    if ((IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) && !(CheckCollisionPointRec(mousePos, uiRect) && showUI))
     {
         GuiLock();
         originTextboxEdit = false;

@@ -129,7 +129,7 @@ int main() {
             }
         }
 
-        if (const float wheel = GetMouseWheelMove(); wheel != 0)
+        if (const float wheel = GetMouseWheelMove(); wheel != 0 && (!ui.WheelInUI() || !ui.MouseInUI()))
         {
             camera.offset = GetMousePosition() * window.dpi;
             camera.target = mouseWorldPos;

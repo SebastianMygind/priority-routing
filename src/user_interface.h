@@ -20,7 +20,7 @@ public:
     UserInterface() = default;
     ~UserInterface();
 
-    // Fixes a clang-tidy warning, taken from Gemini.
+    // Fixes a clang-tidy warning, taken from Gemini. // what
 
     // 1. Delete Copy Constructor (Prevents accidental duplication)
     UserInterface(const UserInterface&) = delete;
@@ -41,7 +41,8 @@ public:
     void DeactivateLoader();
 
     [[nodiscard]] bool KeyboardInUI() const { return originTextboxEdit || destinationTextboxEdit; }
-    [[nodiscard]] static bool MouseInUI()    { return !GuiIsLocked(); }
+    [[nodiscard]] bool WheelInUI()    const { return (CheckCollisionPointRec(mousePos, uiRect) && showUI); }
+    [[nodiscard]] static bool MouseInUI()   { return !GuiIsLocked(); }
     bool IsUpdated();
 
     // Textbox getters/setters
