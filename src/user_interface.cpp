@@ -288,6 +288,10 @@ void UserInterface::DrawObjeciveWeight(ObjectiveList& objectives, int index, boo
             float value = (mousePoint.x - elementX) / outlinePos.width;
             objective.weight = std::clamp(value, 0.f, 1.f);
         }
+        if (GUI_BUTTON_RELEASED && !GuiIsLocked())
+        {
+            wasPreviouslyEditing = true;
+        }
     }
     else
     {
@@ -295,8 +299,6 @@ void UserInterface::DrawObjeciveWeight(ObjectiveList& objectives, int index, boo
     }
 
     DrawTextEx(fontText, objective.name.c_str(), textPos, TEXT_HEIGHT, 1.2, DARKGRAY);
-
-
     DrawTextEx(fontText, weightText.c_str(), textPosR, TEXT_HEIGHT, 1.2, DARKGRAY);
 
     if (removable)
@@ -379,9 +381,6 @@ void UserInterface::DrawUserInterface(const Window &window)
     DrawPathLoader(window);
 
     DrawDebugInfo();
-
-
-
 }
 
 void UserInterface::DrawRouteInfo()
@@ -409,61 +408,58 @@ void UserInterface::DrawRouteInfo()
 
     float addButtonY = 0.f;
 
-    DrawCustomText("Objectives");
     switch (modelSelectionIndex)
     {
-        case 0:  // Dijkstra
-        case 1:
-        //DrawObjecive("Distance", false, 0);
+        case 0: // Dijkstra
+        case 1: // A*
+            break;
 
-        break;
+        case 2: // Weighted Sum
+            DrawCustomText("Objectives");
+            for (size_t i = 0; i < objWeightedSum.size(); i++)
+            {
+                DrawObjeciveWeight(objWeightedSum, i, true);
+            }
 
-    case 2: // Weighted Sum
-        for (size_t i = 0; i < objWeightedSum.size(); i++)
-        {
-            DrawObjeciveWeight(objWeightedSum, i, true);
-        }
+            addButtonY = elementY(boxType);
+            if (GuiButton({.x = elementX,
+                    .y = addButtonY,
+                    .width = elementWidth,
+                    .height = BOX_HEIGHT},
+                    "Add"))
+            {
+                showNewObjective = true;
+            }
+            break;
 
-        addButtonY = elementY(boxType);
-        if (GuiButton({.x = elementX,
-                   .y = addButtonY,
-                   .width = elementWidth,
-                   .height = BOX_HEIGHT},
-                  "Add"))
-        {
-            showNewObjective = true;
-        }
-        break;
+        case 3: // Pareto
+            DrawCustomText("Objectives");
+            for (size_t i = 0; i < objPareto.size(); i++)
+            {
+                DrawObjecive(objPareto, i, true);
+            }
 
-    case 3:
-    {
-        for (size_t i = 0; i < objPareto.size(); i++)
-        {
-            DrawObjecive(objPareto, i, true);
-        }
+            addButtonY = elementY(boxType);
+            if (GuiButton({.x = elementX,
+                    .y = addButtonY,
+                    .width = elementWidth,
+                    .height = BOX_HEIGHT},
+                    "Add"))
+            {
+                showNewObjective = true;
+            }
 
-        addButtonY = elementY(boxType);
-        if (GuiButton({.x = elementX,
-                   .y = addButtonY,
-                   .width = elementWidth,
-                   .height = BOX_HEIGHT},
-                  "Add"))
-        {
-            showNewObjective = true;
-        }
-        break;
+            DrawCustomText("Solutions");
+            DrawCustomPather(pathSelectionIndex, pathCount);
+
+            break;
+
+        default:
+            break;
     }
-
-    default:
-        break;
-    }
-
-    DrawCustomHeading("Solution");
-    DrawCustomPather(pathSelectionIndex, pathCount);
 
     // Draw the model dropdown last so it's drawn over the sliders if open
     DrawCustomSelection("Dijkstra;A Star;Weighted Sum;Pareto", modelY, &modelSelectionIndex, modelSelectionEdit);
-
 
     if (showNewObjective)
     {
@@ -508,8 +504,9 @@ void UserInterface::DrawRouteInfo()
             }
             if (modelSelectionIndex == 2)
                 objWeightedSum.push_back(newObj);
-            else
+            else if (modelSelectionIndex == 3)
                 objPareto.push_back(newObj);
+            wasPreviouslyEditing = true;
         }
     }
 

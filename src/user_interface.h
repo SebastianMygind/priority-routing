@@ -112,7 +112,7 @@ private:
     Vector2 debugMouseWorldPos{.x=0, .y=0};
     std::string poiText;
 
-    bool showDebug = true;
+    bool showDebug = false;
     bool showUI    = true;
 
     bool modelSelectionEdit = false;
